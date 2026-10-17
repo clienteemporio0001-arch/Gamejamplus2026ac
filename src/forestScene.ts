@@ -213,7 +213,7 @@ export class ForestScene extends Phaser.Scene {
       cam.setDeadzone(70,90);cam.setRoundPixels(true);
     }
     this.arrows=this.input.keyboard?.createCursorKeys();
-    this.keys=this.input.keyboard?.addKeys('A,D,W,E,Q') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
+    this.keys=this.input.keyboard?.addKeys('A,D,E,Q') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
     this.heartLabel=this.label(13,48,'',14,'#f9e9c6').setScrollFactor(0).setOrigin(0,.5);
     this.goalLabel=this.label(13,76,'',14,'#e8ffae').setScrollFactor(0).setOrigin(0,.5);
     this.textLabel=this.label(this.scale.gameSize.width/2,125,'',16,'#e7ffdc').setScrollFactor(0)
@@ -321,9 +321,7 @@ export class ForestScene extends Phaser.Scene {
       if(dir)this.facing=dir>0?1:-1;
       const grounded=this.body.blocked.down||this.body.touching.down;
       if(grounded)this.jumps=0;
-      const jump=Boolean((this.arrows&&Phaser.Input.Keyboard.JustDown(this.arrows.space))||
-        (this.arrows&&Phaser.Input.Keyboard.JustDown(this.arrows.up))||
-        (this.keys?.W&&Phaser.Input.Keyboard.JustDown(this.keys.W))||this.touch.jump);
+      const jump=Boolean((this.arrows&&Phaser.Input.Keyboard.JustDown(this.arrows.space))||this.touch.jump);
       const interact=Boolean((this.keys?.E&&Phaser.Input.Keyboard.JustDown(this.keys.E))||this.touch.interact);
       const ability=Boolean((this.keys?.Q&&Phaser.Input.Keyboard.JustDown(this.keys.Q))||this.touch.ability);
       this.touch.jump=false;this.touch.interact=false;this.touch.ability=false;

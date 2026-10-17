@@ -143,7 +143,7 @@ export class DemoScene extends Phaser.Scene {
     configureCamera(this, this.player);
     this.messageLabel = this.sceneText(600, 110, '', 17, '#f1ffcd').setWordWrapWidth(1000);
     this.cursors = this.input.keyboard?.createCursorKeys();
-    this.keys = this.input.keyboard?.addKeys('A,D,SPACE,W,UP,E,Q') as Record<string, Phaser.Input.Keyboard.Key> | undefined;
+    this.keys = this.input.keyboard?.addKeys('A,D,E,Q') as Record<string, Phaser.Input.Keyboard.Key> | undefined;
     this.unsub.push(this.net.on('snapshot', poses => {
       for (const pose of poses) if (pose.seat !== this.net.localSeat) this.targets.set(pose.seat, { ...pose });
     }));
@@ -289,8 +289,6 @@ export class DemoScene extends Phaser.Scene {
       if (this.body.blocked.down || this.body.touching.down) this.jumps = 0;
       const jump = Boolean(
         (this.cursors && Phaser.Input.Keyboard.JustDown(this.cursors.space)) ||
-        (this.cursors && Phaser.Input.Keyboard.JustDown(this.cursors.up)) ||
-        (this.keys?.W && Phaser.Input.Keyboard.JustDown(this.keys.W)) ||
         this.touch.jump
       );
       this.touch.jump = false;

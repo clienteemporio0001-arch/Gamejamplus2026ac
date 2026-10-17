@@ -97,7 +97,7 @@ export class LateScene extends Phaser.Scene {
       }
     }
     if(this.local)configureCamera(this,this.local);
-    this.keys=this.input.keyboard?.addKeys('A,D,W,E,Q') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
+    this.keys=this.input.keyboard?.addKeys('A,D,E,Q') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
     this.cursors=this.input.keyboard?.createCursorKeys();
     this.info=this.text(this.scale.gameSize.width/2,104,'',18).setWordWrapWidth(Math.min(850,this.scale.gameSize.width-20));
     this.info.setScrollFactor(0);
@@ -331,9 +331,7 @@ export class LateScene extends Phaser.Scene {
       this.body.setVelocityX(dir*(seat===2 && now<this.dashUntil?329:235));
       const grounded=this.body.blocked.down||this.body.touching.down;
       if(grounded)this.jumps=0;
-      const jump=Boolean((this.cursors&&Phaser.Input.Keyboard.JustDown(this.cursors.space))||
-        (this.cursors&&Phaser.Input.Keyboard.JustDown(this.cursors.up))||
-        (this.keys?.W&&Phaser.Input.Keyboard.JustDown(this.keys.W))||this.touch.jump);
+      const jump=Boolean((this.cursors&&Phaser.Input.Keyboard.JustDown(this.cursors.space))||this.touch.jump);
       this.touch.jump=false;
       if(jump && (grounded || (seat===0 && this.net.puzzle.unlocked[0] && this.jumps<2))){
         const double=this.jumps===1&&!grounded;this.body.setVelocityY(-465);this.jumps++;

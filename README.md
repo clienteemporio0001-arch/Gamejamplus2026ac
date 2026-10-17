@@ -6,7 +6,7 @@
 
 https://clienteemporio0001-arch.github.io/Gamejamplus2026ac/
 
-Abrir em três navegadores, um jogador cria a sala e compartilha o código de seis caracteres. Todos marcam PRONTO e o host inicia. A introdução é sincronizada. A/D ou setas para andar; Espaço/↑ para pular; **E** para interagir/apoio; **Q** para habilidade especial. Celulares possuem botões touch.
+Abrir em três navegadores, um jogador cria a sala e compartilha o código de seis caracteres. Todos marcam PRONTO e o host inicia. A introdução é sincronizada. A/D ou setas para andar; Espaço para pular (inclusive salto duplo; ↑ não pula); **E** para interagir/apoio; **Q** para habilidade especial. Celulares possuem botões touch.
 
 ## Os quatro capítulos
 

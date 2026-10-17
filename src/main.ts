@@ -196,7 +196,7 @@ function render(): void {
     '<div class="actions">' + readyButton + startButton + button('leave-lobby', 'SAIR', true) + '</div>' +
     '<div class="tip">' + (net.isHost ? 'Você é Téo, anfitrião. Inicie somente com os 3 prontos.' :
       'Você controla ' + (me === null ? 'seu personagem' : CHARACTERS[me].name) + '. Aguarde o anfitrião iniciar.') +
-    '</div><div class="rules"><b>COMPUTADOR:</b> A/D ou ←/→ para andar; Espaço/↑ para pular.<br>' +
+    '</div><div class="rules"><b>COMPUTADOR:</b> A/D ou ←/→ para andar; ESPAÇO para pular (↑ não pula).<br>' +
     '<b>CELULAR:</b> setas na esquerda e PULAR na direita. Coloque na horizontal.<br>' +
     '<b>OBJETIVO:</b> encontrem Caboquim, apoiem-se uns nos outros, coletem 3 cipós e derrubem a árvore para atravessar juntos.</div></main>';
   ui.querySelector('#copy')?.addEventListener('click', () => {

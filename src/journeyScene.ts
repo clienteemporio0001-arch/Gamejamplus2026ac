@@ -204,7 +204,7 @@ export class JourneyScene extends Phaser.Scene {
       cam.setDeadzone(75,100);cam.setRoundPixels(true);
     }
     this.cursors=this.input.keyboard?.createCursorKeys();
-    this.keys=this.input.keyboard?.addKeys('A,D,W,E,Q') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
+    this.keys=this.input.keyboard?.addKeys('A,D,E,Q') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
     this.labelHealth=this.text(12,46,'',14,'#ffe0ce').setScrollFactor(0).setOrigin(0,.5);
     this.labelGoal=this.text(12,76,'',13,'#daffc3').setScrollFactor(0).setOrigin(0,.5);
     this.labelZone=this.text(this.scale.gameSize.width/2,30,'',15).setScrollFactor(0);
@@ -320,9 +320,7 @@ export class JourneyScene extends Phaser.Scene {
       if(dir!==0)this.facing=dir>0?1:-1;
       const grounded=this.body.blocked.down||this.body.touching.down;
       if(grounded)this.jumps=0;
-      const jump=Boolean((this.cursors&&Phaser.Input.Keyboard.JustDown(this.cursors.space))
-        ||(this.cursors&&Phaser.Input.Keyboard.JustDown(this.cursors.up))
-        ||(this.keys?.W&&Phaser.Input.Keyboard.JustDown(this.keys.W))||this.touch.jump);
+      const jump=Boolean((this.cursors&&Phaser.Input.Keyboard.JustDown(this.cursors.space))||this.touch.jump);
       const use=Boolean((this.keys?.E&&Phaser.Input.Keyboard.JustDown(this.keys.E))||this.touch.interact);
       const special=Boolean((this.keys?.Q&&Phaser.Input.Keyboard.JustDown(this.keys.Q))||this.touch.ability);
       this.touch.jump=false;this.touch.interact=false;this.touch.ability=false;
