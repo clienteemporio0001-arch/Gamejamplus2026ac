@@ -1,65 +1,69 @@
 # A FLORESTA MENTE — Ninguém fica para trás
 
-Protótipo cooperativo 2D da Game Jam Plus 2026/2027, com **exatamente três jogadores**: Téo (verde), Lia (laranja) e Nino (azul). Temas: Better Together / Something's Off.
+Protótipo cooperativo Phaser 3 + TypeScript + Vite para a **Game Jam Plus 2026/2027**.
+Temas oficiais: Better Together e Something's Off.
 
-## Tecnologias
+## Fase 02: primeira fase cooperativa
 
-- Phaser 3, TypeScript, Vite
-- WebRTC DataChannels com PeerJS
-- PeerJS Cloud para sinalização, sem backend próprio de gameplay
-- Topologia estrela: convidado → anfitrião → convidados
-- Build estática com caminhos relativos (base configurada como ./), adequada ao ZIP HTML Game do itch.io
+A fase **A Boca da Noite** agora tem três personagens, cada um com habilidade que precisa ser coletada:
+- **Téo (verde)**: salto duplo. Coletar energia verde e pressionar PULAR novamente durante um salto.
+- **Lia (laranja)**: estilingue. Coletar item laranja e usar Q para atingir o alvo acima dos cipós.
+- **Nino (azul)**: dash +40% durante 0,8 segundo e cooldown de 2 segundos. Coletar energia azul e usar Q.
 
-## Executar
+Três desafios precisam ser resolvidos para a vitória:
+1. **A Passagem Suspensa:** Téo alcança plataforma alta com salto duplo e aciona alavanca com E para abrir ponte.
+2. **Os Cipós da Floresta:** Lia atira no alvo com Q; os cipós se recolhem.
+3. **A Porta do Tempo:** Nino aciona o pedestal com E, atravessa com Q (dash) e aciona o interruptor final com E antes da porta fechar. A passagem se abre permanentemente.
 
-Requisitos: Node.js 20.19+ ou 22+.
+O anfitrião valida posição, personagem, habilidade e progresso. Apenas ele pode decidir que os três desafios foram concluídos e que todos estão na saída. A vitória mostra **NINGUÉM FICA PARA TRÁS!**
+
+Há checkpoints cooperativos compartilhados. Quem cai no abismo volta ao checkpoint mais recente.
+
+## Arquitetura
+
+- `src/network.ts` — PeerJS, três vagas, lobby, sincronização de movimento, autorização de ações, broadcast do estado de puzzles, reconexão por até 30 s, vitória autoritativa
+- `src/puzzles.ts` — geometria e regras puras dos três desafios, timers, cooldowns e validação de progresso
+- `src/game.ts` — cena Phaser com habilidades e obstáculos, física, gráficos, efeitos, plataformas e HUD
+- `src/main.ts` — telas iniciais, lobby, HUD, direcional móvel multitoque, botões E e Q
+- `src/style.css` — layout, cores e aviso de orientação
+- `src/levels.ts` — estrutura nominal das cinco fases, com somente a primeira implementada
+- `tests/puzzles.test.ts` — verificações automatizadas de permissões, habilidades, idempotência, timer e vitória
+- `.github/workflows/pages.yml` — compile, test, build HTML5, artifact ZIP e GitHub Pages
+
+**Sem Socket.IO, Express, backend próprio ou banco de dados.** PeerJS Cloud é usado só para sinalização; o gameplay usa WebRTC DataChannels com topologia estrela (anfitrião → dois convidados).
+
+## Execução local
+
+Requisito: Node.js 20.19+ ou 22+.
 
 ~~~bash
 npm install
 npm run dev
-~~~
-
-Abra o endereço exibido pelo Vite. Para testes em outros dispositivos na rede local, use o IP LAN do computador e a porta informada. A publicação remota deve ser servida via HTTPS.
-
-~~~bash
 npm run build
-npm run preview
+npm run test:logic
 ~~~
 
-Saída: pasta dist/, com index.html e pasta assets/. Para itch.io, compacte o conteúdo de dist/ (não a pasta pai) em ZIP e marque o projeto como HTML. Não inclui Node.js em produção.
+A build estática `dist/` contém `index.html` e `assets/`; Vite está configurado com caminho relativo `./`.
+Para o itch.io, compacte **o conteúdo** de `dist/` em ZIP e selecione projeto do tipo HTML. HTTPS é necessário para distribuição remota.
 
-## GitHub Pages
+## Teste com três computadores ou celulares
 
-O workflow .github/workflows/pages.yml cria a build no push da branch main. Em GitHub → Settings → Pages → Build and deployment, selecione GitHub Actions. Após o deploy concluído, a URL esperada será:
+1. Entre em https://clienteemporio0001-arch.github.io/Gamejamplus2026ac/ nos três aparelhos.
+2. Uma pessoa cria sala e envia o código de seis caracteres às outras duas.
+3. Os outros escolhem ENTRAR EM SALA; todos marcam ESTOU PRONTO e o anfitrião inicia.
+4. Coletem cada habilidade individual e ativem os três mecanismos cooperativamente.
+5. Movimentação: A/D ou setas. PULAR: Espaço ou seta para cima. E: interagir. Q: usar habilidade. Controles virtuais E, Q, PULAR e direcional funcionam em celulares na horizontal.
+6. Confiram que a ponte, os cipós, a porta, as habilidades e os checkpoints sincronizam nos três aparelhos. Façam os três entrar na região CASA para finalizar.
+7. Testem o quarto navegador, desconexões de convidados, reconexão em até 30 segundos e redes móveis diferentes.
 
-https://clienteemporio0001-arch.github.io/Gamejamplus2026ac/
+No GitHub, acesse Actions → Publicar jogo no GitHub Pages para ver resultados de compilação, teste de lógica, ZIP e deploy.
 
-O link só estará utilizável quando GitHub Pages tiver sido ativado e a ação executada com sucesso.
+## Limitações e critérios de QA
 
-## Teste com três aparelhos
-
-1. Anfitrião acessa o endereço HTTPS e seleciona CRIAR SALA. O código só aparece depois de o PeerJS Cloud registrar o ID.
-2. Envie o código de seis caracteres aos convidados. Cada um acessa o mesmo endereço no próprio aparelho.
-3. Convidados clicam ENTRAR EM SALA e digitam o código; ocupam Lia e Nino.
-4. Os três clicam ESTOU PRONTO; o anfitrião clica INICIAR JOGO.
-5. Cada um anda com A/D ou ←/→ e pula com Espaço/↑; no celular, controle virtual.
-6. Confira que os personagens remotos se movem em todas as telas. Os três devem chegar juntos à área CASA.
-7. Teste quarto navegador com o código para conferir sala cheia. Teste desconexão e reconexão antes de 30 segundos.
-
-## Arquitetura
-
-- src/network.ts: salas, vagas, validação, sincronização a 20 Hz, reconexão e conclusão pelo anfitrião
-- src/game.ts: cena Phaser, colisões, física local, floresta temporária, objetivo, interpolação
-- src/main.ts: menu, lobby, criação/entrada na sala, código, controles multitoque, HUD
-- src/style.css: interface responsiva e aviso de rotação
-- vite.config.ts: build estática com caminhos relativos
-- .github/workflows/pages.yml: publicação automática
-
-## Limitações conhecidas
-
-- O PeerJS Cloud depende de sinalização pública. O P2P pode falhar em redes NAT/CGNAT ou firewalls, já que não há TURN configurado.
-- O anfitrião é autoridade do estado compartilhado, mas as posições dos convidados vêm da simulação local (sem servidor antitrapaça).
-- Não há migração de anfitrião, banco, persistência ou matchmaking.
-- Vaga de convidado reservada por até 30 segundos, com página do anfitrião aberta.
-- Controles móveis e iframe do itch.io precisam ser validados em dispositivos reais após a publicação.
-- Esta é somente a fase demonstrativa, sem inimigos, chefes ou habilidades especiais.
+- Testes automatizados de TypeScript, build e lógica não substituem testes reais de WebRTC em três dispositivos.
+- O serviço PeerJS Cloud e o NAT de cada rede afetam conectividade; não há servidor TURN próprio.
+- Os convidados simulam seu movimento localmente; o anfitrião valida ações conforme posições recebidas. Não é um sistema antitrapaça completo.
+- A sincronização usa snapshots de posições a ~20 Hz e mensagens de mudança de puzzle; não transmite o cenário inteiro.
+- Não há migração de anfitrião, persistência ou matchmaking.
+- A compatibilidade do ZIP no iframe do itch.io depende de validação depois do upload.
+- Nenhuma fase 03, inimigo ou habilidade além das três previstas foi implementada.

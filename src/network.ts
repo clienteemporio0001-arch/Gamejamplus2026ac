@@ -110,6 +110,7 @@ export class Network {
   private sessionToken = '';
   private reconnectDeadline = 0;
   private shuttingDown = false;
+  private pendingRestore = false;
 
   on<K extends keyof Events>(event: K, fn: (payload: Events[K]) => void): () => void {
     const listeners = (this.listeners[event] ?? []) as Array<(payload: Events[K]) => void>;
@@ -320,6 +321,7 @@ export class Network {
     switch (msg.t) {
       case 'welcome':
         if (msg.code !== this.code) return;
+        this.pendingRestore = this.playing && this.localSeat === msg.seat;
         this.localSeat = msg.seat;
         this.emit('change', undefined);
         break;
@@ -341,6 +343,10 @@ export class Network {
         if (this.playing) {
           this.poses = msg.poses.map(p => ({ ...p }));
           this.emit('snapshot', this.poses);
+          if (this.pendingRestore && this.localSeat !== null) {
+            this.pendingRestore = false;
+            this.emit('respawn', this.poses[this.localSeat]);
+          }
         }
         break;
       case 'puzzle':
@@ -477,7 +483,7 @@ export class Network {
     this.role = 'idle'; this.code = ''; this.localSeat = null;
     this.players = slots(); this.poses = SPAWNS.map(p => ({ ...p }));
     this.playing = false; this.completed = false;
-    this.authority.reset(); this.puzzle = initialWorld(); this.lastAction.clear();
+    this.authority.reset(); this.puzzle = initialWorld(); this.lastAction.clear(); this.pendingRestore = false;
     this.tokens = [null, null, null]; this.lastInput = 0; this.lastReceived = [0, 0, 0];
     this.emit('change', undefined);
   }
