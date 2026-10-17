@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
-import { LOOP_WIDTH, LOOP_MARKS, LOOP_TREE, LOOP_FINAL, ROUTES, barriers,
+import { LOOP_WIDTH, LOOP_GEOMETRY, LOOP_MARKS, LOOP_TREE, LOOP_FINAL, ROUTES, barriers,
   allDone, windGuide, blackoutActive, warningActive, type LoopWorld, LOOP_START } from './forestLoop';
 import { NightArt } from './visuals';
 import { SoloBodies } from './soloBodies';
@@ -21,6 +21,9 @@ export class ForestLoopScene extends Phaser.Scene {
   private marks:Phaser.GameObjects.Container[]=[];
   private links:Phaser.GameObjects.Text[]=[];
   private gusts:Phaser.GameObjects.Ellipse[]=[];
+  private clearingTree!:Phaser.GameObjects.Image;
+  private shiftShade!:Phaser.GameObjects.Rectangle;
+  private movingRoots:Phaser.GameObjects.Ellipse[]=[];
   private local!:Phaser.GameObjects.Rectangle;private body!:Phaser.Physics.Arcade.Body;
   private solo?:SoloBodies;
   private remote:Pose[]=LOOP_START.map(p=>({...p}));
@@ -58,14 +61,30 @@ export class ForestLoopScene extends Phaser.Scene {
   private setMessage(message:string):void {
     if(message===this.hint)return;this.hint=message;this.info.setText(message);
   }
+  preload():void{
+    this.load.svg('loop-clearing-tree',import.meta.env.BASE_URL+'assets/clearing-tree.svg');
+    this.load.svg('loop-hollow-tree',import.meta.env.BASE_URL+'assets/hollow-tree.svg');
+  }
   private background():void{
     this.art=new NightArt(this,LOOP_WIDTH,'forest');
-    this.art.water(2265,2625,637);
-    this.label(410,245,'A · A ENTRADA',23);
-    this.label(1310,235,'B · A TRILHA REPETIDA',21);
-    this.label(2375,235,'C · O ABISMO',21);
-    this.label(3430,230,'D · A SAÍDA REAL',21);
-    this.label(710,366,'A FLORESTA MENTE\nMAS O VENTO NÃO.',20,'#c6ead0');
+    this.art.water(LOOP_GEOMETRY.chasm.start,LOOP_GEOMETRY.chasm.end,637);
+    this.label(575,235,'I · FLORESTA DAS REPETIÇÕES',20);
+    this.label(1850,217,'II · A CLAREIRA CENTRAL',21,'#e3ebca');
+    this.label(2445,225,'III · A ÁRVORE SUSPENSA',20);
+    this.label(3440,235,'IV · A SAÍDA REAL',20);
+    this.clearingTree=this.add.image(1790,333,'loop-clearing-tree')
+      .setDisplaySize(560,625).setDepth(-7).setAlpha(.91);
+    const light=this.add.graphics().setDepth(-6);
+    for(let i=7;i>=1;i--){
+      light.fillStyle(0x83c5ad,.014);
+      light.fillEllipse(1850,330,145+i*45,190+i*45);
+    }
+    this.shiftShade=this.add.rectangle(LOOP_WIDTH/2,350,LOOP_WIDTH,700,0x142c38,.03).setDepth(-5);
+    for(let i=0;i<4;i++){
+      const root=this.add.ellipse(1450+i*100,632,135,29,0x224234,.30).setDepth(-2);
+      this.movingRoots.push(root);
+    }
+    this.label(1860,330,'A FLORESTA MENTE\nMAS O VENTO NÃO.',19,'#e2f0d1');
     this.label(2600,526,'CORRENTEZA FATAL · CUIDADO AO SALTAR',14,'#ffd5a5');
     // Three distinguishable memory landmarks. Their positions shift cosmetically with layout.
     const names=['ÁRVORE OCA','PEDRA RACHADA','TRONCO EM ARCO'] as const;
@@ -73,6 +92,7 @@ export class ForestLoopScene extends Phaser.Scene {
       const pos=LOOP_MARKS[i];const obj=this.add.container(pos.x,pos.y-85).setDepth(12);
       const g=this.add.graphics();
       if(i===0){
+        obj.add(this.add.image(0,0,'loop-hollow-tree').setDisplaySize(150,180));
         g.fillStyle(0x4a4335,1);g.fillRoundedRect(-28,-49,56,98,14);
         g.fillStyle(0x091d1b,1);g.fillEllipse(0,14,27,43);
         g.lineStyle(5,0x8d825c,.65);g.strokeEllipse(0,7,40,73);
@@ -86,6 +106,7 @@ export class ForestLoopScene extends Phaser.Scene {
         g.moveTo(-53,47);g.lineTo(-48,-7);g.lineTo(-15,-29);g.lineTo(27,-30);g.lineTo(51,-4);g.lineTo(56,47);g.strokePath();
         g.lineStyle(4,0x8b6745,.55);g.lineBetween(-38,-13,0,-26);
       }
+      g.setAlpha(i===0?.13:1);
       obj.add(g);this.marks.push(obj);
       this.label(pos.x,pos.y-163,names[i],15,'#e3e9b7');
     }
@@ -103,14 +124,14 @@ export class ForestLoopScene extends Phaser.Scene {
     pad(LOOP_FINAL[1].x,LOOP_FINAL[1].y,0xf7b074,'LIA · J · AMARRA');
     pad(LOOP_FINAL[2].x,LOOP_FINAL[2].y,0x8ec9f4,'NINO · SHIFT + E');
     this.label(3705,485,'A SAÍDA VERDADEIRA',20,'#eaf5cb');
-    this.add.rectangle(1340,625,85,7,0x7cbed4,.8).setDepth(11);
-    this.label(1350,545,'NINO · SHIFT AQUI',12,'#bee2ff');
-    this.add.rectangle(2045,625,85,7,0x7cbed4,.8).setDepth(11);
-    this.label(2045,549,'NINO · INICIE O DASH',12,'#bee2ff');
+    this.add.rectangle(1080,625,85,7,0x7cbed4,.8).setDepth(11);
+    this.label(1080,544,'NINO · SHIFT AQUI',12,'#bee2ff');
+    this.add.rectangle(2122,625,85,7,0x7cbed4,.8).setDepth(11);
+    this.label(2119,549,'NINO · INICIE O DASH',12,'#bee2ff');
     this.add.rectangle(3400,625,85,7,0x7cbed4,.8).setDepth(11);
     this.label(3400,547,'NINO · SHIFT AQUI',12,'#bee2ff');
-    const hollow=this.label(1540,490,'PASSAGEM DA ÁRVORE OCA\nREÚNAM OS TRÊS',15,'#c9edb6');
-    const stone=this.label(1700,487,'PASSAGEM DA PEDRA RACHADA\nREÚNAM OS TRÊS',15,'#ebd9b6');
+    const hollow=this.label(LOOP_GEOMETRY.portal.oca,478,'PASSAGEM DA ÁRVORE OCA\nREÚNAM OS TRÊS',15,'#c9edb6');
+    const stone=this.label(LOOP_GEOMETRY.portal.pedra,480,'PASSAGEM DA PEDRA RACHADA\nREÚNAM OS TRÊS',15,'#ebd9b6');
     this.links=[hollow,stone];
     this.label(3090,484,'TRILHA ENGANOSA\nO VENTO REVELA QUANDO PASSAR',14,'#e8c6a7');
   }
@@ -141,16 +162,18 @@ export class ForestLoopScene extends Phaser.Scene {
     this.background();
     this.ground(1132,674,2265,72);
     this.ground(3212,674,1175,72);
-    this.ground(1060,526,139,20,'wood');
+    this.ground(LOOP_MARKS[0].x,546,165,20,'wood');
     this.ground(2108,550,141,20,'wood');
     this.ground(3320,548,145,20,'wood');
-    this.bridge=this.ground(2445,659,360,36,'wood');
+    this.bridge=this.ground(LOOP_GEOMETRY.bridge.x,LOOP_GEOMETRY.bridge.y,
+      LOOP_GEOMETRY.bridge.width,LOOP_GEOMETRY.bridge.height,'wood');
     // Only the host's loop snapshot determines physical blockers.
-    this.blockers=[this.ground(1745,364,38,540,'stone'),
-      this.ground(1650,364,38,540,'wood'),
-      this.ground(520,364,38,540,'stone'),
-      this.ground(1790,357,44,560,'stone')];
-    this.finalBarrier=this.ground(3710,355,40,565,'wood');
+    this.blockers=[
+      this.ground(LOOP_GEOMETRY.gate,363,40,550,'stone'),
+      ...LOOP_GEOMETRY.layoutWalls.map((x,i)=>
+        this.ground(x,LOOP_GEOMETRY.clearing.groundY-48,45,96,i===1?'wood':'stone'))
+    ];
+    this.finalBarrier=this.ground(LOOP_GEOMETRY.finalGate,363,40,550,'wood');
     this.createTree();
     for(const seat of [0,1,2] as Seat[]){
       const p=this.net.poses[seat]||LOOP_START[seat];
@@ -178,6 +201,7 @@ export class ForestLoopScene extends Phaser.Scene {
     this.cameras.main.setBounds(0,0,LOOP_WIDTH,700);
     this.cameras.main.setZoom(this.scale.gameSize.width<900?1:1.13);
     this.cameras.main.startFollow(this.local,false,.09,.1);
+    this.cameras.main.centerOn(1900,420);
     this.cameras.main.setDeadzone(80,90);
     this.cursors=this.input.keyboard?.createCursorKeys();
     this.keys=this.input.keyboard?.addKeys('A,D,E') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
@@ -219,12 +243,19 @@ export class ForestLoopScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>this.off.forEach(off=>off()));
   }
   private sync(w:LoopWorld):void{
-    this.w={...w,marks:[...w.marks],tree:[...w.tree],final:[...w.final]};
+    this.w={...w,marks:[...w.marks],tree:[...w.tree],final:[...w.final],supporting:[...w.supporting]};
     const walls=barriers(w);
     this.blockers.forEach((b,i)=>this.active(b,walls[i].enabled));
     this.active(this.finalBarrier,!w.exit);
     this.active(this.bridge,w.bridge);
     this.ropes.forEach((rope,i)=>rope.setVisible(!w.tree[i]));
+    const tint=[0x0c3f46,0x082d3c,0x2c3f60][w.layout];
+    this.shiftShade.setFillStyle(tint).setAlpha([.035,.13,.10][w.layout]);
+    this.clearingTree.setTint([0xffffff,0xc9e0d7,0xb4dfff][w.layout]);
+    this.movingRoots.forEach((root,i)=>{
+      root.x=1430+i*105+[0,-34,43][w.layout];
+      root.setAlpha([.28,.45,.4][w.layout]);
+    });
     this.marks.forEach((mark,i)=>{
       const shift=w.layout===0?0:w.layout===1?[14,-22,17][i]:[-17,18,-10][i];
       mark.setX(LOOP_MARKS[i].x+shift);
@@ -234,10 +265,10 @@ export class ForestLoopScene extends Phaser.Scene {
   private action(seat:Seat):void{
     const x=this.local.x,y=this.local.y,w=this.w;
     if(seat===0){
-      if(w.observed && !w.marks[0]&&Math.abs(x-1080)<90)this.net.act({kind:'lever'});
-      else if(allDone(w.marks)&&!w.tree[0]&&Math.abs(x-2130)<95&&Math.abs(y-514)<100)
+      if(w.observed && !w.marks[0]&&Math.abs(x-LOOP_MARKS[0].x)<90)this.net.act({kind:'lever'});
+      else if(allDone(w.marks)&&!w.tree[0]&&Math.abs(x-LOOP_TREE[0].x)<95&&Math.abs(y-LOOP_TREE[0].y)<100)
         this.net.act({kind:'lever'});
-      else if(w.bridge&&!w.final[0]&&Math.abs(x-3320)<95)this.net.act({kind:'lever'});
+      else if(w.bridge&&!w.final[0]&&Math.abs(x-LOOP_FINAL[0].x)<95)this.net.act({kind:'lever'});
     }else if(seat===2){
       this.net.act({kind:'switch'});
     }

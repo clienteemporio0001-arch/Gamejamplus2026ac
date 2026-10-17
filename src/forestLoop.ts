@@ -7,11 +7,25 @@ export const LOOP_WARNING_MS = 10000;
 export const LOOP_BLACKOUT_MS = 2000;
 export type Layout = 0|1|2;
 export type Route = 'oca'|'pedra';
-export const LOOP_START: Pose[] = ([0,1,2] as Seat[]).map(seat=>({seat,x:125+seat*50,y:606,vx:0,vy:0}));
+export const LOOP_GEOMETRY = {
+  clearing:{min:1730,max:2000,groundY:638},
+  gate:2070,
+  layoutWalls:[1360,1540,875] as const,
+  portal:{oca:790,pedra:1460} as const,
+  portalLanding:2120,
+  returnCenter:1840,
+  chasm:{start:2265,end:2625},
+  bridge:{x:2445,y:659,width:360,height:36},
+  finalGate:3710,
+} as const;
+/** Central clearing, clear of every rotating obstacle; all three face both directions. */
+export const LOOP_START: Pose[] = ([0,1,2] as Seat[]).map(seat=>({
+  seat,x:1840+seat*60,y:606,vx:0,vy:0,
+}));
 export const LOOP_MARKS=[
-  {x:1080,y:480,seat:0,name:'ÁRVORE OCA'},
-  {x:1300,y:574,seat:1,name:'PEDRA RACHADA'},
-  {x:1500,y:589,seat:2,name:'TRONCO EM ARCO'},
+  {x:700,y:480,seat:0,name:'ÁRVORE OCA'},
+  {x:1000,y:574,seat:1,name:'PEDRA RACHADA'},
+  {x:1260,y:589,seat:2,name:'TRONCO EM ARCO'},
 ] as const;
 export const LOOP_TREE=[
   {x:2130,y:514,seat:0},{x:2310,y:574,seat:1},{x:2242,y:592,seat:2}
@@ -20,9 +34,12 @@ export const LOOP_FINAL=[
   {x:3320,y:510,seat:0},{x:3470,y:573,seat:1},{x:3595,y:590,seat:2}
 ] as const;
 export const ROUTES:Readonly<Record<Layout,{correct:Route;wrong:Route;barrierX:number;returnTo:number;advanceTo:number}>>={
-  0:{correct:'pedra',wrong:'oca',barrierX:1745,returnTo:975,advanceTo:1880},
-  1:{correct:'oca',wrong:'pedra',barrierX:1650,returnTo:975,advanceTo:1880},
-  2:{correct:'pedra',wrong:'oca',barrierX:520,returnTo:975,advanceTo:1880},
+  0:{correct:'pedra',wrong:'oca',barrierX:LOOP_GEOMETRY.layoutWalls[0],
+    returnTo:LOOP_GEOMETRY.returnCenter,advanceTo:LOOP_GEOMETRY.portalLanding},
+  1:{correct:'oca',wrong:'pedra',barrierX:LOOP_GEOMETRY.layoutWalls[1],
+    returnTo:LOOP_GEOMETRY.returnCenter,advanceTo:LOOP_GEOMETRY.portalLanding},
+  2:{correct:'pedra',wrong:'oca',barrierX:LOOP_GEOMETRY.layoutWalls[2],
+    returnTo:LOOP_GEOMETRY.returnCenter,advanceTo:LOOP_GEOMETRY.portalLanding},
 };
 export type LoopWorld={
   layout:Layout; cycle:number;cycleStart:number;blackoutUntil:number;observed:boolean;
@@ -60,37 +77,62 @@ export const near=(pose:Pose,x:number,y:number,dx=64,dy=88)=>
   Math.abs(pose.x-x)<=dx&&Math.abs(pose.y-y)<=dy;
 export const safeForRoute=(p:Pose)=>p.y>=555&&p.y<=640&&Math.abs(p.vy)<145&&Math.abs(p.vx)<270;
 export function correctRoute(layout:Layout):Route{return ROUTES[layout].correct;}
+/** The trustworthy wind points to the NEXT reachable interaction, not the final exit's X. */
 export function windGuide(w:LoopWorld,seat:Seat,x:number):{direction:-1|0|1;target:number;hint:string}{
   let target=0,hint='';
-  if(!w.observed){target=850;hint='OBSERVEM OS MARCOS. O APAGÃO REVELARÁ OUTRA TRILHA.';}
-  else if(!allDone(w.marks)){
-    target=LOOP_MARKS[w.marks.findIndex(v=>!v)].x- (w.marks.findIndex(v=>!v)===1?190:0);
-    hint='LEMBREM-SE DA ÁRVORE OCA, PEDRA RACHADA E TRONCO EM ARCO.';
-  }else if(x<1790){
-    target=w.layout===1?1540:1700;
-    hint='O VENTO INDICA A PASSAGEM '+(correctRoute(w.layout)==='oca'?'DA ÁRVORE OCA.':'DA PEDRA RACHADA.');
+  if(!w.observed){
+    target=LOOP_MARKS[0].x;
+    hint='EXPLOREM À ESQUERDA E MEMORIZEM A ÁRVORE OCA, A PEDRA E O ARCO.';
+  }else if(!allDone(w.marks)){
+    const next=w.marks.findIndex(value=>!value);
+    target=LOOP_MARKS[next].x-(next===1?210:0);
+    hint='MARCOS CONHECIDOS: OBSERVEM O QUE MUDOU DEPOIS DO APAGÃO.';
+  }else if(w.lastRoute!=='right'&&x<LOOP_GEOMETRY.gate+15){
+    target=LOOP_GEOMETRY.portal[ROUTES[w.layout].correct];
+    hint='PASSAGEM VERDADEIRA: '+(ROUTES[w.layout].correct==='oca'?'ÁRVORE OCA':'PEDRA RACHADA')+
+      '. AS OUTRAS DEVOLVEM À CLAREIRA.';
   }else if(!w.bridge){
-    target=!w.stackMilestone?2050:LOOP_TREE[w.tree.findIndex(v=>!v)]?.x??2110;
-    hint=!w.stackMilestone?'APOIO: NINO FICA PARADO, LIA SOBE COM E, TÉO SOBE EM LIA COM E.':
-      'TRÊS AMARRAS PRENDEM A ÁRVORE SOBRE O ABISMO.';
-  }else if(x<2930){target=2750;hint='A PONTE ESTÁ PRONTA. ATRAVESSEM JUNTOS.';}
-  else if(!allDone(w.final)){target=LOOP_FINAL[w.final.findIndex(v=>!v)].x-20;hint='CADA AMIGO DEVE LIBERAR UMA PARTE DA SAÍDA.';}
-  else if(w.layout!==2){target=3320;hint='A ÚLTIMA PASSAGEM SÓ RESPONDE À FLORESTA INVERTIDA. AGUARDEM O VENTO MUDAR.';}
-  else {target=3710;hint='AGORA! SIGAM O VENTO ATÉ A SAÍDA VERDADEIRA.';}
-  return {direction:target>x+38?1:target<x-38?-1:0,target,hint:hint+(seat===0?' • TÉO':seat===1?' • LIA':' • NINO')};
+    target=!w.stackMilestone?2160:LOOP_TREE[w.tree.findIndex(value=>!value)]?.x??2110;
+    hint=!w.stackMilestone?'APOIO: NINO PARADO, LIA SOBE COM E, TÉO SOBE EM LIA COM E.':
+      'SOLTEM AS TRÊS AMARRAS PARA A ÁRVORE FORMAR A PONTE.';
+  }else if(x<2990){
+    target=2910;hint='ATRAVESSEM A ÁRVORE DEITADA PARA A OUTRA MARGEM.';
+  }else if(!allDone(w.final)){
+    target=LOOP_FINAL[w.final.findIndex(value=>!value)].x-22;
+    hint='CADA PERSONAGEM PRECISA ATIVAR SEU MECANISMO FINAL.';
+  }else if(w.layout!==2){
+    target=3300;hint='A SAÍDA AINDA MENTE. ESPEREM A FLORESTA INVERTIDA.';
+  }else {
+    target=3730;hint='AGORA SIGAM O VENTO ATÉ A SAÍDA REAL.';
+  }
+  return {direction:target>x+38?1:target<x-38?-1:0,target,
+    hint:hint+(seat===0?' · TÉO':seat===1?' · LIA':' · NINO')};
 }
-export function barriers(w:LoopWorld):ReadonlyArray<{x:number;enabled:boolean}>{
+/** Permanent gate blocks bypass from clearing; three jumpable obstacles rotate A/B/C. */
+export function barriers(w:LoopWorld):ReadonlyArray<{x:number;enabled:boolean;height:number}>{
   return [
-    {x:1790,enabled:true}, // must enter C through the marked portal, never run around it
-    {x:ROUTES[0].barrierX,enabled:w.layout===0},
-    {x:ROUTES[1].barrierX,enabled:w.layout===1},
-    {x:ROUTES[2].barrierX,enabled:w.layout===2},
-    {x:3710,enabled:!w.exit},
+    {x:LOOP_GEOMETRY.gate,enabled:true,height:550},
+    ...ROUTES_LIST.map((route,i)=>({x:route.barrierX,enabled:w.layout===i,height:96})),
+    {x:LOOP_GEOMETRY.finalGate,enabled:!w.exit,height:550},
   ];
 }
+const ROUTES_LIST=[ROUTES[0],ROUTES[1],ROUTES[2]];
+/** Structural checks: every state has a distinct true route and obstacle-free spawn. */
 export function layoutReachable(w:LoopWorld):boolean{
-  const table=ROUTES[w.layout];
-  return table.correct!==table.wrong && table.advanceTo>1790 && (w.bridge || !w.exit || allDone(w.tree));
+  const route=ROUTES[w.layout];
+  return route.correct!==route.wrong
+    &&route.advanceTo>LOOP_GEOMETRY.gate
+    &&LOOP_START.every(p=>p.x<LOOP_GEOMETRY.gate-50
+      &&p.x>LOOP_GEOMETRY.layoutWalls[0]+80
+      &&p.x<LOOP_GEOMETRY.chasm.start-120);
+}
+export function safeReposition(poses:Pose[],w:LoopWorld):Pose[]|undefined{
+  const obstacles=barriers(w).filter(b=>b.enabled);
+  const unsafe=poses.some(p=>obstacles.some(b=>Math.abs(p.x-b.x)<b.height/5+25
+    &&p.y>LOOP_GEOMETRY.clearing.groundY-b.height-33));
+  if(!unsafe)return undefined;
+  // Safest common rendezvous point preserves identity but eliminates collider traps.
+  return LOOP_START.map(p=>({...p}));
 }
 type Tick={changed:boolean;poses?:Pose[];reset?:boolean;won?:boolean};
 export class LoopAuthority{
@@ -190,12 +232,10 @@ export class LoopAuthority{
       w.blackoutUntil=0;w.layout=((w.layout+1)%3) as Layout;
       w.cycle++;w.cycleStart=now;w.observed=true;
       this.checkExit();
-      // Do not leave a player inside a newly-solid trunk.
-      const corrected=poses.map(p=>{
-        const blocked=barriers(w).find(b=>b.enabled&&Math.abs(p.x-b.x)<47&&p.y>390);
-        return blocked?{...p,x:blocked.x-83,y:602,vx:0,vy:0}:p;
-      });
-      return{changed:true,poses:corrected.some((p,i)=>p!==poses[i])?corrected:undefined};
+      // Detach temporary human towers before moving collisions; progress stays saved.
+      w.supporting=[null,null,null];
+      const corrected=safeReposition(poses,w);
+      return{changed:true,poses:corrected};
     }
     if(now-w.cycleStart>=LOOP_CYCLE_MS){
       w.blackoutUntil=now+LOOP_BLACKOUT_MS;return{changed:true};
@@ -208,12 +248,13 @@ export class LoopAuthority{
       w.completed=true;return{changed:true,won:true};
     }
     if(now-w.routeAt>=3200&&allDone(w.marks)){
-      for(const [route,x] of [['oca',1540],['pedra',1700]] as const){
+      for(const [route,x] of [['oca',LOOP_GEOMETRY.portal.oca],['pedra',LOOP_GEOMETRY.portal.pedra]] as const){
         if(!poses.every(p=>Math.abs(p.x-x)<135&&safeForRoute(p)))continue;
         const correct=ROUTES[w.layout].correct===route;
         w.lastRoute=correct?'right':'wrong';w.routeAt=now;w.routeCount++;
         const to=correct?ROUTES[w.layout].advanceTo:ROUTES[w.layout].returnTo;
-        const moved=poses.map((p,i)=>({...p,x:to+i*39,y:602,vx:0,vy:0}));
+        w.supporting=[null,null,null];
+        const moved=poses.map((p,i)=>({...p,x:to+i*39,y:606,vx:0,vy:0}));
         return{changed:true,poses:moved};
       }
     }
@@ -221,7 +262,8 @@ export class LoopAuthority{
     if(now-w.routeAt>=3200&&w.bridge&&poses.every(p=>near(p,3070,605,115,53)&&safeForRoute(p))
       &&w.layout!==2){
       w.lastRoute='wrong';w.routeAt=now;w.routeCount++;
-      return{changed:true,poses:poses.map((p,i)=>({...p,x:980+i*39,y:602,vx:0,vy:0}))};
+      w.supporting=[null,null,null];
+      return{changed:true,poses:LOOP_START.map(p=>({...p}))};
     }
     return{changed:false};
   }

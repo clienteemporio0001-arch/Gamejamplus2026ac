@@ -1,5 +1,23 @@
 # A FLORESTA MENTE — MAS O VENTO NÃO
 
+## Etapa 09 — clareira central, geometria auditada e arte original
+
+**Spawn da aventura mutável:** Téo (1840,606), Lia (1900,606), Nino (1960,606), sobre chão contínuo, com enquadramento central da câmera. É possível caminhar à esquerda para investigar ÁRVORE OCA (x=700), PEDRA RACHADA (x=1000) e TRONCO EM ARCO (x=1260). À direita, uma parede em x=2070 bloqueia o atalho até a árvore-ponte. Ela só é ultrapassada pelo portal correto, que deposita o grupo com segurança em x=2120/2159/2198, antes do abismo.
+
+**Bifurcações reais:** portais separados em x=790 e x=1460 levam ao setor da árvore ou devolvem à clareira central (x=1840 etc.). A escolha certa é determinada pelos estados A/B/C; o vento indica o portal correto. As rochas baixas de cada configuração se alternam em x=1360/1540/875, com altura de 96px, inferior à altura alcançável de um salto (aproximadamente 127px), não impedindo a exploração. O apagão remove apoios temporários e reposiciona os três na clareira se alguém estiver dentro de um obstáculo recém-solidificado. Amarras, ponte, marcos e saída não são apagados.
+
+**Física/cooperação:** alvo de Téo em x700 usa plataforma rebaixada em y546, acessível por salto. A marca do dash de Nino da árvore foi colocada em x≈2120 após a parede permanente. Os outros alvos continuam nos locais originais à direita para preservar a ponte física de x2265 a x2625. A condição de vitória continua exigindo os três na saída, com todas as travas resolvidas.
+
+**Sincronização inicial do multiplayer:** anteriormente o host enviava um snapshot de estado antes de comunicar que a introdução havia acabado. Convidados que ainda estavam em `intro` descartavam essas posições. Agora, apenas na experiência mutável, o host comunica a fase `playing` primeiro, inicializa os convidados com `LOOP_START` central e envia as poses autorizadas em seguida. A versão clássica mantém a sequência original.
+
+**Visual:** foram criados sprites SVG originais em `public/assets/clearing-tree.svg` (árvore monumental da clareira) e `public/assets/hollow-tree.svg` (marco reconhecível), carregados localmente pelo Phaser. A clareira recebeu brilho difuso; tintas, raízes, rochas físicas e atmosfera mudam de A para B e C. O céu, as árvores e a névoa do NightArt continuam usando planos de parallax. Essas artes são vetoriais manuais, sem recursos protegidos ou imagens de terceiros e sem imagens geradas por IA.
+
+**Validação:** rode `npm run build` e `npm run test:logic`. O conjunto `tests/forestLoop.test.ts` testa nascimento, trajetos esquerda/direita, amplitude de salto, obstáculos e portal seguro, sequência A/B/C, vento, retorno aparente, cooperação, apagão, persistência e condições de vitória. Os testes de código verificam invariantes geométricos e não substituem um playtest completo em navegadores reais, incluindo performance mobile e três redes WebRTC. O som ambiente permanece como polimento futuro.
+
+---
+
+
+
 **Protótipo principal da Game Jam Plus 2026/2027.** Jogo cooperativo 2D de memória e desorientação ambiental, com Phaser 3, TypeScript, Vite e PeerJS/WebRTC.
 
 **JOGAR:** https://clienteemporio0001-arch.github.io/Gamejamplus2026ac/

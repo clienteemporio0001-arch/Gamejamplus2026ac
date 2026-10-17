@@ -491,7 +491,8 @@ export class Network {
         this.phaseSince = msg.info.since; this.phaseUntil = msg.info.until;
         this.playing = this.stage === 'playing'; this.completed = this.stage === 'final';
         if (this.stage === 'playing') this.pendingRestore = true;
-        if (oldLevel !== this.level) this.poses = (this.experience==='loop'?LOOP_START:this.level === 1 ? FOREST_SPAWNS : this.level === 2 ? JOURNEY_SPAWNS : LATE_SPAWNS).map(p => ({ ...p }));
+        if (oldLevel !== this.level || (this.experience==='loop'&&oldStage!=='playing'&&this.stage==='playing'))
+          this.poses = (this.experience==='loop'?LOOP_START:this.level === 1 ? FOREST_SPAWNS : this.level === 2 ? JOURNEY_SPAWNS : LATE_SPAWNS).map(p => ({ ...p }));
         this.emit('phase', this.phaseInfo());
         if (this.playing && (oldStage !== 'playing' || oldLevel !== this.level)) this.emit('start', undefined);
         this.emit('change', undefined);
@@ -628,8 +629,16 @@ export class Network {
   private finishIntro(): void {
     if (!this.isHost || this.stage !== 'intro' || !this.everyoneConnected) return;
     this.poses = (this.experience==='loop'?LOOP_START:FOREST_SPAWNS).map(p => ({ ...p }));
-    this.broadcast({ t: 'state', poses: this.poses });
-    this.setPhase('playing', 1);
+    if(this.experience==='loop'){
+      // A client in 'intro' ignores state packets. Enter 'playing' first so
+      // every authenticated guest accepts the authoritative central spawn.
+      this.setPhase('playing',1);
+      this.broadcast({t:'state',poses:this.poses});
+      this.emit('snapshot',this.poses);
+    }else{
+      this.broadcast({ t: 'state', poses: this.poses });
+      this.setPhase('playing', 1);
+    }
   }
   private advanceLevel(): void {
     if (!this.isHost || this.stage !== 'transition' || !this.everyoneConnected) return;
