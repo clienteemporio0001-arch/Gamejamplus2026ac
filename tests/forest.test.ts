@@ -82,9 +82,9 @@ for(const ts of [11000,11500,12000,12500]){
 }
 ok(canAdvanceForest(newRun.world,1),'passagem de Caboquim abre com a habilidade liberada');
 ok(!canAdvanceForest(newRun.world,4),'portão do abismo permanece fechado sem 3/3');
-ok(forestHint(newRun.world,2,3060).includes('Q + →'),
+ok(forestHint(newRun.world,2,3060).includes('SHIFT + →'),
   'Nino recebe dica ao encostar no cipó sem usá-lo');
-ok(forestHint(newRun.world,1,2500).includes('Q'),
+ok(forestHint(newRun.world,1,2500).includes('J'),
   'Lia recebe instrução do estilingue');
 ok(forestHint(newRun.world,0,1750).includes('Lia'),
   'Téo recebe dica sobre empilhamento');
