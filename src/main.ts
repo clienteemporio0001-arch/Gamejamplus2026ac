@@ -149,6 +149,7 @@ function render(): void {
         CHARACTERS[net.localSeat??0].hex + '">' + safeText(player.toUpperCase()) + '</span></strong>' +
         '<div class="solo-actions"><button id="solo-restart">↻ REINICIAR FASE</button>' +
         '<button id="solo-leave">VOLTAR AO MENU</button></div>' +
+        '<span class="solo-timing">⏱ Tempos de cooperação adaptados para troca manual.</span>' +
         '<div class="solo-switch"><button data-seat="0">1 · TÉO</button>' +
         '<button data-seat="1">2 · LIA</button><button data-seat="2">3 · NINO</button></div></div>'
       : '') + '<div class="hud">🌳 A FLORESTA MENTE · <span class="text-muted">' +

@@ -37,6 +37,7 @@ for(const label of ['MODO SOLO — TESTES','ESCOLHER FASE PARA TESTAR','REINICIA
 for(let i=1;i<=4;i++)ok(ui.includes("button('solo-"+i+"'"),'seletor de fase '+i);
 for(const digit of ['Digit1','Digit2','Digit3'])ok(ui.includes(digit),'atalho '+digit);
 ok(ui.includes('net.selectSoloSeat'),'botões touch / teclado selecionam seat');
+ok(ui.includes('Tempos de cooperação adaptados'),'painel indica janelas especiais solo');
 ok(SOLO_TIMING.riverTemporary===18000&&SOLO_TIMING.riverFinalShot===23000,'janelas solo estendidas');
 const forest=new ForestAuthority();
 const poses=FOREST_SPAWNS.map(p=>({...p}));
