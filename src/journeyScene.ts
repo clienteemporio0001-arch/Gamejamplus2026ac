@@ -60,7 +60,7 @@ export class JourneyScene extends Phaser.Scene {
     (p.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
     this.blocks.push(p);
     const wood = [0x806040,0x87684c,0x9b8457,0x8e6d48,0x987652].includes(color);
-    this.art.platform(p, height > 120 ? 'gate' : wood ? 'bridge' : height < 25 && width > 100 ? 'stone' : 'earth');
+    this.art.platform(p, h > 120 ? 'gate' : wood ? 'bridge' : h < 25 && w > 100 ? 'stone' : 'earth');
     return p;
   }
   private active(p:Phaser.GameObjects.Rectangle,on:boolean):void {
