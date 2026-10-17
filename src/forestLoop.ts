@@ -128,7 +128,7 @@ export function layoutReachable(w:LoopWorld):boolean{
 }
 export function safeReposition(poses:Pose[],w:LoopWorld):Pose[]|undefined{
   const obstacles=barriers(w).filter(b=>b.enabled);
-  const unsafe=poses.some(p=>obstacles.some(b=>Math.abs(p.x-b.x)<b.height/5+25
+  const unsafe=poses.some(p=>obstacles.some(b=>Math.abs(p.x-b.x)<(b.height>200?40:44)
     &&p.y>LOOP_GEOMETRY.clearing.groundY-b.height-33));
   if(!unsafe)return undefined;
   // Safest common rendezvous point preserves identity but eliminates collider traps.
