@@ -107,6 +107,9 @@ export class PuzzleAuthority {
         this.world.finalGate = true;
         this.world.timerUntil = 0;
         return true;
+      default:
+        // Novas interações pertencem ao ForestAuthority, não aos puzzles legados.
+        return false;
     }
   }
   tick(poses: Pose[], now = Date.now()): boolean {
