@@ -214,7 +214,7 @@ function render(): void {
       button('create','🌿 NOVA AVENTURA · MULTIPLAYER ONLINE')+
       button('join-menu','🔑 ENTRAR EM SALA',true)+
       '<div class="kicker">VERSÃO CLÁSSICA / TESTES</div>'+
-      button('solo-menu','🎮 TESTAR AS QUATRO FASES CLÁSSICAS',true)+
+      button('solo-menu','🎮 MODO SOLO — TESTES (CLÁSSICO)',true)+
       button('create-classic','CRIAR SALA CLÁSSICA',true)+'</div>' +
       '<div class="rules">👥 Três jogadores em aparelhos diferentes. Um cria a sala; os outros entram com o código.<br>' +
       '🌐 PeerJS Cloud + WebRTC • Conexão P2P depende da compatibilidade das redes.</div></main>';
