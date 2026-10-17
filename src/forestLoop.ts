@@ -20,7 +20,7 @@ export const LOOP_FINAL=[
   {x:3320,y:510,seat:0},{x:3470,y:573,seat:1},{x:3595,y:590,seat:2}
 ] as const;
 export const ROUTES:Readonly<Record<Layout,{correct:Route;wrong:Route;barrierX:number;returnTo:number;advanceTo:number}>>={
-  0:{correct:'pedra',wrong:'oca',barrierX:840,returnTo:975,advanceTo:1880},
+  0:{correct:'pedra',wrong:'oca',barrierX:1745,returnTo:975,advanceTo:1880},
   1:{correct:'oca',wrong:'pedra',barrierX:1650,returnTo:975,advanceTo:1880},
   2:{correct:'pedra',wrong:'oca',barrierX:520,returnTo:975,advanceTo:1880},
 };

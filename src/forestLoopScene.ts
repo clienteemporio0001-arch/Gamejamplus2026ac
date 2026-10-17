@@ -146,7 +146,7 @@ export class ForestLoopScene extends Phaser.Scene {
     this.ground(3320,548,145,20,'wood');
     this.bridge=this.ground(2445,659,360,36,'wood');
     // Only the host's loop snapshot determines physical blockers.
-    this.blockers=[this.ground(840,364,38,540,'stone'),
+    this.blockers=[this.ground(1745,364,38,540,'stone'),
       this.ground(1650,364,38,540,'wood'),
       this.ground(520,364,38,540,'stone'),
       this.ground(1790,357,44,560,'stone')];
