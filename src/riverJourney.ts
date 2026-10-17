@@ -59,7 +59,7 @@ export function initialJourney(now=Date.now()):JourneyWorld {
 export function validJourney(value:unknown):value is JourneyWorld {
   if(!value||typeof value!=='object'||Array.isArray(value))return false;
   const w=value as Record<string,unknown>;
-  const tri=(x:unknown)=>Array.isArray(x)&&x.length===3;
+  const tri=(x:unknown):x is unknown[]=>Array.isArray(x)&&x.length===3;
   return tri(w.materials)&&w.materials.every(x=>typeof x==='boolean')
     &&tri(w.supporting)&&w.supporting.every((x:unknown,i:number)=>
       x===null||(i===0&&x===1)||(i===1&&x===2))

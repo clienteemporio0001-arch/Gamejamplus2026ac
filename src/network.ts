@@ -742,7 +742,7 @@ export class Network {
       : this.level === 2 ? JOURNEY_CHECKPOINTS : LATE_CHECKPOINTS;
     const index = this.level === 1 ? this.puzzle.checkpoint
       : this.level === 2 ? this.journey.checkpoint : this.chapter.checkpoint;
-    const pose: Pose = { seat, x: checkpoints[index] + seat * 18, y: 567, vx: 0, vy: 0 };
+    const pose: Pose = { seat, x: (checkpoints[index] ?? checkpoints[0]) + seat * 18, y: 567, vx: 0, vy: 0 };
     if (p.x === pose.x && p.y === pose.y) return;
     this.poses[seat] = pose;
     this.broadcast({t:'respawn',pose});
