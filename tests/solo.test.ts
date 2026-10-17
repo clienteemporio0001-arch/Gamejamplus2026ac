@@ -18,6 +18,9 @@ ok(net.includes("this.poses[p.seat]={...p}"),'três poses de seats reais');
 ok(net.includes('this.poses[this.localSeat]'),'report não força seat 0');
 ok(net.includes("this.authority.world.unlocked=[level!==1,true,true]"),'desbloqueios por capítulo');
 ok(net.includes('  restartSolo():void {'),'recomeçar a fase');
+ok(net.includes('if(this.isSolo && result.hits.length>0)'),'onça reinicia todos no solo');
+ok(net.includes('if(this.isSolo){this.restartSolo();return;}'),'queda nas fases finais reinicia todos no solo');
+
 ok(physics.includes('scene.physics.add.existing(actor)'),'três corpos Arcade');
 ok(physics.includes('scene.physics.add.collider(actor,block)'),'colisões dos inativos');
 ok(physics.includes('body.setAllowGravity(true)'),'inativos continuam sob gravidade');

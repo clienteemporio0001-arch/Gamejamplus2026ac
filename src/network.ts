@@ -773,17 +773,30 @@ export class Network {
           this.broadcast({t:'hazard',jaguar:this.jaguar});
           this.emit('hazard',this.jaguar);
         }
+        if(this.isSolo && result.hits.length>0){
+          this.restartSolo();return;
+        }
         for (const seat of result.hits) this.respawn(seat);
       }
       if (this.level === 4) {
         // Caminho falso marcado pela placa VOLTE; salte a trilha enganosa.
         for (const pose of this.poses) {
           if (pose.x >= 425 && pose.x <= 485 && pose.y >= 594 && this.chapterAuthority.world.level === 4
-              && this.chapterAuthority.world.checkpoint < 2) this.respawn(pose.seat);
+              && this.chapterAuthority.world.checkpoint < 2) {
+              if(this.isSolo){this.restartSolo();return;}
+              this.respawn(pose.seat);
+            }
         }
       }
     }
-    if(this.level>=3){for (const pose of this.poses) { if (pose.y >= 695) this.respawn(pose.seat); }}
+    if(this.level>=3){
+      for(const pose of this.poses){
+        if(pose.y>=695){
+          if(this.isSolo){this.restartSolo();return;}
+          this.respawn(pose.seat);
+        }
+      }
+    }
     this.broadcast({ t: 'state', poses: this.poses });
     this.emit('snapshot', this.poses);
     const passed = this.level === 1 ? this.forestAuthority.hasWon(this.poses)
