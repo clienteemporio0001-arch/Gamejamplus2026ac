@@ -637,7 +637,7 @@ export class Network {
     const minInterval = key === 'collect' ? 140 : 90;
     if (now - (this.lastAction.get(key) ?? -10000) < minInterval) return;
     this.lastAction.set(key, now);
-    if (this.isHost) this.hostAction(0, action);
+    if (this.isHost) this.hostAction(this.isSolo ? this.localSeat : 0, action);
     else this.message(this.hostConn, { t: 'act', action });
   }
   private hostAction(seat: Seat, action: PuzzleAction): void {

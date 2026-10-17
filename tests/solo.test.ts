@@ -16,6 +16,7 @@ ok(net.includes("this.emit('solo-seat',seat)"),'troca sincroniza cenas');
 ok(net.includes("if(!this.isSolo||!this.playing||this.localSeat===seat)return;"),'troca restrita ao solo');
 ok(net.includes("this.poses[p.seat]={...p}"),'três poses de seats reais');
 ok(net.includes('this.poses[this.localSeat]'),'report não força seat 0');
+ok(net.includes('this.hostAction(this.isSolo ? this.localSeat : 0, action)'), 'ações locais atribuídas à identidade selecionada');
 ok(net.includes("this.authority.world.unlocked=[level!==1,true,true]"),'desbloqueios por capítulo');
 ok(net.includes('  restartSolo():void {'),'recomeçar a fase');
 ok(net.includes('if(this.isSolo && result.hits.length>0)'),'onça reinicia todos no solo');
@@ -62,4 +63,21 @@ for(const lvl of [3,4] as const){
  const auth=new ChapterAuthority(lvl);auth.solo=true;
  ok(auth.world.level===lvl&&LATE_SPAWNS.length===3,'autoridade solo fase '+lvl);
 }
+
+const activity=new ForestAuthority();
+activity.world.caboStep=5;activity.world.unlocked=true;activity.world.vines=[true,true,true];
+const actors=FOREST_SPAWNS.map(p=>({...p}));
+actors[0].x=3310;actors[0].y=390;
+ok(!activity.act(1,{kind:'lever'},actors,10000),'Lia não aciona primeira amarra');
+ok(activity.act(0,{kind:'lever'},actors,10100),'Téo aciona primeira amarra');
+actors[1].x=3300;actors[1].y=592;
+ok(!activity.act(2,{kind:'shoot',facing:1},actors,10500),'Nino não usa baladeira');
+ok(activity.act(1,{kind:'shoot',facing:1},actors,10600),'Lia acerta segunda amarra');
+actors[2].x=3260;actors[2].y=590;
+ok(!activity.act(2,{kind:'dash',facing:1},actors,11000),'Nino inicia dash');
+actors[2].x=3425;
+ok(activity.act(2,{kind:'switch'},actors,11700),'Nino aciona terceira amarra');
+ok(activity.world.treeSteps.every(Boolean),'três identidades concluem a árvore');
+ok(ui.includes("net.isSolo&&net.playing&&['Digit1'"),'1/2/3 sem interferência online');
+
 console.log('APROVADO: '+count+' verificações do Modo Solo sem IA e das quatro fases.');

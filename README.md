@@ -129,3 +129,10 @@ Para um usuário alternando personagens, as janelas dos mecanismos temporizados 
 Arquivos novos: src/soloBodies.ts, src/soloRules.ts e tests/solo.test.ts. Arquivos adaptados: src/network.ts, src/main.ts, src/forestScene.ts, src/journeyScene.ts, src/lateScene.ts, src/chapters.ts, src/riverJourney.ts, src/style.css, package.json.
 
 Validação pendente: jogar manualmente os quatro capítulos em um navegador real para conferir colisões físicas dos três atores, troca durante o apoio, plataformas móveis, adequação dos temporizadores, checkpoints, morte e progressão. Um build ou teste de lógica aprovado não comprova conclusões jogáveis no browser.
+
+
+## Etapa 07-C — Modo solo sem IA
+
+No menu, clique MODO SOLO — TESTES e escolha uma das quatro fases, ou assista à introdução. Alterne manualmente com 1=Téo, 2=Lia e 3=Nino (também no celular). O personagem selecionado recebe os controles, a câmera segue seu corpo Arcade e os demais mantêm física, posição e colisões. Use A/D ou setas para mover; Espaço/↑ para pular; E para interagir; J para a baladeira de Lia; Shift para o dash de Nino.
+
+O modo solo não cria PeerJS ou WebRTC. Reutiliza as autoridades das quatro fases, com temporizadores maiores exclusivamente para testes e botões REINICIAR FASE e VOLTAR AO MENU. A física local está em src/soloBodies.ts e o ajuste de tempo em src/soloRules.ts. A correção de atribuição em Network.act identifica o seat atualmente escolhido em modo solo, sem mudar o anfitrião online. Ainda é indispensável validar manualmente o percurso completo nas quatro fases com a troca de personagens, principalmente apoios e pontes móveis; build e testes de lógica não comprovam acessibilidade física dos desafios.
