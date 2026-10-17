@@ -1,69 +1,59 @@
 # A FLORESTA MENTE — Ninguém fica para trás
 
-Protótipo cooperativo Phaser 3 + TypeScript + Vite para a **Game Jam Plus 2026/2027**.
-Temas oficiais: Better Together e Something's Off.
+Jogo cooperativo 2D para três pessoas, desenvolvido para Game Jam Plus 2026/2027. Temas: **Better Together** e **Something's Off**.
 
-## Fase 02: primeira fase cooperativa
+**Tecnologias:** Phaser 3, TypeScript, Vite, PeerJS Cloud (sinalização) e WebRTC DataChannels (jogabilidade P2P entre cada convidado e anfitrião). Não possui Socket.IO, Express, backend de gameplay, banco de dados ou servidor multiplayer próprio.
 
-A fase **A Boca da Noite** agora tem três personagens, cada um com habilidade que precisa ser coletada:
-- **Téo (verde)**: salto duplo. Coletar energia verde e pressionar PULAR novamente durante um salto.
-- **Lia (laranja)**: estilingue. Coletar item laranja e usar Q para atingir o alvo acima dos cipós.
-- **Nino (azul)**: dash +40% durante 0,8 segundo e cooldown de 2 segundos. Coletar energia azul e usar Q.
+## Como jogar
 
-Três desafios precisam ser resolvidos para a vitória:
-1. **A Passagem Suspensa:** Téo alcança plataforma alta com salto duplo e aciona alavanca com E para abrir ponte.
-2. **Os Cipós da Floresta:** Lia atira no alvo com Q; os cipós se recolhem.
-3. **A Porta do Tempo:** Nino aciona o pedestal com E, atravessa com Q (dash) e aciona o interruptor final com E antes da porta fechar. A passagem se abre permanentemente.
+1. No navegador, abra: https://clienteemporio0001-arch.github.io/Gamejamplus2026ac/
+2. Um jogador escolhe **CRIAR SALA**; compartilha código de 6 caracteres com dois amigos.
+3. Ambos entram em **ENTRAR EM SALA**, todos escolhem **ESTOU PRONTO** e o anfitrião inicia.
+4. Assistam à **introdução de 24 segundos** (4 cenas em Phaser). Qualquer jogador pode solicitar **PULAR INTRODUÇÃO**, mas o anfitrião avança as três telas juntas.
+5. Na **Fase 01 — A Boca da Noite**, coletem cada habilidade: Téo (salto duplo), Lia (estilingue), Nino (dash). Destravem ponte, cipós e porta final; os três devem chegar juntos à saída.
+6. Após **FASE CONCLUÍDA**, o anfitrião conduz a transição visual. Todos carregam a **Fase 02 — A Ponte Quebrada** com habilidades preservadas.
+7. No rio, Téo usa salto duplo e E na alavanca elevada para descer a primeira parte da ponte; Lia usa Q no alvo para soltar a segunda; Nino usa E no temporizador, pula, usa Q para dash e aperta E junto ao interruptor oposto para fixar a terceira.
+8. Mecanismo final simultâneo: Téo fica sobre a placa de pressão na outra margem, Lia acerta o alvo com Q, Nino usa Q para dash e E no último interruptor **antes de o tempo acabar**. Depois todos chegam juntos à saída.
+9. A fase termina com **VOCÊS ATRAVESSARAM O RIO!** e **A floresta ainda guarda seus segredos...**. As fases 03, 04 e 05 ainda não são jogáveis.
 
-O anfitrião valida posição, personagem, habilidade e progresso. Apenas ele pode decidir que os três desafios foram concluídos e que todos estão na saída. A vitória mostra **NINGUÉM FICA PARA TRÁS!**
+**Controles:** A/D ou setas para andar, Espaço/↑ para pular e salto duplo, E para interagir, Q para disparo/dash. Celular: direção, botão PULAR e botões E e Q; usar orientação horizontal.
 
-Há checkpoints cooperativos compartilhados. Quem cai no abismo volta ao checkpoint mais recente.
+## Desenvolvimento e testes
 
-## Arquitetura
+Requisito: Node 20.19+ ou 22+.
 
-- `src/network.ts` — PeerJS, três vagas, lobby, sincronização de movimento, autorização de ações, broadcast do estado de puzzles, reconexão por até 30 s, vitória autoritativa
-- `src/puzzles.ts` — geometria e regras puras dos três desafios, timers, cooldowns e validação de progresso
-- `src/game.ts` — cena Phaser com habilidades e obstáculos, física, gráficos, efeitos, plataformas e HUD
-- `src/main.ts` — telas iniciais, lobby, HUD, direcional móvel multitoque, botões E e Q
-- `src/style.css` — layout, cores e aviso de orientação
-- `src/levels.ts` — estrutura nominal das cinco fases, com somente a primeira implementada
-- `tests/puzzles.test.ts` — verificações automatizadas de permissões, habilidades, idempotência, timer e vitória
-- `.github/workflows/pages.yml` — compile, test, build HTML5, artifact ZIP e GitHub Pages
-
-**Sem Socket.IO, Express, backend próprio ou banco de dados.** PeerJS Cloud é usado só para sinalização; o gameplay usa WebRTC DataChannels com topologia estrela (anfitrião → dois convidados).
-
-## Execução local
-
-Requisito: Node.js 20.19+ ou 22+.
-
-~~~bash
+```bash
 npm install
 npm run dev
 npm run build
 npm run test:logic
-~~~
+```
 
-A build estática `dist/` contém `index.html` e `assets/`; Vite está configurado com caminho relativo `./`.
-Para o itch.io, compacte **o conteúdo** de `dist/` em ZIP e selecione projeto do tipo HTML. HTTPS é necessário para distribuição remota.
+O GitHub Actions executa build TypeScript/Vite, testes de lógica das duas fases e publica no GitHub Pages. O workflow disponibiliza ZIP HTML5 em **Actions → Publicar jogo no GitHub Pages → Artifacts**. Para itch.io, compactar o **conteúdo** de `dist/` incluindo `index.html` e `assets/` (o Vite já configura caminhos relativos com `base: './'`).
 
-## Teste com três computadores ou celulares
+## Organização
 
-1. Entre em https://clienteemporio0001-arch.github.io/Gamejamplus2026ac/ nos três aparelhos.
-2. Uma pessoa cria sala e envia o código de seis caracteres às outras duas.
-3. Os outros escolhem ENTRAR EM SALA; todos marcam ESTOU PRONTO e o anfitrião inicia.
-4. Coletem cada habilidade individual e ativem os três mecanismos cooperativamente.
-5. Movimentação: A/D ou setas. PULAR: Espaço ou seta para cima. E: interagir. Q: usar habilidade. Controles virtuais E, Q, PULAR e direcional funcionam em celulares na horizontal.
-6. Confiram que a ponte, os cipós, a porta, as habilidades e os checkpoints sincronizam nos três aparelhos. Façam os três entrar na região CASA para finalizar.
-7. Testem o quarto navegador, desconexões de convidados, reconexão em até 30 segundos e redes móveis diferentes.
+- `src/main.ts`: menu, lobby, controles móveis e renderização sincronizada de intro, fases, transição e epílogo.
+- `src/network.ts`: PeerJS, salas, mensagens tipadas e validadas, autorização do anfitrião, 20 Hz, fases e restauração após reconexão.
+- `src/intro.ts`: intro de 4 cenas ilustradas em Phaser (sem MP4, sem downloads de arte).
+- `src/game.ts`: primeira fase, personagens e puzzles legados preservados.
+- `src/puzzles.ts`: autoridade e regras da primeira fase.
+- `src/riverScene.ts`: segunda fase no rio, cenário e controles do jogo.
+- `src/river.ts`: autoridade dos puzzles, tempo, checkpoints, mistério sincronizado e conclusão da segunda fase.
+- `src/levels.ts`: registro das 5 fases planejadas.
+- `tests/puzzles.test.ts`, `tests/river.test.ts`: testes de regras de ambos os mapas.
 
-No GitHub, acesse Actions → Publicar jogo no GitHub Pages para ver resultados de compilação, teste de lógica, ZIP e deploy.
+## Multiplayer e reconexão
 
-## Limitações e critérios de QA
+O anfitrião recebe intenções dos convidados e valida a vaga, a habilidade, a distância ao mecanismo e o estado do desafio. Somente o anfitrião pode atualizar o estado compartilhado e autorizar transições e conclusão. A sincronização envia posições ~20 vezes/segundo e atualizações de puzzle **apenas quando o estado muda**, não o mapa inteiro.
 
-- Testes automatizados de TypeScript, build e lógica não substituem testes reais de WebRTC em três dispositivos.
-- O serviço PeerJS Cloud e o NAT de cada rede afetam conectividade; não há servidor TURN próprio.
-- Os convidados simulam seu movimento localmente; o anfitrião valida ações conforme posições recebidas. Não é um sistema antitrapaça completo.
-- A sincronização usa snapshots de posições a ~20 Hz e mensagens de mudança de puzzle; não transmite o cenário inteiro.
-- Não há migração de anfitrião, persistência ou matchmaking.
-- A compatibilidade do ZIP no iframe do itch.io depende de validação depois do upload.
-- Nenhuma fase 03, inimigo ou habilidade além das três previstas foi implementada.
+A reconexão do convidado com vaga reservada restaura a fase corrente, posição e estado dos mecanismos; a desconexão pausa a partida cooperativa. Janela de reconexão: até 30 segundos. Não há migração de anfitrião.
+
+## Limitações e créditos
+
+- É necessário testar manualmente os três aparelhos, os controles por toque, os temporizadores com latência real, a reconexão e a execução do itch.io em iframe; testes automatizados não provam isso.
+- PeerJS Cloud é um serviço público de sinalização; o P2P pode falhar sob CGNAT/firewall sem servidor TURN adicional.
+- Movimentação de cada convidado é simulada localmente e reportada ao host; mecanismos são validados pelo anfitrião, mas não há sistema antifraude determinístico.
+- O efeito de ilusão da ponte utiliza um marcador de evento definido pelo anfitrião; a animação não desloca a colisão física, para evitar bloqueios.
+- Gráficos e efeitos visuais desta fase são formas geométricas procedurais desenhadas em Phaser, sem arquivos de imagem, vídeo ou áudio externos nem recursos de arte gerados por IA. A biblioteca de fonte pode ser carregada do Google Fonts; a fonte alternativa do sistema funciona sem ela.
+- A conclusão no rio é temporária; não existe fim definitivo nem Fases 03–05 nesta versão.
