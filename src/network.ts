@@ -3,6 +3,7 @@ import { PuzzleAuthority, initialWorld, validWorld, validAction, CHECKPOINTS, ty
 import { RiverAuthority, initialRiver, validRiver, RIVER_CHECKPOINTS, RIVER_SPAWNS, type RiverWorld } from './river';
 import { SkillFxGate, validSkillFx, type SkillFx } from './effects';
 import { ChapterAuthority, initialEyes, initialTrail, defaultJaguar, validChapter, validJaguar, LATE_SPAWNS, LATE_CHECKPOINTS, type ChapterWorld, type Jaguar, type LateLevel } from './chapters';
+import { nextPlayableLevel } from './levels';
 
 export type Stage = 'lobby' | 'intro' | 'playing' | 'transition' | 'final';
 export type Level = 1 | 2 | 3 | 4;
@@ -485,8 +486,8 @@ export class Network {
   }
   private advanceLevel(): void {
     if (!this.isHost || this.stage !== 'transition' || !this.everyoneConnected) return;
-    const next = (this.level + 1) as Level;
-    if (next < 2 || next > 4) return;
+    const next = nextPlayableLevel(this.level);
+    if (next === null) return;
     this.effectGate.reset();this.lastHazardBroadcast=0;
     if (next === 2) {
       this.riverAuthority.reset();

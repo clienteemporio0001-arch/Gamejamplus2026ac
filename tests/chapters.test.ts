@@ -1,10 +1,13 @@
 import { ChapterAuthority, EYES, TRAIL, LATE_SPAWNS, movingTarget, validChapter, validJaguar } from '../src/chapters';
+import { nextPlayableLevel } from '../src/levels';
 import type { Pose, Seat } from '../src/network';
 const unlock=[true,true,true];
 let checks=0;
 function check(ok:unknown,message:string):void{if(!ok)throw new Error('FALHA: '+message);checks++;}
 function poses():Pose[]{return LATE_SPAWNS.map(x=>({...x}));}
 const players=poses(), eyes=new ChapterAuthority(3);
+check(nextPlayableLevel(1)===2 && nextPlayableLevel(2)===3 && nextPlayableLevel(3)===4,'progresso 1→2→3→4');
+check(nextPlayableLevel(4)===null,'fase 05 reservada');
 let at=10000;
 check(validChapter(eyes.world) && eyes.world.level===3,'snapshot capítulo 3 válido');
 check(!eyes.hasWon(players),'vitória 3 inicialmente bloqueada');
@@ -45,6 +48,7 @@ chasePos[1].x=595;chasePos[1].y=594;
 const hit=chasing.tick(chasePos,20000);
 check(hit.hits.includes(1),'onça detecta colisão');
 check(validJaguar(chasing.jaguar) && chasing.jaguar.mode==='chase','onça é autoritativa e válida');
+check(chasing.jaguar.platformX>=752 && chasing.jaguar.platformX<=858,'plataforma sincronizada pelo anfitrião');
 check(!chasing.tick(chasePos,20050).hits.includes(1),'invulnerabilidade temporária');
 chasePos[1].x=200;
 check(chasing.tick(chasePos,20400).hits.length===0,'onça sem jogador próximo volta a patrulhar');

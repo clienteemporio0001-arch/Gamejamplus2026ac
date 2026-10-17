@@ -9,3 +9,9 @@ export const LEVELS = [
 export type LevelId = typeof LEVELS[number]['id'];
 export const DEMO_LEVEL = LEVELS[0];
 export const RIVER_LEVEL = LEVELS[1];
+
+/** Não carrega a Fase 05 ainda; somente o anfitrião chama para avançar. */
+export function nextPlayableLevel(level: number): 2 | 3 | 4 | null {
+  const next = level + 1;
+  return next === 2 || next === 3 || next === 4 ? next : null;
+}

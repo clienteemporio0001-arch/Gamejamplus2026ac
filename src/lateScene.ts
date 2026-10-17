@@ -22,6 +22,8 @@ export class LateScene extends Phaser.Scene {
   private blink!:Phaser.GameObjects.Rectangle;
   private jaguar!:Phaser.GameObjects.Container;
   private jaguarTarget=595;
+  private platformTarget=805;
+  private mysticTrees:Phaser.GameObjects.Ellipse[]=[];
   private jaguarMode:Jaguar['mode']='patrol';
   private markers:Phaser.GameObjects.Arc[]=[];
   private signs:Phaser.GameObjects.Text[]=[];
@@ -110,7 +112,7 @@ export class LateScene extends Phaser.Scene {
       'Quando a floresta fica em silêncio, é porque alguma coisa está observando.\nA onça protege o caminho. Trabalhem juntos!':
       'Nem todo caminho que parece certo leva para casa.\nContem suas pistas aos outros amigos!',5800);
     this.unsubs.push(this.net.on('chapter',w=>this.sync(w)));
-    this.unsubs.push(this.net.on('hazard',h=>{this.jaguarTarget=h.x;this.jaguarMode=h.mode;}));
+    this.unsubs.push(this.net.on('hazard',h=>{this.jaguarTarget=h.x;this.jaguarMode=h.mode;this.platformTarget=h.platformX;}));
     this.unsubs.push(this.net.on('effect',fx=>this.vfx.play(fx)));
     this.unsubs.push(this.net.on('snapshot',ps=>{
       for(const p of ps)if(p.seat!==this.net.localSeat)this.remote[p.seat]={...p};
@@ -152,6 +154,12 @@ export class LateScene extends Phaser.Scene {
       }
     }
     this.add.rectangle(600,683,1200,27,0x153b2e).setDepth(-1);
+    if(!eyes){
+      for(let i=0;i<5;i++){
+        const crown=this.add.ellipse(120+i*218,331+(i%2)*20,86,116,0x1a483a,.83).setDepth(-2);
+        this.mysticTrees.push(crown);
+      }
+    }
     this.text(600,57,eyes?'03 · OLHOS NA MATA':'04 · A TRILHA QUE MENTE',23);
     this.text(600,84,eyes?'Silêncio. Há olhos na mata.':'A verdade está escondida entre três pistas.',12);
     for(let i=0;i<10;i++){
@@ -166,7 +174,10 @@ export class LateScene extends Phaser.Scene {
     this.bridge=this.block(519,650,170,60,0x815a3a);
     this.roots=this.block(529,507,30,226,0x4a7c47);
     this.gate=this.block(1140,497,32,243,0x5d8c87);
-    this.blink=this.block(822,502,120,18,0x59745b); // plataforma alta de observação, sempre segura
+    this.blink=this.block(805,502,120,18,0x59745b); // plataforma móvel: posição recebida do anfitrião
+    this.platformTarget=this.net.jaguar.platformX;
+    this.blink.setPosition(this.platformTarget,502);
+    (this.blink.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
     this.block(315,432,126,19,0x526c50);
     this.text(318,320,'TÉO · SALTO DUPLO + E',12);
     this.add.rectangle(EYES.lever.x,EYES.lever.y,13,36,0xf7be78).setAngle(-27).setDepth(9);
@@ -258,6 +269,7 @@ export class LateScene extends Phaser.Scene {
         this.signs[1].setText('PERIGO →');
         this.signs[2].setText('SIGA A LUZ ✦');
       }
+      if(!announce && w.transformed) this.mysticTrees.forEach((tree,i)=>tree.x+=(i%2===0?38:-38));
       if(announce && this.info?.active && prev.level===4){
         if(w.errors>prev.errors){
           this.alert('ORDEM ERRADA! OS TOTENS APAGARAM. TENTEM NOVAMENTE!',3000);
@@ -267,6 +279,9 @@ export class LateScene extends Phaser.Scene {
         if(!prev.transformed && w.transformed){
           this.alert('A FLORESTA ESTAVA MENTINDO!',4000);this.blackout(1100);
           this.burst(943,597,0xe5ffbc,22);
+          this.mysticTrees.forEach((tree,i)=>this.tweens.add({
+            targets:tree,x:tree.x+(i%2===0?38:-38),duration:950,ease:'Sine.easeInOut'
+          }));
         }
         if(!prev.finalGate && w.finalGate)this.celebrate();
       }
@@ -334,6 +349,11 @@ export class LateScene extends Phaser.Scene {
     const now=Date.now();
     if(this.net.level===3 && this.jaguar){
       this.jaguar.x=Phaser.Math.Linear(this.jaguar.x,this.jaguarTarget,1-Math.exp(-Math.min(delta,80)/90));
+      const newX=Phaser.Math.Linear(this.blink.x,this.platformTarget,1-Math.exp(-Math.min(delta,80)/110));
+      if(Math.abs(newX-this.blink.x)>.15){
+        this.blink.x=newX;
+        (this.blink.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
+      }
       this.jaguar.setAlpha(this.jaguarMode==='distracted'?.5:1);
       const current=this.world;
       if(current.level===3 && current.distractedUntil>now){

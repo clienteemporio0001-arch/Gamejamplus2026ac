@@ -1,7 +1,7 @@
 import type { Pose, Seat } from './network';
 import type { PuzzleAction } from './puzzles';
 export type LateLevel = 3 | 4;
-export type Jaguar = { x: number; y: number; mode: 'patrol' | 'chase' | 'distracted'; facing: -1 | 1; target: Seat | null };
+export type Jaguar = { platformX: number; x: number; y: number; mode: 'patrol' | 'chase' | 'distracted'; facing: -1 | 1; target: Seat | null };
 export type EyesWorld = {
   level: 3; roots: boolean; distractedUntil: number; timerUntil: number;
   passage: boolean; pressure: boolean; shotUntil: number; finalGate: boolean;
@@ -47,7 +47,7 @@ export const initialTrail = (): TrailWorld => ({
   level:4, totems:0, errors:0, transformed:false, signsChanged:false,
   platformsOn:true, nextFlipAt:0, pressure:false, shotUntil:0, finalGate:false, checkpoint:0
 });
-export const defaultJaguar = (): Jaguar => ({x: PATROL_LEFT, y: JAGUAR_Y, mode:'patrol', facing:1, target:null});
+export const defaultJaguar = (): Jaguar => ({platformX:805,x: PATROL_LEFT, y: JAGUAR_Y, mode:'patrol', facing:1, target:null});
 export function validChapter(value: unknown): value is ChapterWorld {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const w=value as Record<string, unknown>;
@@ -63,7 +63,7 @@ export function validChapter(value: unknown): value is ChapterWorld {
 export function validJaguar(value: unknown): value is Jaguar {
   if(!value || typeof value!=='object' || Array.isArray(value)) return false;
   const j=value as Record<string,unknown>;
-  return available(j.x) && (j.x as number)<=1200 && available(j.y) && (j.y as number)<=700
+  return available(j.platformX) && (j.platformX as number)>=730 && (j.platformX as number)<=880 && available(j.x) && (j.x as number)<=1200 && available(j.y) && (j.y as number)<=700
     && ['patrol','chase','distracted'].includes(String(j.mode))
     && (j.facing===1 || j.facing===-1)
     && (j.target===null || j.target===0 || j.target===1 || j.target===2);
@@ -180,6 +180,7 @@ export class ChapterAuthority {
       const dt=this.lastTick?Math.max(0,Math.min(120,now-this.lastTick)):50;
       this.lastTick=now;
       const prev=this.jaguar.x,prevMode=this.jaguar.mode;
+      this.jaguar.platformX = 805 + Math.sin(now / 760) * 53;
       if(w.distractedUntil>now){
         this.jaguar.mode='distracted';this.jaguar.target=null;
         this.jaguar.x=Math.min(PATROL_RIGHT,Math.max(PATROL_LEFT,this.jaguar.x-0.19*dt));
