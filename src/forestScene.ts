@@ -6,15 +6,9 @@ import { FOREST_WIDTH, FOREST_SPAWNS, FOREST_VINES, CABO_X, TREE_ACTIONS,
 import type { TouchInput } from './game';
 import { SkillVfx } from './skillVfx';
 import { NightArt } from './visuals';
+import { GUIDE_DIALOGUES, GUIDE_NAME } from './forestPresentation';
+import { IndigenousGuideVisual, GiantBridgeTree } from './forestArt';
 
-const story=[
-  '',
-  'CABOQUIM: "Ocês se perderam na mata, foi?"',
-  'TÉO: "A gente só quer voltar pra casa!"',
-  'CABOQUIM: "Essa floresta num mostra o mesmo caminho duas vezes..."',
-  'CABOQUIM: "Mas se ficarem juntos, talvez consigam encontrar a saída."',
-  '✦ TÉO RECEBEU O SALTO DUPLO! Pule novamente durante um salto.'
-];
 export class ForestScene extends Phaser.Scene {
   private net:Network;private touch:TouchInput;private hud?:()=>void;
   private world:ForestWorld;
@@ -30,8 +24,10 @@ export class ForestScene extends Phaser.Scene {
   private caboGateNote!:Phaser.GameObjects.Text;
   private vinesGateNote!:Phaser.GameObjects.Text;
   private hintLabel!:Phaser.GameObjects.Text;
-  private treeTrunk!:Phaser.GameObjects.Rectangle;
-  private cabo!:Phaser.GameObjects.Container;
+  private treeVisual!:GiantBridgeTree;
+  private guide!:IndigenousGuideVisual;
+  private mechanismLights:Phaser.GameObjects.Arc[]=[];
+  private interactionPrompt!:Phaser.GameObjects.Text;
   private vines:Phaser.GameObjects.Container[]=[];
   private heartLabel!:Phaser.GameObjects.Text;
   private goalLabel!:Phaser.GameObjects.Text;
@@ -88,14 +84,15 @@ export class ForestScene extends Phaser.Scene {
     if(!this.heartLabel)return;
     const w=this.world;
     this.heartLabel.setText(w.health.map((n,i)=>CHARACTERS[i].name+': '+'♥'.repeat(n)+'♡'.repeat(3-n)).join('   '));
-    this.goalLabel.setText('CIPÓS '+w.vines.filter(Boolean).length+'/3  •  ÁRVORE '+w.treeSteps.filter(Boolean).length+'/3' +
-      (w.bridge?'  •  PONTE PRONTA!':''));
+    this.goalLabel.setText(w.bridge
+      ? '🌳 PONTE DE ÁRVORE PRONTA! ATRAVESSEM JUNTOS.'
+      : 'CIPÓS '+w.vines.filter(Boolean).length+'/3  •  AMARRAS '+w.treeSteps.filter(Boolean).length+'/3');
     this.hud?.();
   }
   private paint():void {
     this.art=new NightArt(this,FOREST_WIDTH,'forest');
     const zones=[
-      [330,'A · ENTRADA DA FLORESTA'],[835,'B · CABOQUIM DA MATA'],
+      [330,'A · ENTRADA DA FLORESTA'],[835,'B · GUIA INDÍGENA'],
       [1540,'C · A ÁRVORE GIGANTE'],[2400,'D · OS CIPÓS SUSPENSOS'],
       [3450,'E · O GRANDE ABISMO'],[4100,'F · A SAÍDA COOPERATIVA']
     ] as const;
@@ -112,12 +109,12 @@ export class ForestScene extends Phaser.Scene {
     this.ground(1765,653,3530,64);
     this.ground(4086,653,428,64);
     // Paredes físicas bem sinalizadas: os personagens não podem simplesmente
-    // ignorar Caboquim e os 3 cipós, alcançando o abismo sem meios de vencer.
+    // ignorar o encontro com o guia e os 3 cipós, alcançando o abismo sem meios de vencer.
     this.caboGate=this.ground(FOREST_GATES.cabo,300,44,690,0x35674b);
     this.vinesGate=this.ground(FOREST_GATES.vines,300,44,690,0x54764a);
     this.solid(this.caboGate,!this.world.unlocked);
     this.solid(this.vinesGate,!this.world.vines.every(Boolean));
-    this.caboGateNote=this.label(FOREST_GATES.cabo-12,290,'OS 3 AMIGOS\nDEVEM FALAR COM CABOQUIM',12,'#fbeab8');
+    this.caboGateNote=this.label(FOREST_GATES.cabo-12,290,'OS 3 AMIGOS\nDEVEM FALAR COM O GUIA',12,'#fbeab8');
     this.vinesGateNote=this.label(FOREST_GATES.vines-35,265,'PRECISA DOS\n3 CIPÓS',12,'#fbeab8');
     this.ground(1190,570,145,19,0x4d7654);
     this.ground(1460,424,148,18,0x607d58); // degrau alcançável após empilhar 3 amigos
@@ -125,21 +122,16 @@ export class ForestScene extends Phaser.Scene {
     this.ground(1760,309,255,18,0x536e4c);
     this.ground(2090,551,140,18,0x4d7158);
     this.ground(2940,545,143,18,0x4e6d51);
+    this.ground(3166,534,133,19,0x526c4e); // degrau natural para a alavanca de Téo
     this.ground(3298,428,141,18,0x536a4a);
     this.ground(3415,521,120,18,0x47674b);
     this.fallen=this.ground(3709,645,362,34,0x825737);
     this.solid(this.fallen,this.world.bridge);
-    this.treeTrunk=this.add.rectangle(3508,470,363,28,0x966b45)
-      .setAngle(-69).setStrokeStyle(3,0x443524).setDepth(14);
-    this.treeTrunk.setVisible(false);
-    // Caboquim criado com formas procedurais originais.
-    const hat=this.add.triangle(0,-64,-38,16,4,-39,35,16,0x3baa5c);
-    const face=this.add.circle(0,-27,19,0xa37348);
-    const robe=this.add.ellipse(0,2,47,57,0x337e47);
-    const faceEye=this.add.circle(7,-29,3,0xf9eecb);
-    this.cabo=this.add.container(CABO_X,598,[robe,face,hat,faceEye]).setDepth(15);
-    this.tweens.add({targets:this.cabo,y:590,duration:980,yoyo:true,repeat:-1});
-    this.label(CABO_X,490,'CABOQUIM DA MATA',15,'#c2f7ac');
+    // A árvore é sempre um único objeto visual com pivô na margem esquerda.
+    // A física permanece com o retângulo 'fallen', habilitado somente pelo host.
+    this.treeVisual=new GiantBridgeTree(this);
+    this.guide=new IndigenousGuideVisual(this,CABO_X,602);
+    this.label(CABO_X,473,GUIDE_NAME,16,'#e4ebd9');
     this.vines=FOREST_VINES.map((v,i)=>{
       const ring=this.add.circle(0,0,24,CHARACTERS[i].color,.20).setStrokeStyle(3,CHARACTERS[i].color);
       const glyph=this.add.text(0,0,'❧',{fontSize:'31px',color:CHARACTERS[i].hex}).setOrigin(.5);
@@ -154,12 +146,14 @@ export class ForestScene extends Phaser.Scene {
     // Ponto de partida necessário para realizar a corrida com Nino.
     this.add.rectangle(2898,622,82,10,0x4bbef7,.78).setDepth(9);
     this.label(2898,519,'NINO: INICIE SHIFT + → AQUI',13,'#a4e9ff');
-    this.label(3310,321,'TÉO · E · SOLTE A CORDA',14);
-    this.add.circle(TREE_ACTIONS.teo.x,TREE_ACTIONS.teo.y,14,0x8ef2b0).setDepth(17);
-    this.add.circle(TREE_ACTIONS.lia.x,TREE_ACTIONS.lia.y,13,0xffcc79).setDepth(17);
-    this.label(3460,512,'LIA · J · AMARRA',13);
-    this.add.circle(TREE_ACTIONS.nino.x,TREE_ACTIONS.nino.y,13,0x85c9fc).setDepth(17);
-    this.label(3360,540,'NINO · DASH + E',13);
+    this.label(3310,321,'1 · TÉO · E · AMARRA VERDE',14,'#b7ffce');
+    this.mechanismLights[0]=this.add.circle(TREE_ACTIONS.teo.x,TREE_ACTIONS.teo.y,16,0x7cebb7,.9).setStrokeStyle(3,0xd5ffe1).setDepth(17);
+    this.mechanismLights[1]=this.add.circle(TREE_ACTIONS.lia.x,TREE_ACTIONS.lia.y,16,0xffb87b,.9).setStrokeStyle(3,0xfff1c5).setDepth(17);
+    this.label(3460,512,'2 · LIA · J · AMARRA LARANJA',13,'#ffd4ab');
+    this.mechanismLights[2]=this.add.circle(TREE_ACTIONS.nino.x,TREE_ACTIONS.nino.y,16,0x78bff2,.9).setStrokeStyle(3,0xd0f6ff).setDepth(17);
+    this.label(3390,539,'3 · NINO · SHIFT + →, DEPOIS E',13,'#b9e1ff');
+    this.add.rectangle(3260,619,86,9,0x64c5ee,.9).setDepth(10);
+    this.label(3252,573,'NINO · COMECE DASH AQUI',12,'#aee6ff');
     for(const x of [990,2390]){
       const snake=this.add.container(x,601).setDepth(14);
       const coil=this.add.ellipse(0,9,64,18,0x4a904b).setStrokeStyle(3,0x1f582d);
@@ -210,10 +204,12 @@ export class ForestScene extends Phaser.Scene {
     this.textLabel=this.label(this.scale.gameSize.width/2,125,'',16,'#e7ffdc').setScrollFactor(0)
       .setWordWrapWidth(this.scale.gameSize.width-24);
     this.zoneLabel=this.label(this.scale.gameSize.width/2,32,'',14).setScrollFactor(0);
+    this.interactionPrompt=this.label(3310,342,'E · SOLTAR AMARRA',14,'#f0ffd8');
+    this.interactionPrompt.setVisible(false);
     this.hintLabel=this.label(this.scale.gameSize.width/2,166,'',13,'#f5e9aa')
       .setScrollFactor(0).setWordWrapWidth(Math.max(290,this.scale.gameSize.width-38));
     this.sync(this.net.forest,false);
-    this.notify('Entrem na mata juntos. Lia tem estilingue, Nino tem dash.\nEncontrem Caboquim para Téo aprender o salto duplo!',5400);
+    this.notify('Entrem na mata juntos. Lia tem estilingue, Nino tem dash.\nEncontrem o GUIA INDÍGENA e aprendam a trabalhar em equipe!',5400);
     this.off.push(this.net.on('snapshot',ps=>{
       for(const p of ps)this.poses[p.seat]={...p};
     }));
@@ -242,22 +238,33 @@ export class ForestScene extends Phaser.Scene {
     this.caboGateNote.setVisible(!w.unlocked);
     this.vinesGateNote.setVisible(!w.vines.every(Boolean));
     this.solid(this.fallen,w.bridge);
-    this.treeTrunk.setVisible(w.treeFallAt>0&&!w.bridge);
+    // A colisão continua ativa; o retângulo genérico fica invisível para que
+    // a mesma árvore seja o único desenho antes, durante e depois da queda.
+    this.fallen.setVisible(false);
+    this.treeVisual.update(w,Date.now());
+    this.mechanismLights.forEach((light,i)=>{
+      const active=w.vines.every(Boolean)&&!w.treeSteps[i]&&w.treeSteps.slice(0,i).every(Boolean);
+      light.setVisible(!w.treeSteps[i]).setAlpha(active?1:.24);
+    });
     if(!announce||!this.textLabel?.active){this.setHud();return;}
     if(w.resetId!==was.resetId)this.notify('UM AMIGO CAIU NA FLORESTA. RECOMEÇANDO JUNTOS!',3000);
     if(w.caboStep>was.caboStep&&w.caboStep>0){
-      this.notify(story[w.caboStep]+'   [E ou CONTINUAR]',4000);
-      if(w.caboStep===5)this.burst(CABO_X,567,0x9fffac);
+      this.notify(GUIDE_DIALOGUES[w.caboStep]+'   [E ou CONTINUAR]',w.caboStep===5?6300:4600);
+      if(w.caboStep===5){
+        this.guide.demonstrate();
+        this.burst(CABO_X,566,0x9fffac);
+      }
     }
     w.vines.forEach((found,i)=>{if(found&&!was.vines[i]){
       this.burst(FOREST_VINES[i].x,FOREST_VINES[i].y);
       this.notify('CIPÓ COLETADO! '+w.vines.filter(Boolean).length+'/3',2500);
     }});
     w.treeSteps.forEach((done,i)=>{if(done&&!was.treeSteps[i]){
-      this.notify(['TÉO SOLTOU O PRIMEIRO CIPÓ!','LIA LIBEROU A AMARRA!','NINO SOLTOU A ÚLTIMA RAIZ!'][i]);
+      this.notify(['AMARRAS 1/3 · TÉO SOLTOU A PRIMEIRA!','AMARRAS 2/3 · LIA CORTOU A SEGUNDA!','AMARRAS 3/3 · NINO LIBEROU A ÚLTIMA RAIZ!'][i]);
       this.burst([3310,3460,3425][i],550);
     }});
-    if(!was.bridge&&w.bridge){this.notify('A ÁRVORE VIROU UMA PONTE! ATRAVESSEM JUNTOS!',4000);this.burst(3690,610,0xdec68a);}
+    if(!was.treeFallAt&&w.treeFallAt)this.notify('ÁRVORE CAINDO! AFASTEM-SE DA ÁREA DE IMPACTO.',3000);
+    if(!was.bridge&&w.bridge){this.notify('🌳 PONTE DE ÁRVORE PRONTA! ATRAVESSEM JUNTOS.',4300);this.burst(3690,610,0xdec68a);}
     if(w.restartAt>0&&was.restartAt===0)this.notify('UM AMIGO CAIU NA FLORESTA! REINÍCIO EM 3 SEGUNDOS',4200);
     if(!was.stackMilestone&&w.stackMilestone)this.notify('ESCALADA COOPERATIVA REALIZADA! TÉO, SALTE ATÉ A ÁRVORE!',4100);
     this.setHud();
@@ -346,14 +353,24 @@ export class ForestScene extends Phaser.Scene {
     if(region!==this.lastRegion){
       this.lastRegion=region;
       this.zoneLabel.setText([
-        'ENTRADA DA FLORESTA','ENCONTRE CABOQUIM','AJUDEM TÉO A SUBIR [E]',
+        'ENTRADA DA FLORESTA','ENCONTRE O GUIA INDÍGENA','AJUDEM TÉO A SUBIR [E]',
         'CIPÓS SUSPENSOS','O GRANDE ABISMO','A SAÍDA COOPERATIVA'
       ][region]);
     }
-    const progress=w.treeFallAt>0?Math.min(1,(now-w.treeFallAt)/1900):0;
-    if(w.treeFallAt>0&&!w.bridge){
-      this.treeTrunk.setVisible(true).setAngle(-69+69*progress).setPosition(3709,470+174*progress);
-    }else if(w.bridge)this.treeTrunk.setVisible(false);
+    // Render changes follow the last authoritative ForestWorld snapshot.
+    this.treeVisual.update(w,now);
+    this.mechanismLights.forEach((light,i)=>{
+      if(!light.visible)return;
+      light.setScale(1+Math.sin(time/235)*.08);
+    });
+    const task=w.treeSteps.findIndex(done=>!done);
+    const nearTeo=seat===0&&task===0&&w.vines.every(Boolean)
+      &&Math.abs(this.me.x-TREE_ACTIONS.teo.x)<75&&Math.abs(this.me.y-TREE_ACTIONS.teo.y)<83;
+    const nearNino=seat===2&&task===2
+      &&Math.abs(this.me.x-TREE_ACTIONS.nino.x)<63&&Math.abs(this.me.y-TREE_ACTIONS.nino.y)<82;
+    this.interactionPrompt.setVisible(nearTeo||nearNino);
+    if(nearTeo)this.interactionPrompt.setText('E · SOLTAR PRIMEIRA AMARRA').setPosition(3310,344);
+    if(nearNino)this.interactionPrompt.setText('E · LIBERAR RAIZ').setPosition(3425,508);
     if(time>this.narrativeUntil&&this.textLabel.visible)this.textLabel.setVisible(false);
     const smooth=1-Math.exp(-Math.min(dt,80)/110);
     for(const i of [0,1,2] as Seat[]){
@@ -373,7 +390,7 @@ export class ForestScene extends Phaser.Scene {
   getCooldown():string {
     const seat=this.net.localSeat;
     if(seat===null)return '';
-    if(seat===0)return this.net.puzzle.unlocked[0]?'✦ Salto duplo (PULAR)':'🔒 Procure Caboquim';
+    if(seat===0)return this.net.puzzle.unlocked[0]?'✦ Salto duplo (PULAR)':'🔒 Procure o Guia Indígena';
     const remain=(seat===1?this.shotReady:this.dashReady)-performance.now();
     return (seat===1?'🏹 Estilingue ':'⚡ Dash ')+(remain>0?(remain/1000).toFixed(1)+'s':(seat===1?'J disponível':'SHIFT disponível'));
   }

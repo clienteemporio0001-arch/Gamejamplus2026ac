@@ -8,6 +8,7 @@ import { JourneyScene } from './journeyScene';
 import { LateScene } from './lateScene';
 import './style.css';
 import { gameKeys } from './keyboard';
+import { GUIDE_DIALOGUES } from './forestPresentation';
 
 const net = new Network();
 const ui = document.querySelector<HTMLDivElement>('#ui')!;
@@ -141,12 +142,7 @@ function render(): void {
       safeText(player) + ' · FASE 0' + net.level + ' · Sala ' + safeText(net.code) + ' · ' + online + '/3</span> · <span id="skill-status"></span> ' +
       '<span id="team-status" class="team-status"></span><button id="leave" class="hud-leave" title="Sair da sala">✕</button></div>' +
       (net.level === 1 && net.forest.caboStep >= 1 && net.forest.caboStep < 5
-        ? '<div class="forest-dialogue"><p>'+safeText([
-            '', 'CABOQUIM: Ocês se perderam na mata, foi?',
-            'TÉO: A gente só quer voltar pra casa!',
-            'CABOQUIM: Essa floresta num mostra o mesmo caminho duas vezes...',
-            'CABOQUIM: Mas se ficarem juntos, talvez consigam encontrar a saída.'
-          ][net.forest.caboStep])+'</p>'+button('cabo-next','CONTINUAR · E')+'</div>' : '') +
+        ? '<div class="forest-dialogue"><p>'+safeText(GUIDE_DIALOGUES[net.forest.caboStep])+'</p>'+button('cabo-next','CONTINUAR · E')+'</div>' : '') +
       (net.completed
         ? '<div class="victory"><h2>🌟 NINGUÉM FICA PARA TRÁS!</h2><p>Os três amigos venceram juntos o primeiro desafio da floresta.</p>' +
           button('leave-win', 'VOLTAR AO MENU') + '</div>'
@@ -204,7 +200,7 @@ function render(): void {
       'Você controla ' + (me === null ? 'seu personagem' : CHARACTERS[me].name) + '. Aguarde o anfitrião iniciar.') +
     '</div><div class="rules"><b>COMPUTADOR:</b> A/D ou ←/→ para andar; ESPAÇO ou ↑ para pular e salto duplo; SHIFT = dash de Nino; J = baladeira de Lia; E = interagir.<br>' +
     '<b>CELULAR:</b> setas na esquerda e PULAR na direita. Coloque na horizontal.<br>' +
-    '<b>OBJETIVO:</b> encontrem Caboquim, apoiem-se uns nos outros, coletem 3 cipós e derrubem a árvore para atravessar juntos.</div></main>';
+    '<b>OBJETIVO:</b> encontrem o Guia Indígena, apoiem-se uns nos outros, coletem 3 cipós e derrubem a árvore para atravessar juntos.</div></main>';
   ui.querySelector('#copy')?.addEventListener('click', () => {
     navigator.clipboard?.writeText(net.code).then(() => { info = 'Código copiado!'; render(); })
       .catch(() => { info = 'Copie este código: ' + net.code; render(); });

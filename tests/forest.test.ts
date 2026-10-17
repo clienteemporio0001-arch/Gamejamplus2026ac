@@ -105,7 +105,7 @@ ok(!inv.act(2,{kind:'collect'},arr,31400),
 inv.world.vines=[true,true,true];
 ok(canAdvanceForest(inv.world,4),
   'portão das raízes abre quando os três cipós foram coletados');
-ok(forestHint(inv.world,0,3310).includes('Téo'),
+ok(forestHint(inv.world,0,3310).includes('TÉO'),
   'depois dos 3 cipós, instruções passam à árvore');
 
 console.log('APROVADO: '+count+' verificações da floresta ampliada, escalada e sobrevivência.');

@@ -56,9 +56,9 @@ export function canAdvanceForest(w:ForestWorld,checkpoint:number):boolean {
 /** Dica localizada, sem alterar autoridade de quebra-cabeças. */
 export function forestHint(w:ForestWorld,seat:Seat,x:number):string {
   if(!w.unlocked){
-    return x>1000?'VOLTE! Reúnam Téo, Lia e Nino no CABOQUIM e terminem o diálogo.'
-      :x>590?'CABOQUIM: os 3 amigos devem ficar perto dele. Use E / CONTINUAR.'
-      :'OBJETIVO: encontrem CABOQUIM DA MATA, juntos, antes de avançar.';
+    return x>1000?'VOLTE! Reúnam Téo, Lia e Nino no GUIA INDÍGENA e concluam o diálogo.'
+      :x>590?'GUIA INDÍGENA: os 3 amigos devem ficar próximos. Use E / CONTINUAR.'
+      :'OBJETIVO: encontrem o GUIA INDÍGENA, juntos, antes de avançar.';
   }
   if(!w.vines.every(Boolean)){
     if(x>3050 && !w.vines[2] && seat===2)
@@ -74,13 +74,15 @@ export function forestHint(w:ForestWorld,seat:Seat,x:number):string {
       return 'NINO: comece o DASH (SHIFT + →) no raio azul, ANTES do cipó, e atravesse-o.';
     return 'AJUDE SEUS AMIGOS: todos precisam coletar seu cipó antes do grande abismo.';
   }
+  if(w.treeFallAt>0&&!w.bridge)
+    return 'ÁRVORE CAINDO! AFASTEM-SE DA ÁREA DE IMPACTO.';
+  if(w.bridge) return '🌳 PONTE DE ÁRVORE PRONTA! ATRAVESSEM A ÁRVORE JUNTOS.';
   if(!w.treeSteps.every(Boolean))return [
-    'ÁRVORE-PONTE: Téo ativa a corda elevada com E.',
-    'ÁRVORE-PONTE: Lia corta a amarra com J, olhando para a direita.',
-    'ÁRVORE-PONTE: Nino usa DASH vindo da esquerda e E junto à raiz.'
-  ][w.treeSteps.findIndex(x=>!x)] ?? 'Concluam os 3 mecanismos.';
-  return w.bridge?'PONTE PRONTA! Os três devem cruzar juntos para a CASA.'
-    :'A ÁRVORE ESTÁ CAINDO! Aguarde formar uma ponte sólida.';
+    'TÉO: SUBA NA PLATAFORMA E SOLTE A PRIMEIRA AMARRA COM E.',
+    'LIA: ACERTE A SEGUNDA AMARRA COM O ESTILINGUE (J). FIQUE À ESQUERDA DO ALVO.',
+    'NINO: USE SHIFT PARA CORRER A PARTIR DA MARCA AZUL E PRESSIONE E PERTO DA RAIZ.'
+  ][w.treeSteps.findIndex(x=>!x)] ?? 'Soltem as três amarras.';
+  return 'ÁRVORE CAINDO! AFASTEM-SE DA ÁREA DE IMPACTO.';
 }
 export function initialForest(epoch=Date.now()):ForestWorld {
   return {

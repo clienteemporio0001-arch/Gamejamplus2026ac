@@ -10,14 +10,14 @@ Abrir em três navegadores, um jogador cria a sala e compartilha o código de se
 
 ## Os quatro capítulos
 
-1. **A Boca da Noite — mapa expandido 4.300px:** os três entram na mata, conversam com Caboquim da Mata (botão CONTINUAR ou E), e Téo adquire salto duplo. Lia já começa com estilingue e Nino com dash. Na Árvore Gigante, Nino fica na base, Lia se apoia nele por E e Téo se apoia em Lia por E; Téo salta para as plataformas superiores. Os jogadores coletam os três cipós (Téo na copa, Lia por disparo, Nino por dash). Na região final, Téo solta cipó no alto, Lia corta a amarra com o estilingue e Nino libera raiz com dash+E. A árvore cai por 1,9 segundos e vira ponte **com colisão física**. Três jogadores vivos atravessam juntos e avançam.
+1. **A Boca da Noite — mapa expandido 4.300px:** os três entram na mata, conversam com Guia Indígena (botão CONTINUAR ou E), e Téo adquire salto duplo. Lia já começa com estilingue e Nino com dash. Na Árvore Gigante, Nino fica na base, Lia se apoia nele por E e Téo se apoia em Lia por E; Téo salta para as plataformas superiores. Os jogadores coletam os três cipós (Téo na copa, Lia por disparo, Nino por dash). Na região final, Téo solta cipó no alto, Lia corta a amarra com o estilingue e Nino libera raiz com dash+E. A árvore cai por 1,9 segundos e vira ponte **com colisão física**. Três jogadores vivos atravessam juntos e avançam.
 2. **A Ponte Quebrada / Travessia dos Cipós:** rio, mecanismos de Téo, Lia e Nino e ponte coletiva.
 3. **Olhos na Mata:** onça, distração, mecanismos temporizados e checkpoints.
 4. **A Trilha que Mente:** totens Lua→Folha→Estrela, placas enganosas, plataformas alternadas e saída cooperativa. O guardião final e a cinematografia de retorno para casa serão desenvolvidos mais tarde, *dentro da Fase 4*.
 
 ## Sistema de sobrevivência (primeira fase)
 
-Todos têm três corações, controlados pelo anfitrião e sincronizados em `ForestWorld`. Cobras e galhos causam um coração de dano com 1,2s de invulnerabilidade. O aviso de galhos precede a queda. Cair no abismo provoca morte imediata. Ao zerar qualquer personagem: **UM AMIGO CAIU NA FLORESTA**, pausa cooperativa por ~3,2s e reinício coletivo da fase com três corações e habilidades iniciais de Lia/Nino. Téo reconquista o salto duplo ao falar novamente com Caboquim; depois da Fase 1, o salto duplo permanece habilitado.
+Todos têm três corações, controlados pelo anfitrião e sincronizados em `ForestWorld`. Cobras e galhos causam um coração de dano com 1,2s de invulnerabilidade. O aviso de galhos precede a queda. Cair no abismo provoca morte imediata. Ao zerar qualquer personagem: **UM AMIGO CAIU NA FLORESTA**, pausa cooperativa por ~3,2s e reinício coletivo da fase com três corações e habilidades iniciais de Lia/Nino. Téo reconquista o salto duplo ao falar novamente com Guia Indígena; depois da Fase 1, o salto duplo permanece habilitado.
 
 ## Apoio cooperativo
 
@@ -26,8 +26,8 @@ Vínculos simplificados **autoritativos pelo anfitrião**: Lia usa E perto de Ni
 ## Sincronização
 
 - `src/network.ts`: PeerJS Cloud só para sinalização; jogabilidade P2P em WebRTC DataChannels. Slots com reconexão, lobby, habilidade e progresso autoritativos. Posições de x=0 até **4300** no nível 1; níveis 2–4 usam x até 1200; 20 snapshots/segundo.
-- `src/forest.ts`: regras puras de Caboquim, estado de vida, invulnerabilidade, cadeia de apoios, cipós, árvore, checkpoints, reinício e vitória.
-- `src/forestScene.ts`: cenário Phaser 4300px, câmera local, plataformas, física da ponte, Caboquim, cobras e galhos, HUD de corações.
+- `src/forest.ts`: regras puras de Guia Indígena, estado de vida, invulnerabilidade, cadeia de apoios, cipós, árvore, checkpoints, reinício e vitória.
+- `src/forestScene.ts`: cenário Phaser 4300px, câmera local, plataformas, física da ponte, Guia Indígena, cobras e galhos, HUD de corações.
 - `src/game.ts` e `src/puzzles.ts`: implementação anterior preservada para regressão, não utilizada na primeira fase atual.
 - `src/riverScene.ts`, `src/river.ts`: Fase 2; `src/lateScene.ts`, `src/chapters.ts`: Fases 3 e 4; `src/effects.ts` e `src/skillVfx.ts`: efeitos compartilhados de estilingue e dash.
 
@@ -51,7 +51,7 @@ Arte/áudio: visuais vetoriais desenhados proceduralmente no Phaser, sem vídeo 
 
 ## Etapa 06 — Segunda fase ampliada: A Travessia dos Cipós
 
-O roteiro definitivo continua tendo QUATRO fases. A primeira fase permanece com 4.300 pixels, Caboquim, salto duplo, apoio dos três personagens, árvore-ponte e sobrevivência. Foi acrescentado um degrau natural intermediário na Árvore Gigante para viabilizar a subida aos galhos altos.
+O roteiro definitivo continua tendo QUATRO fases. A primeira fase permanece com 4.300 pixels, Guia Indígena, salto duplo, apoio dos três personagens, árvore-ponte e sobrevivência. Foi acrescentado um degrau natural intermediário na Árvore Gigante para viabilizar a subida aos galhos altos.
 
 A Fase 2 agora carrega JourneyScene (Phaser) e JourneyAuthority, separando a exploração das antigas regras compactas de RiverScene/RiverAuthority, que continuam no repositório para regressão.
 
@@ -73,11 +73,11 @@ Importante: os testes de autoridade, percurso e cálculo de alcance não substit
 
 ## Correção após teste real — cipós sem reação (Etapa 06.1)
 
-No teste com três navegadores, o HUD de Téo ainda dizia **Procure Caboquim** e o grupo chegou ao abismo com **CIPÓS 0/3**. A regra existente só habilitava a coleta dos cipós após os três jogadores concluírem o diálogo com Caboquim, mas a floresta não bloqueava a passagem até o abismo nem explicava por que os itens não podiam ser coletados.
+No teste com três navegadores, o HUD de Téo ainda dizia **Procure Guia Indígena** e o grupo chegou ao abismo com **CIPÓS 0/3**. A regra existente só habilitava a coleta dos cipós após os três jogadores concluírem o diálogo com Guia Indígena, mas a floresta não bloqueava a passagem até o abismo nem explicava por que os itens não podiam ser coletados.
 
-Agora há **barreiras físicas visíveis**: uma após Caboquim, liberada quando o diálogo termina, e outra antes dos mecanismos da árvore final, removida quando os três cipós forem coletados. Os checkpoints respeitam o progresso, impedindo salvamento além de tarefas incompletas. Os itens usam cores de seus donos (verde Téo, laranja Lia, azul Nino), um marcador mostra onde Nino deve iniciar o dash, e uma dica contextual em tela acompanha a tarefa atual.
+Agora há **barreiras físicas visíveis**: uma após Guia Indígena, liberada quando o diálogo termina, e outra antes dos mecanismos da árvore final, removida quando os três cipós forem coletados. Os checkpoints respeitam o progresso, impedindo salvamento além de tarefas incompletas. Os itens usam cores de seus donos (verde Téo, laranja Lia, azul Nino), um marcador mostra onde Nino deve iniciar o dash, e uma dica contextual em tela acompanha a tarefa atual.
 
-**Passo a passo:** reúna os três no Caboquim próximo da entrada e avance as falas com CONTINUAR/E; Téo ganha o salto duplo. Na árvore, Nino fica como base, Lia sobe com E, Téo sobe em Lia com E, salta e alcança o cipó alto. Lia deve atirar J olhando para a DIREITA, à esquerda de seu cipó. Nino inicia SHIFT+→ sobre a marca azul **antes** do cipó e corre através dele; a janela de coleta aceita até 1,75s de latência. O contador deve subir para 3/3; só então a barreira das raízes desaparece e os três podem ativar os mecanismos da árvore-ponte.
+**Passo a passo:** reúna os três no Guia Indígena próximo da entrada e avance as falas com CONTINUAR/E; Téo ganha o salto duplo. Na árvore, Nino fica como base, Lia sobe com E, Téo sobe em Lia com E, salta e alcança o cipó alto. Lia deve atirar J olhando para a DIREITA, à esquerda de seu cipó. Nino inicia SHIFT+→ sobre a marca azul **antes** do cipó e corre através dele; a janela de coleta aceita até 1,75s de latência. O contador deve subir para 3/3; só então a barreira das raízes desaparece e os três podem ativar os mecanismos da árvore-ponte.
 
 Os testes de lógica cobrem desbloqueio, pré-requisitos de checkpoints, instruções, distância e tempo do dash de Nino. A abertura real das barreiras no Phaser e o percurso físico continuam exigindo reteste nos três navegadores.
 
@@ -99,3 +99,17 @@ Colisão conservada: os retângulos de Phaser Arcade Physics continuam exatament
 Nenhum asset externo foi importado, nenhuma dependência adicional foi criada, e não há recursos de arte gerados por IA incorporados nessa etapa. A geometria, narrativa, checkpoints, desbloqueios, rede WebRTC, controles, transições e build itch.io continuam sob os mesmos contratos.
 
 Os testes automatizados incluem matemática/limites de partículas e inspeção de integração das cenas; o resultado da build não comprova desempenho de GPU, legibilidade perfeita ou FPS mobile. Ainda é indispensável verificar visualmente as quatro fases em PC e celular, inclusive neblina sobre objetivos, plataformas móveis, colisões habilitadas e ações dos três personagens em redes diferentes.
+
+
+## ETAPA 07-B — Guia Indígena e árvore-ponte do abismo
+
+- **Guia Indígena:** o antigo personagem com aparência fantástica foi substituído por um adulto humano desenhado com gráficos locais do Phaser, com cabelo escuro, rosto, braços, pernas, roupa de trilha e bolsa. Não utiliza indumentária específica ou referências estereotipadas. Respira discretamente e demonstra dois movimentos de salto como treinamento comum de Téo. As falas reais estão centralizadas em src/forestPresentation.ts, apresentadas no HTML e no Phaser conforme caboStep (nome da variável interna preservado por compatibilidade WebRTC).
+- **Árvore única e persistente:** src/forestArt.ts desenha a árvore inteira em um container cujo pivô coincide com a margem esquerda (3528,645). Sempre visível antes da interação, ela mostra três cordas coloridas que desaparecem após a validação de Téo, Lia e Nino. Ao receber treeFallAt do anfitrião, gira suavemente em 1900ms. Quando bridge=true, fica deitada e visível sobre o rio, com a posição horizontal final alinhada ao collider Arcade 362×34 centrado em (3709,645). O retângulo físico existente ainda controla a colisão, mas sua imagem genérica fica oculta; não aparece uma segunda árvore.
+- **Orientação clara:** HUD mostra CIPÓS 3/3 • AMARRAS 0/3, 1/3, 2/3 ou 3/3; depois da ativação mostra PONTE DE ÁRVORE PRONTA! ATRAVESSEM JUNTOS. Mensagens mudam pela progressão validada do anfitrião. Téo vê uma chamada E quando perto da alavanca verde (3310,390), Lia vê o alvo laranja para J (3460,574) e Nino recebe uma marca de arrancada SHIFT na faixa x=3260 antes da raiz azul (3425,590).
+- **Alcance:** foi acrescentado um degrau natural em (3166,534) com tamanho 133×19, conectando o solo à plataforma da alavanca em (3298,428) sem alterar o collider original. A altura dos dois saltos cabe na física do Phaser (465px/s, gravidade 850px/s²). O disparo de Lia parte à esquerda do alvo, e Nino inicia o dash a x≈3260 e aciona E junto à raiz.
+- **Persistência:** o desenho é derivado exclusivamente dos campos existentes treeSteps, treeFallAt e bridge. Uma reconexão recebe o snapshot do anfitrião e reconstrói a mesma árvore, inclusive a posição de ponte concluída. Nenhuma nova mensagem WebRTC, banco ou serviço foi necessário.
+- **Requisitos preservados:** os controles são Espaço/↑ para pulo, J para o estilingue, Shift para o dash, E para interação, A/D ou ←/→ para movimentação e botões móveis equivalentes.
+
+Verificações automatizadas: estado puro da árvore nas quatro situações, geometria alinhada ao retângulo Arcade, validação de ações pelos personagens, degrau acessível e referências públicas sem nome antigo. A árvore e o guia são produzidos com Phaser Graphics, sem assets baixados e sem alteração da lógica P2P.
+
+Ainda é obrigatório testar visualmente em três navegadores e celular: antes/durante/depois da queda, posição da copa e cordas na câmera, latência das interações E/J/Shift, colisão real após 1900ms, avanço para a Fase 2 e renderização após reconexão. Testes unitários e build não substituem inspeção do canvas em execução.
