@@ -48,3 +48,25 @@ GitHub Actions executa build TypeScript/Vite e todas as suítes antes de publica
 **Obrigatório testar em três navegadores/aparelhos reais:** escalada sincronizada e salto sobre amigos; progresso de cipós; abismo/ponte; perdas de vida e reinício; latência de ações E/Q; reconexão e progressão para fases 2–4. Testes unitários validam regras, não garantem geometria ou experiência real. Não existe migração de anfitrião, backend próprio, persistência entre partidas nem simulação Arcade de colisão entre corpos remotos: o suporte usa vínculos verificados pelo anfitrião. As vidas foram implementadas no capítulo 1 e a base de estado pode ser reutilizada nas outras fases, mas os perigos das fases 2–4 não utilizam corações nesta versão.
 
 Arte/áudio: visuais vetoriais desenhados proceduralmente no Phaser, sem vídeo externo, sem arquivos de arte gerados por IA ou áudio de terceiros nesta etapa.
+
+## Etapa 06 — Segunda fase ampliada: A Travessia dos Cipós
+
+O roteiro definitivo continua tendo QUATRO fases. A primeira fase permanece com 4.300 pixels, Caboquim, salto duplo, apoio dos três personagens, árvore-ponte e sobrevivência. Foi acrescentado um degrau natural intermediário na Árvore Gigante para viabilizar a subida aos galhos altos.
+
+A Fase 2 agora carrega JourneyScene (Phaser) e JourneyAuthority, separando a exploração das antigas regras compactas de RiverScene/RiverAuthority, que continuam no repositório para regressão.
+
+O novo mapa possui 4.300 pixels e seis regiões: Margem do Rio, Árvore dos Cipós, Primeira Travessia, Ilha das Raízes, Ponte Suspensa e Outra Margem.
+
+Os objetivos são: Téo usa salto duplo e apoio dos amigos para pegar material na copa; Lia solta cipó com estilingue; Nino busca o último cipó usando dash; os três coletam 3/3 materiais. Téo fixa uma ponta no alto, Lia solta o contrapeso, Nino ativa a passagem temporária com E, atravessa usando dash e fixa a outra ponta com E. As cordas e madeiras descem em 2,1 segundos, e a ponte recebe colisão física apenas quando o encaixe está concluído.
+
+Na Ilha das Raízes, dois troncos flutuantes recebem posições calculadas e transmitidas pelo anfitrião. A correnteza é fatal. Cobras e galhos causam um coração de dano com invulnerabilidade breve. O desafio final exige Nino segurando a placa, Lia acertando o alvo distante com Q e Téo acionando a corda superior com E. A ponte final desce antes de tornar-se sólida; após a conclusão todos podem sair da posição de cooperação.
+
+As fases 1 e 2 compartilham o módulo src/survival.ts para dano, invulnerabilidade e reinício coletivo. Morrer reinicia apenas a fase corrente, restaurando corações, materiais, posições, checkpoints e pontes; as habilidades permanentes permanecem desbloqueadas após o primeiro capítulo. O anfitrião valida os puzzles, controla os riscos e autoriza a passagem Fase 2 para Fase 3.
+
+As novas regras estão em src/riverJourney.ts; o cenário em src/journeyScene.ts. O protocolo em src/network.ts aceita coordenadas até x=4300 nas duas primeiras fases, mantém WebRTC/PeerJS e sincroniza materiais, vida, pontes, reconexão e posições dos troncos em mensagens tipadas. src/effects.ts mantém estilingue e dash visíveis nos demais aparelhos inclusive fora do limite x=1200.
+
+### Build e qualidade
+
+Executar npm install, npm run build e npm run test:logic. O GitHub Actions verifica build e suítes de lógica antes do deploy automático. O conteúdo estático da pasta dist permanece compatível com empacotamento HTML5 do itch.io.
+
+Importante: os testes de autoridade, percurso e cálculo de alcance não substituem o teste da Fase 2 com três pessoas/navegadores. Validar especialmente apoio físico, colisão das tábuas temporárias, troncos móveis com latência, morte na correnteza, reinício simultâneo, mobile e transição para Olhos na Mata. O apoio usa vínculo de posição simplificado pelo anfitrião; não simula rigidbodies remotos completos. Sem migração de host ou backend próprio.

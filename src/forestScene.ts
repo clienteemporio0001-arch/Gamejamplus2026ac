@@ -121,6 +121,7 @@ export class ForestScene extends Phaser.Scene {
     this.ground(1765,653,3530,64);
     this.ground(4086,653,428,64);
     this.ground(1190,570,145,19,0x4d7654);
+    this.ground(1460,424,148,18,0x607d58); // degrau alcançável após empilhar 3 amigos
     this.ground(1540,309,220,18,0x566e4c); // altura inacessível sem a coluna de amigos
     this.ground(1760,309,255,18,0x536e4c);
     this.ground(2090,551,140,18,0x4d7158);

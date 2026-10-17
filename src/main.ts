@@ -4,6 +4,7 @@ import { DemoScene, type TouchInput } from './game';
 import { ForestScene } from './forestScene';
 import { IntroScene } from './intro';
 import { RiverScene } from './riverScene';
+import { JourneyScene } from './journeyScene';
 import { LateScene } from './lateScene';
 import './style.css';
 
@@ -33,7 +34,7 @@ function enterGame(): void {
   exitGame();
   activeMode = mode;
   const scene = mode === 'intro' ? new IntroScene() :
-    mode === 'level2' ? new RiverScene(net, touch, refreshHud) :
+    mode === 'level2' ? new JourneyScene(net, touch, refreshHud) :
     net.level >= 3 ? new LateScene(net, touch, refreshHud) : new ForestScene(net, touch, refreshHud);
   // Aspecto variável no canvas: nas janelas altas o mundo é recortado pela câmera,
   // em vez de ficar minúsculo como na captura com três janelas lado a lado.
@@ -60,7 +61,7 @@ function exitGame(): void {
   controls.replaceChildren();
 }
 function refreshHud(): void {
-  const scene = game?.scene.keys[net.level >= 3 ? 'LateScene' : net.level === 2 ? 'RiverScene' : 'ForestScene'] as DemoScene | ForestScene | RiverScene | LateScene | undefined;
+  const scene = game?.scene.keys[net.level >= 3 ? 'LateScene' : net.level === 2 ? 'JourneyScene' : 'ForestScene'] as DemoScene | ForestScene | RiverScene | JourneyScene | LateScene | undefined;
   const skill = document.querySelector<HTMLElement>('#skill-status');
   if (skill && scene?.getCooldown) skill.textContent = scene.getCooldown();
   const team=document.querySelector<HTMLElement>('#team-status');
@@ -116,8 +117,8 @@ function render(): void {
     if (net.stage === 'transition') {
       const titles=['','A BOCA DA NOITE','A PONTE QUEBRADA','OLHOS NA MATA','A TRILHA QUE MENTE'];
       ui.innerHTML = '<div class="interlevel"><h2>🌿 FASE CONCLUÍDA!</h2><p>' +
-        (net.level===1?'VOCÊS CONSEGUIRAM ATRAVESSAR!':net.level===2?'VOCÊS ATRAVESSARAM O RIO!':'VOCÊS SOBREVIVERAM À ESCURIDÃO!') +
-        '</p><p>Os três amigos seguem juntos...</p><strong>FASE 0'+(net.level+1)+' · '+titles[net.level+1]+'</strong></div>';
+        (net.level===1?'VOCÊS CONSEGUIRAM ATRAVESSAR!':net.level===2?'VOCÊS VENCERAM A CORRENTEZA!':'VOCÊS SOBREVIVERAM À ESCURIDÃO!') +
+        '</p><p>'+(net.level===2?'Mas a noite ainda esconde perigos...':'Os três amigos seguem juntos...')+'</p><strong>FASE 0'+(net.level+1)+' · '+titles[net.level+1]+'</strong></div>';
       return;
     }
     if (net.stage === 'final') {

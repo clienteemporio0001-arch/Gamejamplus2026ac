@@ -1,5 +1,6 @@
 import type { Pose, Seat } from './network';
 import type { PuzzleAction } from './puzzles';
+import { applyDamage } from './survival';
 
 export const FOREST_WIDTH = 4300;
 export const FOREST_SPAWNS: Pose[] = ([0,1,2] as Seat[]).map(seat=>({
@@ -171,13 +172,9 @@ export class ForestAuthority {
   damage(seat:Seat,now=Date.now(),fatal=false):boolean {
     const w=this.world;
     if(w.restartAt>0||w.safeUntil[seat]>now)return false;
-    w.health[seat]=fatal?0:Math.max(0,w.health[seat]-1);
-    w.safeUntil[seat]=now+1200;
-    if(w.health[seat]===0){
-      w.restartAt=now+3200;
-      w.supporting=[null,null,null];
-    }
-    return true;
+    const applied=applyDamage(w,seat,now,fatal);
+    if(applied&&w.restartAt>0)w.supporting=[null,null,null];
+    return applied;
   }
   tick(poses:Pose[],now=Date.now()):{changed:boolean;reset:boolean}{
     const w=this.world;let changed=false;

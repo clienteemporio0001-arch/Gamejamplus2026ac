@@ -20,7 +20,7 @@ export function validSkillFx(value: unknown): value is SkillFx {
   return (f.kind === 'shoot' && f.seat === 1 || f.kind === 'dash' && f.seat === 2)
     && (f.level === 1 || f.level === 2 || f.level === 3 || f.level === 4)
     && (f.facing === 1 || f.facing === -1)
-    && finite(f.x) && f.x >= 0 && f.x <= (f.level === 1 ? 4300 : 1200)
+    && finite(f.x) && f.x >= 0 && f.x <= (f.level <= 2 ? 4300 : 1200)
     && finite(f.y) && f.y >= 0 && f.y <= 700;
 }
 
