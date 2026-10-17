@@ -14,7 +14,7 @@ const act=(id:number,kind:'lever'|'shoot'|'dash'|'switch',now:number)=>
 ok(LOOP_WIDTH===3800,'mapa em quatro setores com 3800px');
 ok(LOOP_CYCLE_MS===60000&&LOOP_BLACKOUT_MS===2000,'60s e blackout de 2s');
 ok(a.world.layout===0&&a.world.cycle===0&&validLoop(a.world),'estado A válido');
-ok(!warningActive(a.world,50000),'sem aviso antes dos 50 segundos');
+ok(!warningActive(a.world,49999),'sem aviso antes dos 50 segundos');
 ok(warningActive(a.world,51000),'alerta aos 50s');
 ok(!act(0,'lever',52000),'marcos dependem de ter observado a mudança');
 ok(a.tick(p,60000).changed,'anfitrião inicia apagão aos 60s');
