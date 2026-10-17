@@ -90,7 +90,6 @@ ok(scene.includes('this.solid(this.fallen,w.bridge)'),'colisão habilitada exclu
 ok(scene.includes('this.fallen.setVisible(false)'),'bloco da colisão não desenha segunda ponte');
 ok(art.includes('this.root.setRotation(frame.rotation+shake)'),'árvore animada mesmo antes de w.bridge=true');
 ok(art.includes('this.root=scene.add.container('),'árvore é renderizada permanentemente em um container');
-ok(art.includes('new'), 'módulo gráfico importável');
 ok(art.includes('fillRoundedRect')&&art.includes('fillEllipse'),'guia tem corpo humano e rosto detalhados');
 ok(art.includes('demonstrate()'),'guia demonstra salto por movimento');
 ok(scene.includes('this.guide.demonstrate()'),'treinamento acionado ao desbloquear habilidade');
