@@ -181,6 +181,13 @@ ok(LOOP_GEOMETRY.portalLanding>LOOP_GEOMETRY.gate+35,
   'ponto de teleporte seguro além da parede direita');
 ok(LOOP_GEOMETRY.portalLanding+2*39<LOOP_GEOMETRY.chasm.start-30,
   'os três desembarcam sobre terreno antes do abismo');
+const falseExitWind=windGuide({...a.world,layout:1,bridge:true},0,3070);
+ok(falseExitWind.direction===-1&&falseExitWind.hint.includes('FALSA'),
+  'vento afasta o grupo do falso acesso ao setor D no estado B');
+const safeExitWind=windGuide({...a.world,layout:2,bridge:true,
+  final:[false,false,false]},0,3070);
+ok(safeExitWind.direction===1&&safeExitWind.hint.includes('MECANISMO'),
+  'vento aponta mecanismos finais quando o layout C libera a passagem');
 ok(LOOP_GEOMETRY.bridge.x-LOOP_GEOMETRY.bridge.width/2===LOOP_GEOMETRY.chasm.start &&
   LOOP_GEOMETRY.bridge.x+LOOP_GEOMETRY.bridge.width/2===LOOP_GEOMETRY.chasm.end,
   'ponte possui comprimento que fecha precisamente o abismo');

@@ -97,6 +97,9 @@ export function windGuide(w:LoopWorld,seat:Seat,x:number):{direction:-1|0|1;targ
       'SOLTEM AS TRÊS AMARRAS PARA A ÁRVORE FORMAR A PONTE.';
   }else if(x<2990){
     target=2910;hint='ATRAVESSEM A ÁRVORE DEITADA PARA A OUTRA MARGEM.';
+  }else if(w.layout!==2){
+    target=2910;
+    hint='CUIDADO: A TRILHA À FRENTE É FALSA. AGUARDEM O ESTADO C NA MARGEM SEGURA.';
   }else if(!allDone(w.final)){
     target=LOOP_FINAL[w.final.findIndex(value=>!value)].x-22;
     hint='CADA PERSONAGEM PRECISA ATIVAR SEU MECANISMO FINAL.';
