@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { gameKeys } from './keyboard';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import type { TouchInput } from './game';
 import { SkillVfx } from './skillVfx';
@@ -97,7 +98,7 @@ export class LateScene extends Phaser.Scene {
       }
     }
     if(this.local)configureCamera(this,this.local);
-    this.keys=this.input.keyboard?.addKeys('A,D,E,Q') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
+    this.keys=this.input.keyboard?.addKeys('A,D,E') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
     this.cursors=this.input.keyboard?.createCursorKeys();
     this.info=this.text(this.scale.gameSize.width/2,104,'',18).setWordWrapWidth(Math.min(850,this.scale.gameSize.width-20));
     this.info.setScrollFactor(0);
@@ -182,7 +183,7 @@ export class LateScene extends Phaser.Scene {
     this.text(318,320,'TÉO · SALTO DUPLO + E',12);
     this.add.rectangle(EYES.lever.x,EYES.lever.y,13,36,0xf7be78).setAngle(-27).setDepth(9);
     this.markers[0]=this.add.circle(EYES.distraction.x,EYES.distraction.y,15,0xffcb65).setDepth(8);
-    this.text(658,515,'LIA · Q · DISTRAIA A ONÇA',12);
+    this.text(658,515,'LIA · J · DISTRAIA A ONÇA',12);
     this.add.circle(EYES.timer.x,EYES.timer.y,18,0x8edff0,.9).setDepth(7);
     this.text(696,538,'NINO · E · TEMPO',12);
     this.markers[1]=this.add.circle(EYES.switch.x,EYES.switch.y,14,0x82c8eb).setDepth(8);
@@ -214,7 +215,7 @@ export class LateScene extends Phaser.Scene {
     this.markers[0]=this.add.circle(TRAIL.moon.x,TRAIL.moon.y,16,0xbedaf9).setDepth(9);
     this.text(330,329,'TÉO · E · ☾ LUA',13);
     this.markers[1]=this.add.circle(TRAIL.leaf.x,TRAIL.leaf.y,16,0x8dff95).setDepth(9);
-    this.text(614,511,'LIA · Q · FOLHA',13);
+    this.text(614,511,'LIA · J · FOLHA',13);
     this.markers[2]=this.add.circle(TRAIL.star.x,TRAIL.star.y,16,0xffeb93).setDepth(9);
     this.text(834,526,'NINO · DASH + E · ★',12);
     this.add.ellipse(TRAIL.plate.x,624,78,15,0x8fffba).setDepth(9);
@@ -331,14 +332,14 @@ export class LateScene extends Phaser.Scene {
       this.body.setVelocityX(dir*(seat===2 && now<this.dashUntil?329:235));
       const grounded=this.body.blocked.down||this.body.touching.down;
       if(grounded)this.jumps=0;
-      const jump=Boolean((this.cursors&&Phaser.Input.Keyboard.JustDown(this.cursors.space))||this.touch.jump);
+      const jump=Boolean(gameKeys.consumeJump()||this.touch.jump);
       this.touch.jump=false;
       if(jump && (grounded || (seat===0 && this.net.puzzle.unlocked[0] && this.jumps<2))){
         const double=this.jumps===1&&!grounded;this.body.setVelocityY(-465);this.jumps++;
         if(double)this.burst(this.local.x,this.local.y+22,0x9affb2,10);
       }
       const use=Boolean((this.keys?.E&&Phaser.Input.Keyboard.JustDown(this.keys.E))||this.touch.interact);
-      const special=Boolean((this.keys?.Q&&Phaser.Input.Keyboard.JustDown(this.keys.Q))||this.touch.ability);
+      const special=Boolean(gameKeys.consumeSkill(seat)||this.touch.ability);
       this.touch.interact=false;this.touch.ability=false;
       if(use)this.action(seat);
       if(special)this.ability(seat,now);
@@ -383,6 +384,6 @@ export class LateScene extends Phaser.Scene {
     const seat=this.net.localSeat;if(seat===null)return '';
     if(seat===0)return '✦ Salto duplo (PULAR)';
     const remain=(seat===1?this.shotReady:this.dashReady)-performance.now();
-    return (seat===1?'🏹 Estilingue: ':'⚡ Dash: ')+(remain>0?(remain/1000).toFixed(1)+'s':'Q disponível');
+    return (seat===1?'🏹 Estilingue: ':'⚡ Dash: ')+(remain>0?(remain/1000).toFixed(1)+'s':(seat===1?'J disponível':'SHIFT disponível'));
   }
 }

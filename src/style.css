@@ -67,3 +67,14 @@ body.playing #game canvas{image-rendering:auto}
 .forest-dialogue p{font-size:clamp(12px,2.3vw,17px);margin:0 0 9px;color:#f2ffcf}
 .forest-dialogue .btn{padding:8px 17px;font-size:13px}
 @media(max-height:450px){.forest-dialogue{bottom:8px;padding:7px 10px}.forest-dialogue p{font-size:11px}}
+
+/* Botão sempre visível: antes, bottom absoluto usava #ui com altura zero. */
+.cinematic-actions{position:fixed!important;top:max(70px,env(safe-area-inset-top));bottom:auto!important;
+  right:max(16px,env(safe-area-inset-right));left:auto;z-index:60;pointer-events:auto}
+.cinematic-actions .btn{background:#c8f388!important;color:#10271f!important;
+  border:2px solid #edffc5!important;padding:13px 19px;box-shadow:0 5px 22px #000a;
+  font-weight:900;white-space:nowrap}
+.cinematic-actions .btn:focus-visible{outline:3px solid #fff;outline-offset:3px}
+@media(max-width:600px){.cinematic-actions{top:80px;right:10px}.cinematic-actions .btn{padding:11px 13px;font-size:12px}}
+.touch-btn:disabled{opacity:.35;cursor:not-allowed}
+#ability{font-size:clamp(13px,3vw,22px)}

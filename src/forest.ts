@@ -62,21 +62,21 @@ export function forestHint(w:ForestWorld,seat:Seat,x:number):string {
   }
   if(!w.vines.every(Boolean)){
     if(x>3050 && !w.vines[2] && seat===2)
-      return 'NINO: recue até o raio azul e aperte Q + →. Atravesse o cipó durante o DASH.';
+      return 'NINO: recue até o raio azul e aperte SHIFT + →. Atravesse o cipó durante o DASH.';
     if(x>FOREST_GATES.vines-170)
       return 'BARREIRA DE CIPÓS: faltam materiais ('+w.vines.filter(Boolean).length+'/3). Voltem e coletem.';
     if(seat===0&&!w.vines[0])
       return x<1230?'TÉO: vá até a árvore gigante; os amigos ajudarão você a subir.'
         :'TÉO: Lia sobe em Nino com E, você sobe em Lia com E; pule até o cipó verde alto.';
     if(seat===1&&!w.vines[1])
-      return 'LIA: fique À ESQUERDA do cipó laranja e atire Q olhando para a DIREITA.';
+      return 'LIA: fique À ESQUERDA do cipó laranja e atire J olhando para a DIREITA.';
     if(seat===2&&!w.vines[2])
-      return 'NINO: comece o DASH (Q + →) no raio azul, ANTES do cipó, e atravesse-o.';
+      return 'NINO: comece o DASH (SHIFT + →) no raio azul, ANTES do cipó, e atravesse-o.';
     return 'AJUDE SEUS AMIGOS: todos precisam coletar seu cipó antes do grande abismo.';
   }
   if(!w.treeSteps.every(Boolean))return [
     'ÁRVORE-PONTE: Téo ativa a corda elevada com E.',
-    'ÁRVORE-PONTE: Lia corta a amarra com Q, olhando para a direita.',
+    'ÁRVORE-PONTE: Lia corta a amarra com J, olhando para a direita.',
     'ÁRVORE-PONTE: Nino usa DASH vindo da esquerda e E junto à raiz.'
   ][w.treeSteps.findIndex(x=>!x)] ?? 'Concluam os 3 mecanismos.';
   return w.bridge?'PONTE PRONTA! Os três devem cruzar juntos para a CASA.'

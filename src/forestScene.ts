@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { gameKeys } from './keyboard';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import { FOREST_WIDTH, FOREST_SPAWNS, FOREST_VINES, CABO_X, TREE_ACTIONS,
   forestDanger, branchWarning, forestHint, FOREST_GATES, type ForestWorld } from './forest';
@@ -163,15 +164,15 @@ export class ForestScene extends Phaser.Scene {
       return container;
     });
     this.label(1790,225,'TÉO · CIPÓ ALTO',14);
-    this.label(2570,490,'LIA · Q · AMARRA',14);
+    this.label(2570,490,'LIA · J · AMARRA',14);
     this.label(3060,492,'NINO · DASH PELO CIPÓ',14);
     // Ponto de partida necessário para realizar a corrida com Nino.
     this.add.rectangle(2898,622,82,10,0x4bbef7,.78).setDepth(9);
-    this.label(2898,519,'NINO: INICIE Q + → AQUI',13,'#a4e9ff');
+    this.label(2898,519,'NINO: INICIE SHIFT + → AQUI',13,'#a4e9ff');
     this.label(3310,321,'TÉO · E · SOLTE A CORDA',14);
     this.add.circle(TREE_ACTIONS.teo.x,TREE_ACTIONS.teo.y,14,0x8ef2b0).setDepth(17);
     this.add.circle(TREE_ACTIONS.lia.x,TREE_ACTIONS.lia.y,13,0xffcc79).setDepth(17);
-    this.label(3460,512,'LIA · Q · AMARRA',13);
+    this.label(3460,512,'LIA · J · AMARRA',13);
     this.add.circle(TREE_ACTIONS.nino.x,TREE_ACTIONS.nino.y,13,0x85c9fc).setDepth(17);
     this.label(3360,540,'NINO · DASH + E',13);
     for(const x of [990,2390]){
@@ -213,7 +214,7 @@ export class ForestScene extends Phaser.Scene {
       cam.setDeadzone(70,90);cam.setRoundPixels(true);
     }
     this.arrows=this.input.keyboard?.createCursorKeys();
-    this.keys=this.input.keyboard?.addKeys('A,D,E,Q') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
+    this.keys=this.input.keyboard?.addKeys('A,D,E') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
     this.heartLabel=this.label(13,48,'',14,'#f9e9c6').setScrollFactor(0).setOrigin(0,.5);
     this.goalLabel=this.label(13,76,'',14,'#e8ffae').setScrollFactor(0).setOrigin(0,.5);
     this.textLabel=this.label(this.scale.gameSize.width/2,125,'',16,'#e7ffdc').setScrollFactor(0)
@@ -321,9 +322,9 @@ export class ForestScene extends Phaser.Scene {
       if(dir)this.facing=dir>0?1:-1;
       const grounded=this.body.blocked.down||this.body.touching.down;
       if(grounded)this.jumps=0;
-      const jump=Boolean((this.arrows&&Phaser.Input.Keyboard.JustDown(this.arrows.space))||this.touch.jump);
+      const jump=Boolean(gameKeys.consumeJump()||this.touch.jump);
       const interact=Boolean((this.keys?.E&&Phaser.Input.Keyboard.JustDown(this.keys.E))||this.touch.interact);
-      const ability=Boolean((this.keys?.Q&&Phaser.Input.Keyboard.JustDown(this.keys.Q))||this.touch.ability);
+      const ability=Boolean(gameKeys.consumeSkill(seat)||this.touch.ability);
       this.touch.jump=false;this.touch.interact=false;this.touch.ability=false;
       if(base===null){
         this.body.setVelocityX(dir*(seat===2&&performance.now()<this.dashUntil?329:235));
@@ -382,6 +383,6 @@ export class ForestScene extends Phaser.Scene {
     if(seat===null)return '';
     if(seat===0)return this.net.puzzle.unlocked[0]?'✦ Salto duplo (PULAR)':'🔒 Procure Caboquim';
     const remain=(seat===1?this.shotReady:this.dashReady)-performance.now();
-    return (seat===1?'🏹 Estilingue ':'⚡ Dash ')+(remain>0?(remain/1000).toFixed(1)+'s':'Q disponível');
+    return (seat===1?'🏹 Estilingue ':'⚡ Dash ')+(remain>0?(remain/1000).toFixed(1)+'s':(seat===1?'J disponível':'SHIFT disponível'));
   }
 }

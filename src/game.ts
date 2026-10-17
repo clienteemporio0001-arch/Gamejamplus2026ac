@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { gameKeys } from './keyboard';
 import { CHARACTERS, SPAWNS, type Network, type Pose, type Seat } from './network';
 import { EXIT, LEVER, PEDAL, PICKUPS, SWITCH, TARGET, type WorldState } from './puzzles';
 import { SkillVfx } from './skillVfx';
@@ -97,7 +98,7 @@ export class DemoScene extends Phaser.Scene {
     this.lever = this.add.rectangle(LEVER.x, LEVER.y, 13, 35, 0xf3b86a).setAngle(-30).setDepth(5);
     this.sceneText(LEVER.x, 331, 'TÉO · E', 13);
     this.target = this.add.circle(TARGET.x, TARGET.y, 17, 0xffcc7b).setStrokeStyle(5, 0x9c5b22).setDepth(6);
-    this.sceneText(TARGET.x, TARGET.y - 44, 'LIA · Q', 14);
+    this.sceneText(TARGET.x, TARGET.y - 44, 'LIA · J', 14);
     this.add.circle(PEDAL.x, 613, 24, 0x6ac5ec, 0.85).setDepth(5);
     this.sceneText(PEDAL.x, 567, 'NINO · E', 14);
     this.switch = this.add.circle(SWITCH.x, SWITCH.y, 13, 0x9aecca).setDepth(6);
@@ -143,7 +144,7 @@ export class DemoScene extends Phaser.Scene {
     configureCamera(this, this.player);
     this.messageLabel = this.sceneText(600, 110, '', 17, '#f1ffcd').setWordWrapWidth(1000);
     this.cursors = this.input.keyboard?.createCursorKeys();
-    this.keys = this.input.keyboard?.addKeys('A,D,E,Q') as Record<string, Phaser.Input.Keyboard.Key> | undefined;
+    this.keys = this.input.keyboard?.addKeys('A,D,E') as Record<string, Phaser.Input.Keyboard.Key> | undefined;
     this.unsub.push(this.net.on('snapshot', poses => {
       for (const pose of poses) if (pose.seat !== this.net.localSeat) this.targets.set(pose.seat, { ...pose });
     }));
@@ -194,8 +195,8 @@ export class DemoScene extends Phaser.Scene {
           this.flash(PICKUPS[i].x, PICKUPS[i].y - 28, PICKUPS[i].color);
           if (i === this.net.localSeat) this.notify(
             ['Salto duplo desbloqueado! Pressione PULAR de novo no ar.',
-              'Estilingue desbloqueado! Pressione Q para disparar.',
-              'Dash desbloqueado! Pressione Q para correr mais rápido.'][i]);
+              'Estilingue desbloqueado! Pressione J para disparar.',
+              'Dash desbloqueado! Pressione SHIFT para correr mais rápido.'][i]);
         }
       }
       if (!old.bridge && world.bridge) { this.flash(460, 607, 0xc8f9b5, 16); this.notify('PONTE ATIVADA! Atravessem juntos.'); }
@@ -288,7 +289,7 @@ export class DemoScene extends Phaser.Scene {
       this.body.setVelocityX(dir * (me === 2 && now < this.dashUntil ? 329 : 235));
       if (this.body.blocked.down || this.body.touching.down) this.jumps = 0;
       const jump = Boolean(
-        (this.cursors && Phaser.Input.Keyboard.JustDown(this.cursors.space)) ||
+        gameKeys.consumeJump() ||
         this.touch.jump
       );
       this.touch.jump = false;
@@ -299,7 +300,7 @@ export class DemoScene extends Phaser.Scene {
         if (double) this.flash(this.player.x, this.player.y + 20, 0xa3ffa5, 12);
       }
       const use = Boolean((this.keys?.E && Phaser.Input.Keyboard.JustDown(this.keys.E)) || this.touch.interact);
-      const ability = Boolean((this.keys?.Q && Phaser.Input.Keyboard.JustDown(this.keys.Q)) || this.touch.ability);
+      const ability = Boolean(gameKeys.consumeSkill(me) || this.touch.ability);
       this.touch.interact = false; this.touch.ability = false;
       if (use) this.interact(me);
       if (ability) this.abilityPress(now, me);
@@ -340,7 +341,7 @@ export class DemoScene extends Phaser.Scene {
     if (me === 0) return '✦ Salto duplo: PULAR novamente no ar';
     const remaining = (me === 1 ? this.shotReadyAt : this.dashReadyAt) - performance.now();
     return remaining <= 0
-      ? (me === 1 ? '🏹 Estilingue: Q disponível' : '⚡ Dash: Q disponível')
+      ? (me === 1 ? '🏹 Estilingue: J disponível' : '⚡ Dash: SHIFT disponível')
       : (me === 1 ? '🏹 Estilingue: ' : '⚡ Dash: ') + (remaining / 1000).toFixed(1) + 's';
   }
 }

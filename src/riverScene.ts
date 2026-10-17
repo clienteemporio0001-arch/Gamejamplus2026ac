@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { gameKeys } from './keyboard';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import { RIVER, RIVER_SPAWNS, type RiverWorld } from './river';
 import type { TouchInput } from './game';
@@ -90,7 +91,7 @@ export class RiverScene extends Phaser.Scene {
     this.block(213, 417, 136, 19, 0x4a7158); // salto duplo de Téo
     this.title(221, 331, 'TÉO: E · ALAVANCA', 14);
     this.add.rectangle(RIVER.lever.x, RIVER.lever.y, 12, 35, 0xeac672).setAngle(-27).setDepth(5);
-    this.title(481, 519, 'LIA: Q · ALVO', 14);
+    this.title(481, 519, 'LIA: J · ALVO', 14);
     this.add.circle(RIVER.target.x, RIVER.target.y, 17, 0xffd47e).setStrokeStyle(4, 0x955a25).setDepth(7);
     this.title(688, 535, 'NINO: E · TEMPO', 14);
     this.add.circle(RIVER.timer.x, RIVER.timer.y, 16, 0x87d5ef).setStrokeStyle(3, 0xddfaff).setDepth(6);
@@ -98,7 +99,7 @@ export class RiverScene extends Phaser.Scene {
     this.add.circle(RIVER.switch.x, RIVER.switch.y, 13, 0x87d5ef).setDepth(6);
     this.title(953, 516, 'TÉO: SEGURE A PLACA', 13);
     this.add.ellipse(RIVER.plate.x, 624, 77, 16, 0x80ecab).setDepth(5);
-    this.title(1073, 480, 'LIA: Q · ALVO FINAL', 12);
+    this.title(1073, 480, 'LIA: J · ALVO FINAL', 12);
     this.add.circle(RIVER.finalTarget.x, RIVER.finalTarget.y, 13, 0xffce79).setDepth(6);
     this.title(1096, 523, 'NINO: DASH + E', 12);
     this.add.circle(RIVER.finalSwitch.x, RIVER.finalSwitch.y, 14, 0x7bbdf7).setDepth(6);
@@ -122,7 +123,7 @@ export class RiverScene extends Phaser.Scene {
     }
     configureCamera(this, this.actor);
     this.cursors = this.input.keyboard?.createCursorKeys();
-    this.keys = this.input.keyboard?.addKeys('A,D,E,Q') as Record<string, Phaser.Input.Keyboard.Key> | undefined;
+    this.keys = this.input.keyboard?.addKeys('A,D,E') as Record<string, Phaser.Input.Keyboard.Key> | undefined;
     this.tip = this.title(600, 120, '', 18).setWordWrapWidth(1050);
     this.sync(this.net.river, false);
     this.inform('O RIO ESCONDE A PASSAGEM...\nCada amigo precisa usar sua habilidade para reconstruir a ponte.', 6000);
@@ -233,7 +234,7 @@ export class RiverScene extends Phaser.Scene {
       this.body.setVelocityX(dir * (me === 2 && now < this.dashUntil ? 329 : 235));
       const grounded = this.body.blocked.down || this.body.touching.down;
       if (grounded) this.jumps = 0;
-      const jump = Boolean((this.cursors && Phaser.Input.Keyboard.JustDown(this.cursors.space)) || this.touch.jump);
+      const jump = Boolean(gameKeys.consumeJump() || this.touch.jump);
       this.touch.jump = false;
       if (jump && (grounded || (me === 0 && this.net.puzzle.unlocked[0] && this.jumps < 2))) {
         const double = this.jumps === 1 && !grounded;
@@ -241,7 +242,7 @@ export class RiverScene extends Phaser.Scene {
         if (double) this.burst(this.actor.x, this.actor.y + 18, 0x9bf8bb, 9);
       }
       const use = Boolean((this.keys?.E && Phaser.Input.Keyboard.JustDown(this.keys.E)) || this.touch.interact);
-      const special = Boolean((this.keys?.Q && Phaser.Input.Keyboard.JustDown(this.keys.Q)) || this.touch.ability);
+      const special = Boolean(gameKeys.consumeSkill(me) || this.touch.ability);
       this.touch.interact = false; this.touch.ability = false;
       if (use) this.net.act({ kind: me === 0 ? 'lever' : me === 2 && !this.world.partC && this.actor.x < 770 ? 'timer' : 'switch' });
       if (special) this.ability(now, me);
@@ -271,7 +272,7 @@ export class RiverScene extends Phaser.Scene {
     if (seat === null) return '';
     if (seat === 0) return '✦ Salto duplo (PULAR)';
     const rest = (seat === 1 ? this.shotReady : this.dashReady) - performance.now();
-    return seat === 1 ? ('🏹 Estilingue ' + (rest > 0 ? (rest / 1000).toFixed(1) + 's' : 'Q')) :
-      ('⚡ Dash ' + (rest > 0 ? (rest / 1000).toFixed(1) + 's' : 'Q'));
+    return seat === 1 ? ('🏹 Estilingue ' + (rest > 0 ? (rest / 1000).toFixed(1) + 's' : 'J')) :
+      ('⚡ Dash ' + (rest > 0 ? (rest / 1000).toFixed(1) + 's' : 'SHIFT'));
   }
 }

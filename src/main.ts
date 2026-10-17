@@ -7,6 +7,7 @@ import { RiverScene } from './riverScene';
 import { JourneyScene } from './journeyScene';
 import { LateScene } from './lateScene';
 import './style.css';
+import { gameKeys } from './keyboard';
 
 const net = new Network();
 const ui = document.querySelector<HTMLDivElement>('#ui')!;
@@ -78,13 +79,17 @@ function refreshHud(): void {
 }
 setInterval(refreshHud, 150);
 function bindMobile(): void {
+  const skillLabel = net.localSeat === 1 ? 'J' : net.localSeat === 2 ? 'SHIFT' : '—';
+  const skillAria = net.localSeat === 1 ? 'Disparar baladeira' : net.localSeat === 2 ? 'Ativar dash' : 'Sem habilidade nesta tecla';
   controls.innerHTML = '<div class="control-group"><button class="touch-btn" id="left" aria-label="Esquerda">◀</button>' +
     '<button class="touch-btn" id="right" aria-label="Direita">▶</button></div>' +
     '<div class="control-group"><button class="touch-btn" id="interact" aria-label="Interagir">E</button>' +
-    '<button class="touch-btn" id="ability" aria-label="Habilidade">Q</button>' +
+    '<button class="touch-btn" id="ability" aria-label="' + skillAria + '"' +
+    (net.localSeat === 0 ? ' disabled' : '') + '>' + skillLabel + '</button>' +
     '<button class="touch-btn jump" id="jump" aria-label="Pular">PULAR</button></div>';
   for (const key of ['left', 'right', 'jump', 'interact', 'ability'] as const) {
     const el = controls.querySelector<HTMLButtonElement>('#' + key)!;
+    if (el.disabled) continue;
     el.addEventListener('pointerdown', event => {
       event.preventDefault();
       el.setPointerCapture(event.pointerId);
@@ -101,6 +106,7 @@ function bindMobile(): void {
   }
 }
 function render(): void {
+  gameKeys.setEnabled(net.playing);
   const showing = net.stage !== 'lobby' && net.role !== 'idle';
   document.body.classList.toggle('playing', net.playing);
   ui.classList.toggle('in-game', showing);
@@ -196,7 +202,7 @@ function render(): void {
     '<div class="actions">' + readyButton + startButton + button('leave-lobby', 'SAIR', true) + '</div>' +
     '<div class="tip">' + (net.isHost ? 'Você é Téo, anfitrião. Inicie somente com os 3 prontos.' :
       'Você controla ' + (me === null ? 'seu personagem' : CHARACTERS[me].name) + '. Aguarde o anfitrião iniciar.') +
-    '</div><div class="rules"><b>COMPUTADOR:</b> A/D ou ←/→ para andar; ESPAÇO para pular (↑ não pula).<br>' +
+    '</div><div class="rules"><b>COMPUTADOR:</b> A/D ou ←/→ para andar; ESPAÇO ou ↑ para pular e salto duplo; SHIFT = dash de Nino; J = baladeira de Lia; E = interagir.<br>' +
     '<b>CELULAR:</b> setas na esquerda e PULAR na direita. Coloque na horizontal.<br>' +
     '<b>OBJETIVO:</b> encontrem Caboquim, apoiem-se uns nos outros, coletem 3 cipós e derrubem a árvore para atravessar juntos.</div></main>';
   ui.querySelector('#copy')?.addEventListener('click', () => {
@@ -229,13 +235,14 @@ function showJoin(): void {
     (event.target as HTMLInputElement).setCustomValidity('');
   });
 }
+gameKeys.bind();
 net.on('change', render);
 net.on('start', () => { info = ''; render(); });
 net.on('phase', () => { info = ''; render(); });
 net.on('notice', text => { info = text; render(); });
 net.on('win', () => { info = ''; render(); });
 window.addEventListener('keydown', event => {
-  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space'].includes(event.code)) event.preventDefault();
+  if (net.playing && ['ArrowLeft', 'ArrowRight'].includes(event.code)) event.preventDefault();
 });
 window.addEventListener('beforeunload', () => net.shutdown());
 render();

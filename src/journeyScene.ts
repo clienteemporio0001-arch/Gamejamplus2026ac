@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { gameKeys } from './keyboard';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import { JOURNEY, JOURNEY_SPAWNS, MATERIALS, RIVER_WIDTH,
   journeyBranchPhase, type JourneyWorld, type JourneyMotion } from './riverJourney';
@@ -148,12 +149,12 @@ export class JourneyScene extends Phaser.Scene {
       return group;
     });
     this.text(1380,271,'TÉO · SALTO DUPLO + APOIO',13);
-    this.text(1580,511,'LIA · Q · CIPÓ',13);
-    this.text(2000,518,'NINO · DASH · CIPÓ',13);
+    this.text(1580,511,'LIA · J · CIPÓ',13);
+    this.text(2000,518,'NINO · SHIFT DASH · CIPÓ',13);
     this.add.circle(JOURNEY.anchor.x,JOURNEY.anchor.y,15,0xa0ffa5).setDepth(11);
     this.text(2155,379,'TÉO · E · FIXAR A PONTA',13);
     this.add.circle(JOURNEY.counterweight.x,JOURNEY.counterweight.y,15,0xffcf85).setDepth(11);
-    this.text(2475,527,'LIA · Q · CONTRAPESO',13);
+    this.text(2475,527,'LIA · J · CONTRAPESO',13);
     this.add.circle(JOURNEY.timer.x,JOURNEY.timer.y,17,0x86daff).setDepth(12);
     this.text(2260,534,'NINO · E · PASSAGEM TEMPORÁRIA',12);
     this.add.circle(JOURNEY.farFix.x,JOURNEY.farFix.y,16,0x87d6ef).setDepth(12);
@@ -161,7 +162,7 @@ export class JourneyScene extends Phaser.Scene {
     this.add.ellipse(JOURNEY.plate.x,624,82,15,0x7fffc0).setDepth(12);
     this.text(3575,521,'NINO · SEGURE A PLACA',13);
     this.add.circle(JOURNEY.finalTarget.x,JOURNEY.finalTarget.y,14,0xffc67d).setDepth(12);
-    this.text(3790,521,'LIA · Q · ALVO',13);
+    this.text(3790,521,'LIA · J · ALVO',13);
     this.add.circle(JOURNEY.finalLever.x,JOURNEY.finalLever.y,15,0xa8ffac).setDepth(12);
     this.text(3840,383,'TÉO · SALTO DUPLO + E',13);
     for(const x of [760,3450]){
@@ -204,7 +205,7 @@ export class JourneyScene extends Phaser.Scene {
       cam.setDeadzone(75,100);cam.setRoundPixels(true);
     }
     this.cursors=this.input.keyboard?.createCursorKeys();
-    this.keys=this.input.keyboard?.addKeys('A,D,E,Q') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
+    this.keys=this.input.keyboard?.addKeys('A,D,E') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
     this.labelHealth=this.text(12,46,'',14,'#ffe0ce').setScrollFactor(0).setOrigin(0,.5);
     this.labelGoal=this.text(12,76,'',13,'#daffc3').setScrollFactor(0).setOrigin(0,.5);
     this.labelZone=this.text(this.scale.gameSize.width/2,30,'',15).setScrollFactor(0);
@@ -320,9 +321,9 @@ export class JourneyScene extends Phaser.Scene {
       if(dir!==0)this.facing=dir>0?1:-1;
       const grounded=this.body.blocked.down||this.body.touching.down;
       if(grounded)this.jumps=0;
-      const jump=Boolean((this.cursors&&Phaser.Input.Keyboard.JustDown(this.cursors.space))||this.touch.jump);
+      const jump=Boolean(gameKeys.consumeJump()||this.touch.jump);
       const use=Boolean((this.keys?.E&&Phaser.Input.Keyboard.JustDown(this.keys.E))||this.touch.interact);
-      const special=Boolean((this.keys?.Q&&Phaser.Input.Keyboard.JustDown(this.keys.Q))||this.touch.ability);
+      const special=Boolean(gameKeys.consumeSkill(seat)||this.touch.ability);
       this.touch.jump=false;this.touch.interact=false;this.touch.ability=false;
       if(support===null){
         this.body.setVelocityX(dir*(seat===2&&performance.now()<this.dashUntil?329:235));
@@ -387,6 +388,6 @@ export class JourneyScene extends Phaser.Scene {
     const seat=this.net.localSeat;if(seat===null)return '';
     if(seat===0)return '✦ Salto duplo: PULAR novamente no ar';
     const left=(seat===1?this.shotReady:this.dashReady)-performance.now();
-    return (seat===1?'🏹 Estilingue ':'⚡ Dash ')+(left>0?(left/1000).toFixed(1)+'s':'Q disponível');
+    return (seat===1?'🏹 Estilingue ':'⚡ Dash ')+(left>0?(left/1000).toFixed(1)+'s':(seat===1?'J disponível':'SHIFT disponível'));
   }
 }
