@@ -45,3 +45,11 @@ input.code-input{margin:12px 0;padding:12px 14px;width:min(300px,100%);border-ra
 @media (pointer:coarse){body.playing #mobile-controls{display:flex}}
 @media (orientation:portrait) and (pointer:coarse){body.playing #rotate{display:flex}}
 @media(max-height:500px){.panel{padding:12px;max-height:95dvh}.panel h1{font-size:27px}.actions{margin-top:10px}.player-list{margin:10px 0}.rules{margin:8px 0 0}.touch-btn{width:60px;height:60px}}
+
+/* Cutscene e carregamento sincronizados pelo host. */
+.cinematic-actions{position:absolute;right:24px;bottom:max(25px,env(safe-area-inset-bottom));pointer-events:auto;z-index:10}
+.cinematic-actions .btn{background:#183c35e8;color:#ecffd1;border:1px solid #aed895}
+.interlevel{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#0b291ff0;border:2px solid #badb92;border-radius:22px;padding:clamp(25px,5vw,45px);width:min(620px,92vw);text-align:center;box-shadow:0 0 90px #000b;pointer-events:none}
+.interlevel h2{color:#e5ffad;font-size:clamp(26px,5vw,44px)}
+.interlevel strong{display:block;margin-top:20px;color:#93f5e0;letter-spacing:2px}
+@media(max-height:500px){.cinematic-actions{right:12px;bottom:8px}.cinematic-actions .btn{padding:9px 14px}.interlevel{padding:18px}.interlevel h2{font-size:24px}}

@@ -1,5 +1,10 @@
 import Peer, { type DataConnection } from 'peerjs';
 import { PuzzleAuthority, initialWorld, validWorld, validAction, CHECKPOINTS, type WorldState, type PuzzleAction } from './puzzles';
+import { RiverAuthority, initialRiver, validRiver, RIVER_CHECKPOINTS, RIVER_SPAWNS, type RiverWorld } from './river';
+
+export type Stage = 'lobby' | 'intro' | 'playing' | 'transition' | 'final';
+export type Level = 1 | 2;
+export type PhaseInfo = { stage: Stage; level: Level; since: number; until: number };
 
 export type Seat = 0 | 1 | 2;
 export type Slot = { seat: Seat; online: boolean; ready: boolean };
@@ -15,6 +20,9 @@ type Wire =
   | { t: 'act'; action: PuzzleAction }
   | { t: 'puzzle'; world: WorldState }
   | { t: 'respawn'; pose: Pose }
+  | { t: 'river'; world: RiverWorld }
+  | { t: 'phase'; info: PhaseInfo }
+  | { t: 'intro-skip' }
   | { t: 'win' }
   | { t: 'reject'; reason: string }
   | { t: 'closed' };
@@ -26,6 +34,8 @@ type Events = {
   snapshot: Pose[];
   puzzle: WorldState;
   respawn: Pose;
+  river: RiverWorld;
+  phase: PhaseInfo;
   win: undefined;
 };
 const names = ['Téo', 'Lia', 'Nino'] as const;
@@ -79,6 +89,14 @@ function parseWire(value: unknown): Wire | null {
     case 'act': return validAction(p.action) ? value as Wire : null;
     case 'puzzle': return validWorld(p.world) ? value as Wire : null;
     case 'respawn': return validPose(p.pose) ? value as Wire : null;
+    case 'river': return validRiver(p.world) ? value as Wire : null;
+    case 'phase': {
+      const i = p.info as Record<string, unknown> | undefined;
+      return i && typeof i === 'object' && ['lobby','intro','playing','transition','final'].includes(String(i.stage))
+        && (i.level === 1 || i.level === 2) && finite(i.since) && finite(i.until)
+        && i.since >= 0 && i.until >= 0 ? value as Wire : null;
+    }
+    case 'intro-skip': return value as Wire;
     case 'reject': return typeof p.reason === 'string' && p.reason.length <= 130 ? value as Wire : null;
     case 'begin': case 'win': case 'closed': return value as Wire;
     default: return null;
@@ -95,6 +113,12 @@ export class Network {
   playing = false;
   completed = false;
   puzzle: WorldState = initialWorld();
+  river: RiverWorld = initialRiver();
+  stage: Stage = 'lobby';
+  level: Level = 1;
+  phaseSince = 0;
+  phaseUntil = 0;
+  private riverAuthority = new RiverAuthority();
   private authority = new PuzzleAuthority();
   private lastAction = new Map<string, number>();
   private peer: Peer | null = null;
@@ -124,7 +148,7 @@ export class Network {
   }
   get isHost(): boolean { return this.role === 'host'; }
   get everyoneConnected(): boolean { return this.players.every(p => p.online); }
-  get canStart(): boolean { return this.isHost && !this.playing && this.players.every(p => p.online && p.ready); }
+  get canStart(): boolean { return this.isHost && this.stage === 'lobby' && this.players.every(p => p.online && p.ready); }
   private message(conn: DataConnection | null, wire: Wire): void {
     if (conn?.open) {
       try { conn.send(wire); } catch { this.emit('notice', 'Falha ao enviar dados pela conexão.'); }
@@ -249,8 +273,8 @@ export class Network {
         if (msg.t !== 'hello') return;
         const reserved = this.tokens.findIndex(t => t === msg.token);
         const newSeat = reserved >= 1 ? reserved : this.tokens.findIndex((t, i) => i > 0 && t === null);
-        if (newSeat < 1 || (reserved < 0 && this.playing) || this.players[newSeat].online) {
-          this.message(conn, { t: 'reject', reason: this.playing ? 'Partida em andamento.' : 'Sala cheia (3 jogadores).' });
+        if (newSeat < 1 || (reserved < 0 && this.stage !== 'lobby') || this.players[newSeat].online) {
+          this.message(conn, { t: 'reject', reason: this.stage !== 'lobby' ? 'Partida em andamento.' : 'Sala cheia (3 jogadores).' });
           setTimeout(() => conn.close(), 250);
           return;
         }
@@ -264,12 +288,10 @@ export class Network {
         this.players[seat] = { seat, online: true, ready: reserved >= 1 ? this.players[seat].ready : false };
         this.message(conn, { t: 'welcome', seat, code: this.code });
         this.updateRoster();
-        if (this.playing) {
-          this.message(conn, { t: 'begin' });
-          this.message(conn, { t: 'state', poses: this.poses });
-        }
-        // O convidado reconectado recebe sempre o snapshot completo de puzzles.
         this.message(conn, { t: 'puzzle', world: this.puzzle });
+        this.message(conn, { t: 'river', world: this.river });
+        this.message(conn, { t: 'phase', info: this.phaseInfo() });
+        if (this.stage !== 'lobby') this.message(conn, { t: 'state', poses: this.poses });
         return;
       }
       if (this.conns.get(seat) !== conn) return;
@@ -277,6 +299,7 @@ export class Network {
         this.players[seat].ready = msg.value;
         this.updateRoster();
       }
+      if (msg.t === 'intro-skip' && this.stage === 'intro' && this.everyoneConnected) this.finishIntro();
       if (msg.t === 'act' && this.playing && this.everyoneConnected) {
         this.hostAction(seat, msg.action);
       }
@@ -299,10 +322,12 @@ export class Network {
         this.grace.delete(seat!);
         if (!this.players[seat!].online) {
           this.tokens[seat!] = null;
-          if (this.playing) {
-            this.playing = false;
+          if (this.stage !== 'lobby') {
+            this.stage = 'lobby'; this.playing = false;
             this.completed = false;
             for (const p of this.players) p.ready = false;
+            this.broadcast({ t: 'phase', info: this.phaseInfo() });
+            this.emit('phase', this.phaseInfo());
             this.emit('notice', 'Tempo de reconexão esgotado. Aguardando jogadores no lobby.');
           }
           this.updateRoster();
@@ -327,18 +352,24 @@ export class Network {
         break;
       case 'roster':
         this.players = msg.players.map(p => ({ ...p }));
-        if (this.playing && !msg.playing) {
-          this.playing = false; this.completed = false;
-        }
         this.emit('change', undefined);
         break;
       case 'begin':
+        // Mensagem legada da Fase 01, mantida apenas para compatibilidade do parser.
+        break;
+      case 'phase': {
         if (this.localSeat === null) return;
-        this.playing = true; this.completed = false;
-        this.poses = SPAWNS.map(p => ({ ...p }));
-        this.emit('start', undefined);
+        const oldStage = this.stage, oldLevel = this.level;
+        this.stage = msg.info.stage; this.level = msg.info.level;
+        this.phaseSince = msg.info.since; this.phaseUntil = msg.info.until;
+        this.playing = this.stage === 'playing'; this.completed = this.stage === 'final';
+        if (this.stage === 'playing') this.pendingRestore = true;
+        if (oldLevel !== this.level) this.poses = RIVER_SPAWNS.map(p => ({ ...p }));
+        this.emit('phase', this.phaseInfo());
+        if (this.playing && (oldStage !== 'playing' || oldLevel !== this.level)) this.emit('start', undefined);
         this.emit('change', undefined);
         break;
+      }
       case 'state':
         if (this.playing) {
           this.poses = msg.poses.map(p => ({ ...p }));
@@ -348,6 +379,11 @@ export class Network {
             this.emit('respawn', this.poses[this.localSeat]);
           }
         }
+        break;
+      case 'river':
+        this.river = { ...msg.world };
+        this.emit('river', this.river);
+        this.emit('change', undefined);
         break;
       case 'puzzle':
         this.puzzle = { ...msg.world, unlocked: [...msg.world.unlocked] as WorldState['unlocked'] };
@@ -374,22 +410,49 @@ export class Network {
   }
   ready(value: boolean): void {
     const seat = this.localSeat;
-    if (seat === null || this.playing) return;
+    if (seat === null || this.stage !== 'lobby') return;
     if (this.isHost) {
       this.players[seat].ready = value;
       this.updateRoster();
     } else this.message(this.hostConn, { t: 'ready', value });
   }
+  phaseInfo(): PhaseInfo {
+    return { stage: this.stage, level: this.level, since: this.phaseSince, until: this.phaseUntil };
+  }
+  private setPhase(stage: Stage, level: Level, until = 0): void {
+    this.stage = stage; this.level = level;
+    this.phaseSince = Date.now(); this.phaseUntil = until;
+    this.playing = stage === 'playing'; this.completed = stage === 'final';
+    this.broadcast({ t: 'phase', info: this.phaseInfo() });
+    this.emit('phase', this.phaseInfo());
+    if (this.playing) this.emit('start', undefined);
+    this.updateRoster();
+  }
   start(): void {
     if (!this.canStart) return;
-    this.playing = true; this.completed = false;
-    this.authority.reset();
-    this.puzzle = initialWorld();
+    this.authority.reset(); this.riverAuthority.reset();
+    this.puzzle = initialWorld(); this.river = initialRiver();
     this.poses = SPAWNS.map(p => ({ ...p }));
-    this.broadcast({ t: 'begin' });
-    this.sharePuzzle();
-    this.updateRoster();
-    this.emit('start', undefined);
+    this.sharePuzzle(); this.shareRiver();
+    this.setPhase('intro', 1, Date.now() + 24000);
+  }
+  skipIntro(): void {
+    if (this.stage !== 'intro') return;
+    if (this.isHost) this.finishIntro();
+    else this.message(this.hostConn, { t: 'intro-skip' });
+  }
+  private finishIntro(): void {
+    if (!this.isHost || this.stage !== 'intro' || !this.everyoneConnected) return;
+    this.poses = SPAWNS.map(p => ({ ...p }));
+    this.broadcast({ t: 'state', poses: this.poses });
+    this.setPhase('playing', 1);
+  }
+  private advanceLevel(): void {
+    if (!this.isHost || this.stage !== 'transition' || !this.everyoneConnected) return;
+    this.riverAuthority.reset();
+    this.poses = RIVER_SPAWNS.map(p => ({ ...p }));
+    this.shareRiver(); this.broadcast({ t: 'state', poses: this.poses });
+    this.setPhase('playing', 2);
   }
   report(x: number, y: number, vx: number, vy: number): void {
     if (!this.playing || this.completed || !this.everyoneConnected || this.localSeat === null) return;
@@ -414,7 +477,9 @@ export class Network {
   }
   private hostAction(seat: Seat, action: PuzzleAction): void {
     if (!this.isHost || !this.playing || !this.everyoneConnected) return;
-    if (this.authority.act(seat, action, this.poses)) this.sharePuzzle();
+    if (this.level === 1) {
+      if (this.authority.act(seat, action, this.poses)) this.sharePuzzle();
+    } else if (this.riverAuthority.act(seat, action, this.poses, this.puzzle.unlocked)) this.shareRiver();
   }
   private sharePuzzle(): void {
     this.puzzle = { ...this.authority.world, unlocked: [...this.authority.world.unlocked] as WorldState['unlocked'] };
@@ -422,13 +487,30 @@ export class Network {
     this.emit('puzzle', this.puzzle);
     this.emit('change', undefined);
   }
+  private shareRiver(): void {
+    this.river = { ...this.riverAuthority.world };
+    this.broadcast({ t: 'river', world: this.river });
+    this.emit('river', this.river);
+    this.emit('change', undefined);
+  }
   private hostTick(): void {
-    if (!this.isHost || !this.playing || this.completed || !this.everyoneConnected) return;
-    if (this.authority.tick(this.poses)) this.sharePuzzle();
+    if (!this.isHost || !this.everyoneConnected) return;
+    if (this.stage === 'intro') {
+      if (Date.now() >= this.phaseUntil) this.finishIntro();
+      return;
+    }
+    if (this.stage === 'transition') {
+      if (Date.now() >= this.phaseUntil) this.advanceLevel();
+      return;
+    }
+    if (!this.playing || this.completed) return;
+    if (this.level === 1) {
+      if (this.authority.tick(this.poses)) this.sharePuzzle();
+    } else if (this.riverAuthority.tick(this.poses)) this.shareRiver();
     for (const pose of this.poses) {
       if (pose.y >= 695) {
-        const checkpoint = CHECKPOINTS[this.puzzle.checkpoint];
-        const replacement: Pose = { seat: pose.seat, x: checkpoint + pose.seat * 24, y: 565, vx: 0, vy: 0 };
+        const checkpoint = this.level === 1 ? CHECKPOINTS[this.puzzle.checkpoint] : RIVER_CHECKPOINTS[this.river.checkpoint];
+        const replacement: Pose = { seat: pose.seat, x: checkpoint + pose.seat * 19, y: 562, vx: 0, vy: 0 };
         this.poses[pose.seat] = replacement;
         this.broadcast({ t: 'respawn', pose: replacement });
         this.emit('respawn', replacement);
@@ -436,11 +518,10 @@ export class Network {
     }
     this.broadcast({ t: 'state', poses: this.poses });
     this.emit('snapshot', this.poses);
-    if (this.authority.hasWon(this.poses)) {
-      this.completed = true;
-      this.broadcast({ t: 'win' });
-      this.emit('win', undefined);
-      this.emit('change', undefined);
+    if (this.level === 1 && this.authority.hasWon(this.poses)) {
+      this.setPhase('transition', 1, Date.now() + 2500);
+    } else if (this.level === 2 && this.riverAuthority.hasWon(this.poses)) {
+      this.setPhase('final', 2);
     }
   }
   private startReconnect(): void {
@@ -483,6 +564,8 @@ export class Network {
     this.role = 'idle'; this.code = ''; this.localSeat = null;
     this.players = slots(); this.poses = SPAWNS.map(p => ({ ...p }));
     this.playing = false; this.completed = false;
+    this.stage = 'lobby'; this.level = 1; this.phaseSince = 0; this.phaseUntil = 0;
+    this.riverAuthority.reset(); this.river = initialRiver();
     this.authority.reset(); this.puzzle = initialWorld(); this.lastAction.clear(); this.pendingRestore = false;
     this.tokens = [null, null, null]; this.lastInput = 0; this.lastReceived = [0, 0, 0];
     this.emit('change', undefined);
