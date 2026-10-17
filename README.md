@@ -1,5 +1,16 @@
 # A FLORESTA MENTE — MAS O VENTO NÃO
 
+## Etapa 10 — interface enxuta e sessões de rede estáveis
+
+- **Menu principal:** apenas **JOGAR SOZINHO** (Network.startLoopSolo) e **MULTIPLAYER ONLINE** (Network.createRoom('loop')) como ações destacadas; **ENTRAR COM CÓDIGO** aparece secundariamente para convidados. As quatro fases antigas estão em **FERRAMENTAS DE DESENVOLVIMENTO**, dentro de uma seção recolhível, sem serem apresentadas como capítulos da floresta mutável. O multiplayer da versão clássica também permanece acessível nessa área técnica.
+- **HUD principal:** estado A/B/C e tempo no canto superior esquerdo; objetivo progressivo de uma linha e progresso no canto superior direito; direção resumida do vento abaixo do relógio; personagem e habilidade no canto inferior. Téo/Lia/Nino podem ser trocados com 1/2/3 no solo (botões compactos também na tela touch).
+- **Cenário limpo:** removidas dezenas de legendas permanentes e os avisos de grande comprimento da nova cena Phaser. A orientação é calculada por funções puras em \`src/forestLoopUI.ts\`, e só aparece no mundo se o personagem estiver perto de um mecanismo relevante. Os nomes das quatro regiões surgem durante 2 segundos após a entrada. As marcações de cor, colisões, árvores SVG originais, iluminação e parallax permanecem.
+- **Painéis:** REINICIAR TENTATIVA, ADIANTAR APAGÃO e VOLTAR AO MENU só aparecem ao expandir **Opções** na floresta mutável solo. A barra solo das fases clássicas também foi compactada e as ações secundárias estão sob ⚙.
+- **Rede e navegação:** \`Network.sessionEpoch\` identifica cada sessão e impede que handlers e promises pendentes de PeerJS publiquem eventos após saída, retorno ao menu ou troca de modo. Callbacks de host, guest e DataChannel conferem época/objeto e \`shuttingDown\`; shutdown limpa token temporário, timers e referências. Ao sair, o aviso da sessão anterior também é limpo na interface. Falhas reais durante uma sessão ativa continuam visíveis.
+- **Build/testes:** execute \`npm run build\` e \`npm test\` (alias de \`npm run test:logic\`). O GitHub Actions usa os dois antes de publicar; \`tests/interface.test.ts\` valida modo principal, área técnica, HUD, dicas, câmera, proteção de sessão e regressões. A validação unitária não substitui screenshots de desktop/celular e uma partida com três redes reais.
+
+---
+
 ## Etapa 09 — clareira central, geometria auditada e arte original
 
 **Spawn da aventura mutável:** Téo (1840,606), Lia (1900,606), Nino (1960,606), sobre chão contínuo, com enquadramento central da câmera. É possível caminhar à esquerda para investigar ÁRVORE OCA (x=700), PEDRA RACHADA (x=1000) e TRONCO EM ARCO (x=1260). À direita, uma parede em x=2070 bloqueia o atalho até a árvore-ponte. Ela só é ultrapassada pelo portal correto, que deposita o grupo com segurança em x=2120/2159/2198, antes do abismo.
@@ -24,7 +35,7 @@
 
 ## Aventura prioritária: uma fase, quatro setores
 
-No menu, escolha **NOVA AVENTURA · JOGAR SOZINHO** para controlar Téo, Lia e Nino manualmente, ou **NOVA AVENTURA · MULTIPLAYER ONLINE** para criar uma sala de três participantes. A aventura ocupa um mundo único de 3800 pixels dividido em Entrada, Trilha Repetida, Abismo e Saída Real. **VERSÃO CLÁSSICA / TESTES** preserva as quatro fases antigas.
+No menu, escolha **JOGAR SOZINHO** para controlar Téo, Lia e Nino manualmente, ou **MULTIPLAYER ONLINE** para criar uma sala de três participantes. A aventura ocupa um mundo único de 3800 pixels dividido em Entrada, Trilha Repetida, Abismo e Saída Real. **VERSÃO CLÁSSICA / TESTES** preserva as quatro fases antigas.
 
 A floresta muda entre estados **A → B → C → A** a cada 60 segundos, precedidos de 10 segundos de vento mais forte e um apagão de aproximadamente 2 segundos. O anfitrião pausa a física, escolhe a próxima configuração predefinida e transmite o estado da floresta aos convidados. As barreiras têm colisão física que realmente muda; os outros jogadores nunca escolhem configuração por conta própria.
 

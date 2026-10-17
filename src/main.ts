@@ -211,14 +211,14 @@ function render(): void {
     const online = net.players.filter(p => p.online).length;
     const paused = online < 3;
     ui.innerHTML = (net.isSolo
-      ? '<div class="solo-hud"><strong>MODO SOLO DE TESTES · CONTROLANDO: <span style="color:' +
+      ? '<div class="solo-hud"><strong>CLÁSSICO · <span style="color:' +
         CHARACTERS[net.localSeat??0].hex + '">' + safeText(player.toUpperCase()) + '</span></strong>' +
-        '<div class="solo-actions"><button id="solo-restart">↻ '+(net.experience==='loop'?'REINICIAR TENTATIVA':'REINICIAR FASE')+'</button>' +
-         (net.experience==='loop'?'<button id="solo-cycle">☾ ADIANTAR APAGÃO</button>':'') +
-        '<button id="solo-leave">VOLTAR AO MENU</button></div>' +
-        '<span class="solo-timing">⏱ Tempos de cooperação adaptados para troca manual.</span>' +
         '<div class="solo-switch"><button data-seat="0">1 · TÉO</button>' +
-        '<button data-seat="1">2 · LIA</button><button data-seat="2">3 · NINO</button></div></div>'
+        '<button data-seat="1">2 · LIA</button><button data-seat="2">3 · NINO</button></div>' +
+        '<details class="classic-dev"><summary>⚙</summary><div class="classic-dev-options">' +
+        '<button id="solo-restart">REINICIAR FASE</button>' +
+        '<button id="solo-leave">VOLTAR AO MENU</button>' +
+        '<small>Tempos de cooperação adaptados para troca manual.</small></div></details></div>'
       : '') + '<div class="hud">🌳 A FLORESTA MENTE · <span class="text-muted">' +
       safeText(player) + (net.experience==='loop'?' · FLORESTA QUE MUDA':' · FASE 0'+net.level) + ' · Sala ' + safeText(net.code) + ' · ' + online + '/3</span> · <span id="skill-status"></span> ' +
       '<span id="team-status" class="team-status"></span><button id="leave" class="hud-leave" title="Sair da sala">✕</button></div>' +

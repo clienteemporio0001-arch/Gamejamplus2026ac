@@ -198,3 +198,22 @@ body.playing #game canvas{image-rendering:auto}
   .loop-menu{bottom:90px}
   .solo-touch-switch{bottom:69px}
 }
+
+
+/* Older playable prototypes also use a compact local-control strip. */
+#ui.in-game .solo-hud{position:fixed;top:auto;bottom:max(14px,env(safe-area-inset-bottom));
+  left:max(12px,env(safe-area-inset-left));transform:none;width:auto;max-width:min(94vw,440px);
+  padding:6px 9px;gap:7px;border-radius:10px;flex-wrap:nowrap;font-size:11px}
+.solo-hud .solo-switch{flex-wrap:nowrap;gap:3px}
+.solo-hud .solo-switch button{font-size:10px;padding:5px 6px}
+.classic-dev{position:relative;flex:0 0 auto;pointer-events:auto}
+.classic-dev summary{list-style:none;cursor:pointer;background:#244d3b;border:1px solid #749a7f;
+  border-radius:7px;color:#e8f4d8;padding:5px 8px;font-size:12px}
+.classic-dev summary::-webkit-details-marker{display:none}
+.classic-dev-options{position:absolute;left:0;bottom:35px;min-width:180px;display:flex;flex-direction:column;
+  padding:8px;gap:6px;border:1px solid #678d70;border-radius:10px;background:#102b21f5;box-shadow:0 8px 20px #0009}
+.classic-dev-options button{padding:7px 9px;font-size:11px;border-radius:7px;background:#315740;color:#f0f8df}
+.classic-dev-options small{font-size:9px;color:#b3c9b7}
+@media(pointer:coarse){#ui.in-game .solo-hud{bottom:109px;left:8px}
+  .solo-hud .solo-switch{display:none}}
+@media(max-height:500px) and (pointer:coarse){#ui.in-game .solo-hud{bottom:85px}}
