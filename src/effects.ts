@@ -18,7 +18,7 @@ export function validSkillFx(value: unknown): value is SkillFx {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const f = value as Record<string, unknown>;
   return (f.kind === 'shoot' && f.seat === 1 || f.kind === 'dash' && f.seat === 2)
-    && (f.level === 1 || f.level === 2)
+    && (f.level === 1 || f.level === 2 || f.level === 3 || f.level === 4)
     && (f.facing === 1 || f.facing === -1)
     && finite(f.x) && f.x >= 0 && f.x <= 1200
     && finite(f.y) && f.y >= 0 && f.y <= 700;

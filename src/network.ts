@@ -2,9 +2,10 @@ import Peer, { type DataConnection } from 'peerjs';
 import { PuzzleAuthority, initialWorld, validWorld, validAction, CHECKPOINTS, type WorldState, type PuzzleAction } from './puzzles';
 import { RiverAuthority, initialRiver, validRiver, RIVER_CHECKPOINTS, RIVER_SPAWNS, type RiverWorld } from './river';
 import { SkillFxGate, validSkillFx, type SkillFx } from './effects';
+import { ChapterAuthority, initialEyes, initialTrail, defaultJaguar, validChapter, validJaguar, LATE_SPAWNS, LATE_CHECKPOINTS, type ChapterWorld, type Jaguar, type LateLevel } from './chapters';
 
 export type Stage = 'lobby' | 'intro' | 'playing' | 'transition' | 'final';
-export type Level = 1 | 2;
+export type Level = 1 | 2 | 3 | 4;
 export type PhaseInfo = { stage: Stage; level: Level; since: number; until: number };
 
 export type Seat = 0 | 1 | 2;
@@ -23,6 +24,8 @@ type Wire =
   | { t: 'puzzle'; world: WorldState }
   | { t: 'respawn'; pose: Pose }
   | { t: 'river'; world: RiverWorld }
+  | { t: 'chapter'; world: ChapterWorld }
+  | { t: 'hazard'; jaguar: Jaguar }
   | { t: 'phase'; info: PhaseInfo }
   | { t: 'intro-skip' }
   | { t: 'win' }
@@ -38,6 +41,8 @@ type Events = {
   puzzle: WorldState;
   respawn: Pose;
   river: RiverWorld;
+  chapter: ChapterWorld;
+  hazard: Jaguar;
   phase: PhaseInfo;
   win: undefined;
 };
@@ -94,10 +99,12 @@ function parseWire(value: unknown): Wire | null {
     case 'puzzle': return validWorld(p.world) ? value as Wire : null;
     case 'respawn': return validPose(p.pose) ? value as Wire : null;
     case 'river': return validRiver(p.world) ? value as Wire : null;
+    case 'chapter': return validChapter(p.world) ? value as Wire : null;
+    case 'hazard': return validJaguar(p.jaguar) ? value as Wire : null;
     case 'phase': {
       const i = p.info as Record<string, unknown> | undefined;
       return i && typeof i === 'object' && ['lobby','intro','playing','transition','final'].includes(String(i.stage))
-        && (i.level === 1 || i.level === 2) && finite(i.since) && finite(i.until)
+        && [1,2,3,4].includes(Number(i.level)) && finite(i.since) && finite(i.until)
         && i.since >= 0 && i.until >= 0 ? value as Wire : null;
     }
     case 'intro-skip': return value as Wire;
@@ -118,6 +125,10 @@ export class Network {
   completed = false;
   puzzle: WorldState = initialWorld();
   river: RiverWorld = initialRiver();
+  chapter: ChapterWorld = initialEyes();
+  jaguar: Jaguar = defaultJaguar();
+  private chapterAuthority = new ChapterAuthority(3);
+  private lastHazardBroadcast = 0;
   stage: Stage = 'lobby';
   level: Level = 1;
   phaseSince = 0;
@@ -295,6 +306,8 @@ export class Network {
         this.updateRoster();
         this.message(conn, { t: 'puzzle', world: this.puzzle });
         this.message(conn, { t: 'river', world: this.river });
+        this.message(conn, { t: 'chapter', world: this.chapter });
+        this.message(conn, { t: 'hazard', jaguar: this.jaguar });
         this.message(conn, { t: 'phase', info: this.phaseInfo() });
         if (this.stage !== 'lobby') this.message(conn, { t: 'state', poses: this.poses });
         return;
@@ -369,7 +382,7 @@ export class Network {
         this.phaseSince = msg.info.since; this.phaseUntil = msg.info.until;
         this.playing = this.stage === 'playing'; this.completed = this.stage === 'final';
         if (this.stage === 'playing') this.pendingRestore = true;
-        if (oldLevel !== this.level) this.poses = RIVER_SPAWNS.map(p => ({ ...p }));
+        if (oldLevel !== this.level) this.poses = (this.level === 2 ? RIVER_SPAWNS : this.level >= 3 ? LATE_SPAWNS : SPAWNS).map(p => ({ ...p }));
         this.emit('phase', this.phaseInfo());
         if (this.playing && (oldStage !== 'playing' || oldLevel !== this.level)) this.emit('start', undefined);
         this.emit('change', undefined);
@@ -384,6 +397,16 @@ export class Network {
             this.emit('respawn', this.poses[this.localSeat]);
           }
         }
+        break;
+      case 'chapter':
+        if (msg.world.level !== this.level && this.stage === 'playing') break;
+        this.chapter = { ...msg.world };
+        this.emit('chapter', this.chapter);
+        this.emit('change', undefined);
+        break;
+      case 'hazard':
+        this.jaguar = { ...msg.jaguar };
+        this.emit('hazard', this.jaguar);
         break;
       case 'river':
         this.river = { ...msg.world };
@@ -443,6 +466,7 @@ export class Network {
   start(): void {
     if (!this.canStart) return;
     this.authority.reset(); this.riverAuthority.reset(); this.effectGate.reset();
+    this.chapterAuthority.reset(3); this.chapter = initialEyes(); this.jaguar = defaultJaguar();
     this.puzzle = initialWorld(); this.river = initialRiver();
     this.poses = SPAWNS.map(p => ({ ...p }));
     this.sharePuzzle(); this.shareRiver();
@@ -461,10 +485,22 @@ export class Network {
   }
   private advanceLevel(): void {
     if (!this.isHost || this.stage !== 'transition' || !this.everyoneConnected) return;
-    this.riverAuthority.reset(); this.effectGate.reset();
-    this.poses = RIVER_SPAWNS.map(p => ({ ...p }));
-    this.shareRiver(); this.broadcast({ t: 'state', poses: this.poses });
-    this.setPhase('playing', 2);
+    const next = (this.level + 1) as Level;
+    if (next < 2 || next > 4) return;
+    this.effectGate.reset();this.lastHazardBroadcast=0;
+    if (next === 2) {
+      this.riverAuthority.reset();
+      this.poses = RIVER_SPAWNS.map(p => ({ ...p }));
+      this.shareRiver();
+    } else {
+      this.chapterAuthority.reset(next as LateLevel);
+      this.poses = LATE_SPAWNS.map(p => ({ ...p }));
+      this.shareChapter();
+      this.jaguar = { ...this.chapterAuthority.jaguar };
+      this.broadcast({t:'hazard',jaguar:this.jaguar});
+    }
+    this.broadcast({ t: 'state', poses: this.poses });
+    this.setPhase('playing', next);
   }
   report(x: number, y: number, vx: number, vy: number): void {
     if (!this.playing || this.completed || !this.everyoneConnected || this.localSeat === null) return;
@@ -493,7 +529,9 @@ export class Network {
     // independente do acerto (a pedra também precisa aparecer quando erra).
     if (this.level === 1) {
       if (this.authority.act(seat, action, this.poses)) this.sharePuzzle();
-    } else if (this.riverAuthority.act(seat, action, this.poses, this.puzzle.unlocked)) this.shareRiver();
+    } else if (this.level === 2) {
+      if (this.riverAuthority.act(seat, action, this.poses, this.puzzle.unlocked)) this.shareRiver();
+    } else if (this.chapterAuthority.act(seat, action, this.poses, this.puzzle.unlocked)) this.shareChapter();
 
     const effect = this.effectGate.accept(
       seat, this.level, action, this.poses[seat], this.puzzle.unlocked, performance.now()
@@ -519,6 +557,12 @@ export class Network {
     this.emit('river', this.river);
     this.emit('change', undefined);
   }
+  private shareChapter(): void {
+    this.chapter = { ...this.chapterAuthority.world };
+    this.broadcast({ t: 'chapter', world: this.chapter });
+    this.emit('chapter', this.chapter);
+    this.emit('change', undefined);
+  }
   private hostTick(): void {
     if (!this.isHost || !this.everyoneConnected) return;
     if (this.stage === 'intro') {
@@ -532,23 +576,54 @@ export class Network {
     if (!this.playing || this.completed) return;
     if (this.level === 1) {
       if (this.authority.tick(this.poses)) this.sharePuzzle();
-    } else if (this.riverAuthority.tick(this.poses)) this.shareRiver();
-    for (const pose of this.poses) {
-      if (pose.y >= 695) {
-        const checkpoint = this.level === 1 ? CHECKPOINTS[this.puzzle.checkpoint] : RIVER_CHECKPOINTS[this.river.checkpoint];
-        const replacement: Pose = { seat: pose.seat, x: checkpoint + pose.seat * 19, y: 562, vx: 0, vy: 0 };
-        this.poses[pose.seat] = replacement;
-        this.broadcast({ t: 'respawn', pose: replacement });
-        this.emit('respawn', replacement);
+    } else if (this.level === 2) {
+      if (this.riverAuthority.tick(this.poses)) this.shareRiver();
+    } else {
+      const now = Date.now();
+      const result = this.chapterAuthority.tick(this.poses, now);
+      if (result.changed) this.shareChapter();
+      if (this.level === 3) {
+        this.jaguar = { ...this.chapterAuthority.jaguar };
+        if (now - this.lastHazardBroadcast >= 140) {
+          this.lastHazardBroadcast = now;
+          this.broadcast({t:'hazard',jaguar:this.jaguar});
+          this.emit('hazard',this.jaguar);
+        }
+        for (const seat of result.hits) this.respawn(seat);
       }
+      if (this.level === 4) {
+        // Caminho falso marcado pela placa VOLTE; salte a trilha enganosa.
+        for (const pose of this.poses) {
+          if (pose.x >= 425 && pose.x <= 485 && pose.y >= 594 && this.chapterAuthority.world.level === 4
+              && this.chapterAuthority.world.checkpoint < 2) this.respawn(pose.seat);
+        }
+      }
+    }
+    for (const pose of this.poses) {
+      if (pose.y >= 695) this.respawn(pose.seat);
     }
     this.broadcast({ t: 'state', poses: this.poses });
     this.emit('snapshot', this.poses);
-    if (this.level === 1 && this.authority.hasWon(this.poses)) {
-      this.setPhase('transition', 1, Date.now() + 2500);
-    } else if (this.level === 2 && this.riverAuthority.hasWon(this.poses)) {
-      this.setPhase('final', 2);
+    const passed = this.level === 1 ? this.authority.hasWon(this.poses)
+      : this.level === 2 ? this.riverAuthority.hasWon(this.poses)
+      : this.chapterAuthority.hasWon(this.poses);
+    if (passed) {
+      if (this.level === 4) this.setPhase('final', 4);
+      else this.setPhase('transition', this.level, Date.now() + 2800);
     }
+  }
+  private respawn(seat: Seat): void {
+    const p = this.poses[seat];
+    if (!p) return;
+    const checkpoints = this.level === 1 ? CHECKPOINTS
+      : this.level === 2 ? RIVER_CHECKPOINTS : LATE_CHECKPOINTS;
+    const index = this.level === 1 ? this.puzzle.checkpoint
+      : this.level === 2 ? this.river.checkpoint : this.chapter.checkpoint;
+    const pose: Pose = { seat, x: checkpoints[index] + seat * 18, y: 567, vx: 0, vy: 0 };
+    if (p.x === pose.x && p.y === pose.y) return;
+    this.poses[seat] = pose;
+    this.broadcast({t:'respawn',pose});
+    this.emit('respawn',pose);
   }
   private startReconnect(): void {
     if (this.reconnectTimer || this.shuttingDown) return;
@@ -592,6 +667,7 @@ export class Network {
     this.playing = false; this.completed = false;
     this.stage = 'lobby'; this.level = 1; this.phaseSince = 0; this.phaseUntil = 0;
     this.riverAuthority.reset(); this.river = initialRiver();
+    this.chapterAuthority.reset(3);this.chapter=initialEyes();this.jaguar=defaultJaguar();this.lastHazardBroadcast=0;
     this.authority.reset(); this.puzzle = initialWorld(); this.lastAction.clear(); this.effectGate.reset(); this.pendingRestore = false;
     this.tokens = [null, null, null]; this.lastInput = 0; this.lastReceived = [0, 0, 0];
     this.emit('change', undefined);

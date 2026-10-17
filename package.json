@@ -7,7 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test:logic": "esbuild tests/puzzles.test.ts tests/river.test.ts tests/effects.test.ts --bundle --platform=node --format=esm --outdir=.test-output && node .test-output/puzzles.test.js && node .test-output/river.test.js && node .test-output/effects.test.js"
+    "test:logic": "esbuild tests/puzzles.test.ts tests/river.test.ts tests/effects.test.ts tests/chapters.test.ts --bundle --platform=node --format=esm --outdir=.test-output && node .test-output/puzzles.test.js && node .test-output/river.test.js && node .test-output/effects.test.js && node .test-output/chapters.test.js"
   },
   "dependencies": {
     "peerjs": "^1.5.5",

@@ -3,6 +3,7 @@ import { CHARACTERS, Network } from './network';
 import { DemoScene, type TouchInput } from './game';
 import { IntroScene } from './intro';
 import { RiverScene } from './riverScene';
+import { LateScene } from './lateScene';
 import './style.css';
 
 const net = new Network();
@@ -10,7 +11,7 @@ const ui = document.querySelector<HTMLDivElement>('#ui')!;
 const controls = document.querySelector<HTMLDivElement>('#mobile-controls')!;
 const touch: TouchInput = { left: false, right: false, jump: false, interact: false, ability: false };
 let game: Phaser.Game | null = null;
-let activeMode: 'none' | 'intro' | 'level1' | 'level2' = 'none';
+let activeMode: 'none' | 'intro' | 'level1' | 'level2' | 'level3' | 'level4' = 'none';
 let info = '';
 
 function safeText(value: string): string {
@@ -26,16 +27,21 @@ function banner(): string {
     '<p>Quando chega a boca da noite, a floresta muda de lugar.<br>Três amigos. Uma saída. Ninguém pode ficar para trás.</p>';
 }
 function enterGame(): void {
-  const mode = net.stage === 'intro' ? 'intro' : net.level === 2 ? 'level2' : 'level1';
+  const mode = net.stage === 'intro' ? 'intro' : ('level' + net.level) as 'level1' | 'level2' | 'level3' | 'level4';
   if (game && activeMode === mode) return;
   exitGame();
   activeMode = mode;
   const scene = mode === 'intro' ? new IntroScene() :
-    mode === 'level2' ? new RiverScene(net, touch, refreshHud) : new DemoScene(net, touch, refreshHud);
+    mode === 'level2' ? new RiverScene(net, touch, refreshHud) :
+    net.level >= 3 ? new LateScene(net, touch, refreshHud) : new DemoScene(net, touch, refreshHud);
+  // Aspecto variável no canvas: nas janelas altas o mundo é recortado pela câmera,
+  // em vez de ficar minúsculo como na captura com três janelas lado a lado.
+  const ratio = window.innerWidth / Math.max(1, window.innerHeight);
+  const viewWidth = mode === 'intro' ? 1200 : ratio < 1.25 ? Math.max(350, Math.round(700 * ratio)) : 1200;
   game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: 'game',
-    width: 1200,
+    width: viewWidth,
     height: 700,
     backgroundColor: '#091c23',
     render: { antialias: true, pixelArt: false },
@@ -53,9 +59,20 @@ function exitGame(): void {
   controls.replaceChildren();
 }
 function refreshHud(): void {
-  const scene = game?.scene.keys[net.level === 2 ? 'RiverScene' : 'DemoScene'] as DemoScene | RiverScene | undefined;
+  const scene = game?.scene.keys[net.level >= 3 ? 'LateScene' : net.level === 2 ? 'RiverScene' : 'DemoScene'] as DemoScene | RiverScene | LateScene | undefined;
   const skill = document.querySelector<HTMLElement>('#skill-status');
   if (skill && scene?.getCooldown) skill.textContent = scene.getCooldown();
+  const team=document.querySelector<HTMLElement>('#team-status');
+  if (team && net.localSeat !== null && net.playing) {
+    const x = net.poses[net.localSeat].x;
+    const names: string[]=[];
+    for (const p of net.poses) {
+      if (p.seat === net.localSeat || !net.players[p.seat].online) continue;
+      const dx=p.x-x;
+      if(Math.abs(dx)>185)names.push((dx<0?'◀':'▶')+' '+CHARACTERS[p.seat].name);
+    }
+    team.textContent=names.join(' · ');
+  }
 }
 setInterval(refreshHud, 150);
 function bindMobile(): void {
@@ -96,13 +113,15 @@ function render(): void {
       return;
     }
     if (net.stage === 'transition') {
-      ui.innerHTML = '<div class="interlevel"><h2>🌿 FASE CONCLUÍDA!</h2><p>NINGUÉM FICA PARA TRÁS!</p>' +
-        '<p>Os três amigos seguem juntos até o rio...</p><strong>FASE 02 · A PONTE QUEBRADA</strong></div>';
+      const titles=['','A BOCA DA NOITE','A PONTE QUEBRADA','OLHOS NA MATA','A TRILHA QUE MENTE','O ÚLTIMO CAMINHO'];
+      ui.innerHTML = '<div class="interlevel"><h2>🌿 FASE CONCLUÍDA!</h2><p>' +
+        (net.level===2?'VOCÊS ATRAVESSARAM O RIO!':net.level===3?'VOCÊS SOBREVIVERAM À ESCURIDÃO!':'NINGUÉM FICA PARA TRÁS!') +
+        '</p><p>Os três amigos seguem juntos...</p><strong>FASE 0'+(net.level+1)+' · '+titles[net.level+1]+'</strong></div>';
       return;
     }
     if (net.stage === 'final') {
-      ui.innerHTML = '<div class="victory"><h2>🌟 VOCÊS ATRAVESSARAM O RIO!</h2>' +
-        '<p>A floresta ainda guarda seus segredos...</p><p>As próximas fases chegarão em breve.</p>' +
+      ui.innerHTML = '<div class="victory"><h2>🌟 VOCÊS DESCOBRIRAM A VERDADE!</h2>' +
+        '<p>Mas ainda existe algo protegendo a saída da floresta...</p><p>O último capítulo chegará em breve.</p>' +
         button('leave-final', 'VOLTAR AO MENU') + '</div>';
       ui.querySelector('#leave-final')?.addEventListener('click', () => net.shutdown());
       return;
@@ -112,7 +131,7 @@ function render(): void {
     const paused = online < 3;
     ui.innerHTML = '<div class="hud">🌳 A FLORESTA MENTE · <span class="text-muted">' +
       safeText(player) + ' · FASE 0' + net.level + ' · Sala ' + safeText(net.code) + ' · ' + online + '/3</span> · <span id="skill-status"></span> ' +
-      '<button id="leave" class="hud-leave" title="Sair da sala">✕</button></div>' +
+      '<span id="team-status" class="team-status"></span><button id="leave" class="hud-leave" title="Sair da sala">✕</button></div>' +
       (net.completed
         ? '<div class="victory"><h2>🌟 NINGUÉM FICA PARA TRÁS!</h2><p>Os três amigos venceram juntos o primeiro desafio da floresta.</p>' +
           button('leave-win', 'VOLTAR AO MENU') + '</div>'

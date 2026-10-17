@@ -53,3 +53,9 @@ input.code-input{margin:12px 0;padding:12px 14px;width:min(300px,100%);border-ra
 .interlevel h2{color:#e5ffad;font-size:clamp(26px,5vw,44px)}
 .interlevel strong{display:block;margin-top:20px;color:#93f5e0;letter-spacing:2px}
 @media(max-height:500px){.cinematic-actions{right:12px;bottom:8px}.cinematic-actions .btn{padding:9px 14px}.interlevel{padding:18px}.interlevel h2{font-size:24px}}
+
+/* Janelas estreitas: o mundo é mostrado pela câmera Phaser, não espremido em 1200x700. */
+.team-status{font-size:11px;color:#e5fda7;letter-spacing:.2px;white-space:nowrap}
+.hud{max-width:calc(100vw - 12px);flex-wrap:wrap;gap:5px}
+body.playing #game canvas{image-rendering:auto}
+@media(max-width:680px){.hud{font-size:10px;padding:6px 9px;justify-content:center}.team-status{font-size:10px}}

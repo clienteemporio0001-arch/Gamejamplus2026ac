@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CHARACTERS, SPAWNS, type Network, type Pose, type Seat } from './network';
 import { EXIT, LEVER, PEDAL, PICKUPS, SWITCH, TARGET, type WorldState } from './puzzles';
 import { SkillVfx } from './skillVfx';
+import { configureCamera } from './camera';
 
 export type TouchInput = { left: boolean; right: boolean; jump: boolean; interact: boolean; ability: boolean };
 
@@ -139,6 +140,7 @@ export class DemoScene extends Phaser.Scene {
       }
     }
 
+    configureCamera(this, this.player);
     this.messageLabel = this.sceneText(600, 110, '', 17, '#f1ffcd').setWordWrapWidth(1000);
     this.cursors = this.input.keyboard?.createCursorKeys();
     this.keys = this.input.keyboard?.addKeys('A,D,SPACE,W,UP,E,Q') as Record<string, Phaser.Input.Keyboard.Key> | undefined;

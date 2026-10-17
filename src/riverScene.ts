@@ -3,6 +3,7 @@ import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import { RIVER, RIVER_SPAWNS, type RiverWorld } from './river';
 import type { TouchInput } from './game';
 import { SkillVfx } from './skillVfx';
+import { configureCamera } from './camera';
 
 /** Fase 2: rio amazônico, três peças de ponte, ilusão e mecanismo coletivo. */
 export class RiverScene extends Phaser.Scene {
@@ -119,6 +120,7 @@ export class RiverScene extends Phaser.Scene {
         for (const block of this.blocks) this.physics.add.collider(actor, block);
       }
     }
+    configureCamera(this, this.actor);
     this.cursors = this.input.keyboard?.createCursorKeys();
     this.keys = this.input.keyboard?.addKeys('A,D,W,E,Q') as Record<string, Phaser.Input.Keyboard.Key> | undefined;
     this.tip = this.title(600, 120, '', 18).setWordWrapWidth(1050);
