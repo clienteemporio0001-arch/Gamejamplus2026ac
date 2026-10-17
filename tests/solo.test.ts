@@ -33,9 +33,11 @@ for(const path of ['src/forestScene.ts','src/journeyScene.ts','src/lateScene.ts'
  for(const token of ['new SoloBodies(this,',"this.net.on('solo-seat'",'this.solo?.beforeFrame(', 'this.solo?.report()'])
    ok(s.includes(token),path+' integra '+token);
 }
-for(const label of ['MODO SOLO — TESTES','ESCOLHER FASE PARA TESTAR','REINICIAR FASE','VOLTAR AO MENU','ASSISTIR À INTRODUÇÃO'])
+for(const label of ['JOGAR SOZINHO','MULTIPLAYER ONLINE','FERRAMENTAS DE DESENVOLVIMENTO',
+  'TESTAR FLORESTA MUTÁVEL','REINICIAR TENTATIVA','VOLTAR AO MENU'])
  ok(ui.includes(label),'interface '+label);
-for(let i=1;i<=4;i++)ok(ui.includes("button('solo-"+i+"'"),'seletor de fase '+i);
+ok(ui.includes("button('dev-classic-'+level"),'seletor clássico dentro do desenvolvimento');
+ok(ui.includes('net.startSolo(level)'),'fases antigas continuam testáveis');
 for(const digit of ['Digit1','Digit2','Digit3'])ok(ui.includes(digit),'atalho '+digit);
 ok(ui.includes('net.selectSoloSeat'),'botões touch / teclado selecionam seat');
 ok(ui.includes('Tempos de cooperação adaptados'),'painel indica janelas especiais solo');

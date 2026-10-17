@@ -3,6 +3,7 @@ import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import { LOOP_WIDTH, LOOP_GEOMETRY, LOOP_MARKS, LOOP_TREE, LOOP_FINAL, ROUTES, barriers,
   allDone, windGuide, blackoutActive, warningActive, type LoopWorld, LOOP_START } from './forestLoop';
 import { NightArt } from './visuals';
+import { loopContext, regionTitle } from './forestLoopUI';
 import { SoloBodies } from './soloBodies';
 import { gameKeys } from './keyboard';
 import type { TouchInput } from './game';
@@ -19,7 +20,9 @@ export class ForestLoopScene extends Phaser.Scene {
   private tree!:Phaser.GameObjects.Container;private ropes:Phaser.GameObjects.Graphics[]=[];
   private finalBarrier!:Phaser.GameObjects.Rectangle;
   private marks:Phaser.GameObjects.Container[]=[];
-  private links:Phaser.GameObjects.Text[]=[];
+  private contextText!:Phaser.GameObjects.Text;
+  private regionToast!:Phaser.GameObjects.Text;
+  private regionShown='';private regionUntil=0;
   private gusts:Phaser.GameObjects.Ellipse[]=[];
   private clearingTree!:Phaser.GameObjects.Image;
   private shiftShade!:Phaser.GameObjects.Rectangle;
@@ -30,13 +33,10 @@ export class ForestLoopScene extends Phaser.Scene {
   private off:Array<()=>void>=[];
   private cursors?:Phaser.Types.Input.Keyboard.CursorKeys;
   private keys?:Record<string,Phaser.Input.Keyboard.Key>;
-  private prompt!:Phaser.GameObjects.Text;private info!:Phaser.GameObjects.Text;
-  private wind!:Phaser.GameObjects.Text;private cycle!:Phaser.GameObjects.Text;
+
   private blackout!:Phaser.GameObjects.Rectangle;private blackoutText!:Phaser.GameObjects.Text;
-  private life!:Phaser.GameObjects.Text;
   private shots=0;private dashes=0;private dashUntil=0;private facing:-1|1=1;
   private jumps=0;private paused=false;private pendingJump=false;
-  private hint='';
   constructor(net:Network,touch:TouchInput,hud?:()=>void){
     super({key:'ForestLoopScene'});this.net=net;this.touch=touch;this.hud=hud;
     this.w={...net.loop,marks:[...net.loop.marks],tree:[...net.loop.tree],final:[...net.loop.final]};
@@ -58,9 +58,6 @@ export class ForestLoopScene extends Phaser.Scene {
     rect.setVisible(active);
     if(active)(rect.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
   }
-  private setMessage(message:string):void {
-    if(message===this.hint)return;this.hint=message;this.info.setText(message);
-  }
   preload():void{
     this.load.svg('loop-clearing-tree',import.meta.env.BASE_URL+'assets/clearing-tree.svg');
     this.load.svg('loop-hollow-tree',import.meta.env.BASE_URL+'assets/hollow-tree.svg');
@@ -68,10 +65,6 @@ export class ForestLoopScene extends Phaser.Scene {
   private background():void{
     this.art=new NightArt(this,LOOP_WIDTH,'forest');
     this.art.water(LOOP_GEOMETRY.chasm.start,LOOP_GEOMETRY.chasm.end,637);
-    this.label(575,235,'I · FLORESTA DAS REPETIÇÕES',20);
-    this.label(1850,217,'II · A CLAREIRA CENTRAL',21,'#e3ebca');
-    this.label(2445,225,'III · A ÁRVORE SUSPENSA',20);
-    this.label(3440,235,'IV · A SAÍDA REAL',20);
     this.clearingTree=this.add.image(1790,333,'loop-clearing-tree')
       .setDisplaySize(560,625).setDepth(-7).setAlpha(.91);
     const light=this.add.graphics().setDepth(-6);
@@ -84,10 +77,7 @@ export class ForestLoopScene extends Phaser.Scene {
       const root=this.add.ellipse(1450+i*100,632,135,29,0x224234,.30).setDepth(-2);
       this.movingRoots.push(root);
     }
-    this.label(1860,330,'A FLORESTA MENTE\nMAS O VENTO NÃO.',19,'#e2f0d1');
-    this.label(2600,526,'CORRENTEZA FATAL · CUIDADO AO SALTAR',14,'#ffd5a5');
     // Three distinguishable memory landmarks. Their positions shift cosmetically with layout.
-    const names=['ÁRVORE OCA','PEDRA RACHADA','TRONCO EM ARCO'] as const;
     for(let i=0;i<3;i++){
       const pos=LOOP_MARKS[i];const obj=this.add.container(pos.x,pos.y-85).setDepth(12);
       const g=this.add.graphics();
@@ -108,32 +98,22 @@ export class ForestLoopScene extends Phaser.Scene {
       }
       g.setAlpha(i===0?.13:1);
       obj.add(g);this.marks.push(obj);
-      this.label(pos.x,pos.y-163,names[i],15,'#e3e9b7');
     }
-    const pad=(x:number,y:number,color:number,text:string)=>{
-      this.add.circle(x,y,16,color,.81).setStrokeStyle(3,0xeafaf0,.77).setDepth(13);
-      this.label(x,y-76,text,13);
+    const pad=(x:number,y:number,color:number)=>{
+      this.add.circle(x,y,13,color,.76).setStrokeStyle(2,0xeafaf0,.65).setDepth(13);
     };
-    pad(LOOP_MARKS[0].x,LOOP_MARKS[0].y,0x8eda9e,'TÉO · E · ÁRVORE OCA');
-    pad(LOOP_MARKS[1].x,LOOP_MARKS[1].y,0xf7b074,'LIA · J · PEDRA RACHADA');
-    pad(LOOP_MARKS[2].x,LOOP_MARKS[2].y,0x8ec9f4,'NINO · SHIFT + E');
-    pad(LOOP_TREE[0].x,LOOP_TREE[0].y,0x8eda9e,'TÉO · E · PRIMEIRA AMARRA');
-    pad(LOOP_TREE[1].x,LOOP_TREE[1].y,0xf7b074,'LIA · J · SEGUNDA AMARRA');
-    pad(LOOP_TREE[2].x,LOOP_TREE[2].y,0x8ec9f4,'NINO · SHIFT + E · RAIZ');
-    pad(LOOP_FINAL[0].x,LOOP_FINAL[0].y,0x8eda9e,'TÉO · E · SAÍDA');
-    pad(LOOP_FINAL[1].x,LOOP_FINAL[1].y,0xf7b074,'LIA · J · AMARRA');
-    pad(LOOP_FINAL[2].x,LOOP_FINAL[2].y,0x8ec9f4,'NINO · SHIFT + E');
-    this.label(3705,485,'A SAÍDA VERDADEIRA',20,'#eaf5cb');
-    this.add.rectangle(1080,625,85,7,0x7cbed4,.8).setDepth(11);
-    this.label(1080,544,'NINO · SHIFT AQUI',12,'#bee2ff');
-    this.add.rectangle(2122,625,85,7,0x7cbed4,.8).setDepth(11);
-    this.label(2119,549,'NINO · INICIE O DASH',12,'#bee2ff');
-    this.add.rectangle(3400,625,85,7,0x7cbed4,.8).setDepth(11);
-    this.label(3400,547,'NINO · SHIFT AQUI',12,'#bee2ff');
-    const hollow=this.label(LOOP_GEOMETRY.portal.oca,478,'PASSAGEM DA ÁRVORE OCA\nREÚNAM OS TRÊS',15,'#c9edb6');
-    const stone=this.label(LOOP_GEOMETRY.portal.pedra,480,'PASSAGEM DA PEDRA RACHADA\nREÚNAM OS TRÊS',15,'#ebd9b6');
-    this.links=[hollow,stone];
-    this.label(3090,484,'TRILHA ENGANOSA\nO VENTO REVELA QUANDO PASSAR',14,'#e8c6a7');
+    for(const [index,point] of LOOP_MARKS.entries())
+      pad(point.x,point.y,[0x8eda9e,0xf7b074,0x8ec9f4][index]);
+    for(const [index,point] of LOOP_TREE.entries())
+      pad(point.x,point.y,[0x8eda9e,0xf7b074,0x8ec9f4][index]);
+    for(const [index,point] of LOOP_FINAL.entries())
+      pad(point.x,point.y,[0x8eda9e,0xf7b074,0x8ec9f4][index]);
+    // Subtle route cues: world objects stay anchored, captions only appear nearby.
+    for(const x of [LOOP_GEOMETRY.portal.oca,LOOP_GEOMETRY.portal.pedra]){
+      this.add.circle(x,625,19,0x88bd97,.14).setStrokeStyle(2,0xb2d8af,.55).setDepth(12);
+    }
+    for(const x of [1080,2122,3400])
+      this.add.rectangle(x,625,72,5,0x7cbed4,.7).setDepth(11);
   }
   private createTree():void{
     const ink=this.add.graphics();
@@ -205,12 +185,10 @@ export class ForestLoopScene extends Phaser.Scene {
     this.cameras.main.setDeadzone(80,90);
     this.cursors=this.input.keyboard?.createCursorKeys();
     this.keys=this.input.keyboard?.addKeys('A,D,E') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
-    this.wind=this.label(12,88,'',14,'#c6ead8').setScrollFactor(0).setOrigin(0,.5);
-    this.cycle=this.label(12,53,'',15,'#e6d6a7').setScrollFactor(0).setOrigin(0,.5);
-    this.info=this.label(this.scale.gameSize.width/2,150,'',14,'#d7f4cf').setScrollFactor(0);
-    this.info.setWordWrapWidth(this.scale.gameSize.width-30);
-    this.prompt=this.label(this.scale.gameSize.width/2,200,'',14,'#f0e9b9').setScrollFactor(0);
-    this.life=this.label(this.scale.gameSize.width-16,56,'3 AMIGOS · UMA SAÍDA',13).setScrollFactor(0).setOrigin(1,.5);
+    this.contextText=this.label(0,0,'',12,'#e7f4d6')
+      .setDepth(70).setVisible(false).setWordWrapWidth(230);
+    this.regionToast=this.label(this.scale.gameSize.width/2,111,'',13,'#cbe7c8')
+      .setScrollFactor(0).setDepth(90).setVisible(false);
     this.blackout=this.add.rectangle(this.scale.gameSize.width/2,350,this.scale.gameSize.width+200,800,0x02080e,1)
       .setDepth(190).setScrollFactor(0).setAlpha(0);
     // Wind is readable through moving leaves, and its sign comes exclusively from windGuide().
@@ -352,24 +330,17 @@ export class ForestLoopScene extends Phaser.Scene {
       this.labels[i].setPosition(a.x,a.y-47);
       this.labels[i].setColor(i===seat?'#ffffff':CHARACTERS[i].hex);
     }
-    const elapsed=Math.max(0,now-w.cycleStart);
-    const seconds=Math.max(0,Math.ceil((60000-elapsed)/1000));
-    this.cycle.setText('FLORESTA '+['A · ORIGINAL','B · REORGANIZADA','C · INVERTIDA'][w.layout]
-      +'  |  PRÓXIMA MUDANÇA: '+seconds+'s'
-      +'  |  CICLOS '+w.cycle);
+    // Context is the only gameplay instruction rendered in world coordinates.
+    const hint=loopContext(w,seat,this.local.x,this.local.y,now);
+    this.contextText.setText(hint).setVisible(Boolean(hint))
+      .setPosition(this.local.x,this.local.y-87);
+    const region=regionTitle(this.local.x);
+    if(region!==this.regionShown){
+      this.regionShown=region;this.regionUntil=time+2000;
+      this.regionToast.setText(region);
+    }
+    this.regionToast.setVisible(time<this.regionUntil&&!pause);
     const wind=windGuide(w,seat,this.local.x);
-    this.wind.setText('VENTO '+(wind.direction<0?'◀◀':wind.direction>0?'▶▶':'≈≈')
-      +'  '+wind.hint);
-    if(warningActive(w,now))this.setMessage('O VENTO AUMENTA. A FLORESTA VAI MUDAR EM BREVE...');
-    else if(!w.observed)this.setMessage('OBSERVEM OS TRÊS MARCOS. MEMORIZEM ANTES DO PRIMEIRO APAGÃO.');
-    else if(w.lastRoute==='wrong'&&now-w.routeAt<5800)
-      this.setMessage('ESPERA... A GENTE JÁ PASSOU AQUI! O VENTO AVISOU.');
-    else if(!allDone(w.marks))this.setMessage('MARCOS: '+w.marks.filter(Boolean).length+'/3 • '+wind.hint);
-    else if(!w.bridge)this.setMessage('AMARRAS DA ÁRVORE: '+w.tree.filter(Boolean).length+'/3 • TÉO E, LIA J, NINO SHIFT + E.');
-    else if(!w.exit)this.setMessage('SAÍDA: '+w.final.filter(Boolean).length+'/3 • '+wind.hint);
-    else this.setMessage('A SAÍDA VERDADEIRA ESTÁ LIVRE. ATRAVESSEM TODOS JUNTOS.');
-    this.prompt.setText(w.observed?'MEMÓRIA '+w.marks.filter(Boolean).length+'/3  •  ÁRVORE '+
-      w.tree.filter(Boolean).length+'/3  •  SAÍDA '+w.final.filter(Boolean).length+'/3':'MEMORIZEM: OCA · PEDRA · ARCO');
     const fallProgress=w.treeFallAt>0?Math.min(1,(now-w.treeFallAt)/1900):0;
     const easing=fallProgress*fallProgress*(3-2*fallProgress);
     this.tree.setRotation(-1.16*(1-easing));

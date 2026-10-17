@@ -179,6 +179,7 @@ export class Network {
   private sessionToken = '';
   private reconnectDeadline = 0;
   private shuttingDown = false;
+  private sessionEpoch=0;
   private pendingRestore = false;
 
   on<K extends keyof Events>(event: K, fn: (payload: Events[K]) => void): () => void {
@@ -278,6 +279,7 @@ export class Network {
     this.shutdown();
     this.experience=mode;
     this.shuttingDown = false;
+    const epoch=this.sessionEpoch;
     this.role = 'host';
     this.localSeat = 0;
     this.players[0] = { seat: 0, online: true, ready: false };
@@ -291,26 +293,37 @@ export class Network {
           candidate.on('open', () => { clearTimeout(timeout); resolve(candidate); });
           candidate.on('error', (err) => { clearTimeout(timeout); candidate.destroy(); reject(err); });
         });
+        if(this.sessionEpoch!==epoch || this.role!=='host'||this.shuttingDown){peer.destroy();return;}
         this.peer = peer;
         this.code = code; // Somente depois do evento open do servidor de sinalização.
-        peer.on('connection', conn => this.acceptConnection(conn));
-        peer.on('error', err => this.emit('notice', this.peerError(err)));
-        peer.on('disconnected', () => {
-          this.emit('notice', 'Sinalização interrompida. Tentando reconectar...');
-          if (!peer.destroyed) peer.reconnect();
+        peer.on('connection',conn=>{
+          if(this.sessionEpoch!==epoch||this.peer!==peer||this.shuttingDown||this.role!=='host'){
+            conn.close();return;
+          }
+          this.acceptConnection(conn);
+        });
+        peer.on('error',err=>{
+          if(this.sessionEpoch!==epoch||this.peer!==peer||this.shuttingDown||this.role!=='host')return;
+          this.emit('notice',this.peerError(err));
+        });
+        peer.on('disconnected',()=>{
+          if(this.sessionEpoch!==epoch||this.peer!==peer||this.shuttingDown||this.role!=='host')return;
+          this.emit('notice','Sinalização interrompida. Tentando reconectar...');
+          if(!peer.destroyed)peer.reconnect();
         });
         this.heartbeat = setInterval(() => this.hostTick(), 50);
         this.updateRoster();
         return;
       } catch (e) {
+        if(this.sessionEpoch!==epoch || this.shuttingDown||this.role!=='host')return;
         const error = e as Error & { type?: string };
         if (error.type === 'unavailable-id') continue;
         this.emit('notice', this.peerError(error));
-        this.shutdown(); return;
+        return;
       }
     }
-    this.emit('notice', 'Não foi possível obter um código livre. Tente novamente.');
-    this.shutdown();
+    if(this.sessionEpoch===epoch&&!this.shuttingDown&&this.role==='host')
+      this.emit('notice','Não foi possível obter um código livre. Tente novamente.');
   }
   joinRoom(rawCode: string): void {
     const code = rawCode.trim().toUpperCase();
@@ -319,6 +332,7 @@ export class Network {
     }
     this.shutdown();
     this.shuttingDown = false;
+    const epoch=this.sessionEpoch;
     this.role = 'guest'; this.code = code;
     try {
       this.sessionToken = sessionStorage.getItem('afm-' + code) || newToken();
@@ -327,8 +341,9 @@ export class Network {
     this.emit('change', undefined);
     const peer = new Peer();
     this.peer = peer;
-    peer.on('open', () => this.connectHost());
+    peer.on('open',()=>{if(this.sessionEpoch===epoch&&this.peer===peer&&!this.shuttingDown&&this.role==='guest')this.connectHost();});
     peer.on('error', err => {
+      if(this.sessionEpoch!==epoch||this.peer!==peer||this.shuttingDown||this.role!=='guest')return;
       const type = (err as Error & { type?: string }).type;
       if (type === 'peer-unavailable' && this.localSeat === null) {
         this.emit('notice', 'Sala não encontrada. Confira o código e tente novamente.');
@@ -339,6 +354,7 @@ export class Network {
       }
     });
     peer.on('disconnected', () => {
+      if(this.sessionEpoch!==epoch||this.peer!==peer||this.shuttingDown||this.role!=='guest')return;
       this.emit('notice', 'Sem sinalização. Tentando restabelecer conexão...');
       if (!peer.destroyed) peer.reconnect();
     });
@@ -348,7 +364,10 @@ export class Network {
     if (this.hostConn?.open) return;
     const conn = this.peer.connect(roomId(this.code), { reliable: true, serialization: 'json' });
     this.hostConn = conn;
+    const epoch=this.sessionEpoch;
+    const valid=()=>!this.shuttingDown&&this.role==='guest'&&this.hostConn===conn&&this.sessionEpoch===epoch;
     const timeout = setTimeout(() => {
+      if (!valid())return;
       if (!conn.open) {
         conn.close();
         if (this.localSeat === null) this.emit('notice', 'Não foi possível conectar. Sala inexistente, bloqueio WebRTC ou rede indisponível.');
@@ -356,13 +375,14 @@ export class Network {
     }, 10000);
     conn.on('open', () => {
       clearTimeout(timeout);
+      if(!valid())return;
       this.stopReconnect();
       this.message(conn, { t: 'hello', token: this.sessionToken });
     });
     conn.on('data', raw => this.guestReceive(conn, raw));
     conn.on('close', () => {
       clearTimeout(timeout);
-      if (this.shuttingDown || conn !== this.hostConn) return;
+      if (!valid()) return;
       if (this.localSeat === null) {
         this.emit('notice', 'Não foi possível entrar na sala.');
       } else {
@@ -373,14 +393,16 @@ export class Network {
       }
     });
     conn.on('error', () => {
+      if(!valid())return;
       if (this.localSeat === null) this.emit('notice', 'Erro na conexão WebRTC. Confira a rede ou tente outro navegador.');
     });
   }
   private acceptConnection(conn: DataConnection): void {
-    if (this.role !== 'host') { conn.close(); return; }
+    if (this.shuttingDown||this.role !== 'host') { conn.close(); return; }
     let seat: Seat | null = null;
     const timeout = setTimeout(() => { if (seat === null) conn.close(); }, 6000);
     conn.on('data', raw => {
+      if(this.shuttingDown||this.role!=='host')return;
       const msg = parseWire(raw);
       if (!msg) return;
       if (seat === null) {
@@ -461,11 +483,12 @@ export class Network {
       this.grace.set(seat, timer);
     });
     conn.on('error', () => {
+      if(this.shuttingDown||this.role!=='host'||seat===null||this.conns.get(seat)!==conn)return;
       this.emit('notice', 'Erro na conexão com um dos convidados.');
     });
   }
   private guestReceive(conn: DataConnection, raw: unknown): void {
-    if (conn !== this.hostConn) return;
+    if (conn !== this.hostConn || this.shuttingDown || this.role!=='guest') return;
     const msg = parseWire(raw);
     if (!msg) return;
     switch (msg.t) {
@@ -925,6 +948,7 @@ export class Network {
     return 'Erro de conexão: ' + String((err as Error)?.message || type || 'desconhecido');
   }
   shutdown(): void {
+    this.sessionEpoch++;
     this.shuttingDown = true;
     if (this.isHost) this.broadcast({ t: 'closed' });
     this.stopReconnect();
@@ -948,6 +972,7 @@ export class Network {
     this.forestAuthority.reset();this.forest=initialForest();
     this.authority.reset(); this.puzzle = initialWorld(); this.lastAction.clear(); this.effectGate.reset(); this.pendingRestore = false;
     this.tokens = [null, null, null]; this.lastInput = 0; this.lastReceived = [0, 0, 0];
+    this.sessionToken='';this.reconnectDeadline=0;
     this.emit('change', undefined);
   }
 }

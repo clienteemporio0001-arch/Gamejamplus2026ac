@@ -10,6 +10,8 @@ import { LateScene } from './lateScene';
 import './style.css';
 import { gameKeys } from './keyboard';
 import { GUIDE_DIALOGUES } from './forestPresentation';
+import { loopObjective, loopWind } from './forestLoopUI';
+import { LOOP_CYCLE_MS } from './forestLoop';
 
 const net = new Network();
 const ui = document.querySelector<HTMLDivElement>('#ui')!;
@@ -18,7 +20,7 @@ const touch: TouchInput = { left: false, right: false, jump: false, interact: fa
 let game: Phaser.Game | null = null;
 let activeMode: 'none' | 'intro' | 'level1' | 'level2' | 'level3' | 'level4' | 'loop' = 'none';
 let info = '';
-let soloSetup=false;
+let devToolsOpen=false;
 
 function safeText(value: string): string {
   return value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] ?? c));
@@ -29,7 +31,7 @@ function button(id: string, label: string, secondary = false, disabled = false):
 function notice(): string { return info ? '<div class="notice" role="status">' + safeText(info) + '</div>' : ''; }
 function banner(): string {
   return '<span class="kicker">GAME JAM PLUS • BETTER TOGETHER / SOMETHING’S OFF</span>' +
-    '<h1>A FLORESTA<br>MENTE</h1><div class="subtitle">Ninguém fica para trás.</div>' +
+    '<h1>A FLORESTA<br>MENTE</h1><div class="subtitle">Mas o vento não.</div>' +
     '<p>Quando chega a boca da noite, a floresta muda de lugar.<br>Três amigos. Uma saída. Ninguém pode ficar para trás.</p>';
 }
 function enterGame(): void {
@@ -66,6 +68,24 @@ function exitGame(): void {
   controls.replaceChildren();
 }
 function refreshHud(): void {
+  if(net.playing&&net.experience==='loop'&&net.localSeat!==null){
+    const world=net.loop;
+    const update=(id:string,value:string)=>{
+      const el=document.getElementById(id);
+      if(el&&el.textContent!==value)el.textContent=value;
+    };
+    const objective=loopObjective(world);
+    const remaining=world.blackoutUntil>Date.now()
+      ?Math.max(0,Math.ceil((world.blackoutUntil-Date.now())/1000))
+      :Math.max(0,Math.ceil((LOOP_CYCLE_MS-Math.max(0,Date.now()-world.cycleStart))/1000));
+    update('loop-state',['A','B','C'][world.layout]);
+    update('loop-timer',(world.blackoutUntil>Date.now()?'MUDANDO ':'APAGÃO EM ')+remaining+'s');
+    update('loop-objective',objective.title);
+    update('loop-progress',objective.progress);
+    update('loop-wind',loopWind(world,net.localSeat,net.poses[net.localSeat].x));
+    update('loop-character',CHARACTERS[net.localSeat].name.toUpperCase());
+    update('loop-skill',net.localSeat===0?'SALTO DUPLO':net.localSeat===1?'J · BALADEIRA':'SHIFT · DASH');
+  }
   const scene = game?.scene.keys[net.experience==='loop'?'ForestLoopScene':net.level >= 3 ? 'LateScene' : net.level === 2 ? 'JourneyScene' : 'ForestScene'] as DemoScene | ForestScene | RiverScene | JourneyScene | LateScene | ForestLoopScene | undefined;
   const skill = document.querySelector<HTMLElement>('#skill-status');
   if (skill && scene?.getCooldown) skill.textContent = scene.getCooldown();
@@ -150,6 +170,43 @@ function render(): void {
       ui.querySelector('#leave-final')?.addEventListener('click', () => net.shutdown());
       return;
     }
+    if(net.playing&&net.experience==='loop'){
+      const seat=net.localSeat??0;
+      const selected=CHARACTERS[seat];
+      const object=loopObjective(net.loop);
+      ui.innerHTML='<div class="loop-top-left" aria-label="Estado da floresta">'+
+        '<span class="loop-state">FLORESTA <strong id="loop-state">'+['A','B','C'][net.loop.layout]+'</strong></span>'+
+        '<span id="loop-timer">APAGÃO EM —</span></div>'+
+        '<div class="loop-top-right" aria-live="polite"><strong id="loop-objective">'+safeText(object.title)+'</strong>'+
+        '<small id="loop-progress">'+safeText(object.progress)+'</small></div>'+
+        '<div class="loop-wind" id="loop-wind" aria-label="Direção do vento"></div>'+
+        '<div class="loop-bottom-left"><span class="loop-avatar" style="background:'+selected.hex+'"></span>'+
+        '<span><strong id="loop-character">'+safeText(selected.name.toUpperCase())+'</strong>'+
+        '<small id="loop-skill"></small></span></div>'+
+        (net.isSolo?'<nav class="loop-seat-switch" aria-label="Trocar personagem">'+
+          ([0,1,2] as const).map(i=>'<button data-seat="'+i+'" '+(i===seat?'class="active" ':'')+
+            'aria-label="Controlar '+CHARACTERS[i].name+'">'+(i+1)+' · '+CHARACTERS[i].name+'</button>').join('')+
+          '</nav>':'')+
+        '<div class="loop-menu">'+
+        (net.isSolo?'<details id="loop-dev"><summary>⚙ <span>Opções</span></summary>'+
+          '<div class="loop-menu-options">'+
+          '<button id="solo-restart">REINICIAR TENTATIVA</button>'+
+          '<button id="solo-cycle">ADIANTAR APAGÃO</button>'+
+          '<button id="solo-leave">VOLTAR AO MENU</button></div></details>':
+          '<button id="leave" class="loop-online-leave" title="Sair da sala">SAIR</button>')+
+        '</div>'+
+        (net.players.some(p=>!p.online)?'<div class="loop-offline">Aguardando reconexão da equipe.</div>':'')+
+        (info?'<div class="loop-alert" role="status">'+safeText(info)+'</div>':'');
+      ui.querySelector('#solo-restart')?.addEventListener('click',()=>net.restartSolo());
+      ui.querySelector('#solo-cycle')?.addEventListener('click',()=>net.advanceLoopCycle());
+      ui.querySelector('#solo-leave')?.addEventListener('click',()=>net.shutdown());
+      ui.querySelector('#leave')?.addEventListener('click',()=>net.shutdown());
+      ui.querySelectorAll<HTMLButtonElement>('[data-seat]').forEach(button=>
+        button.addEventListener('click',()=>net.selectSoloSeat(Number(button.dataset.seat) as 0|1|2)));
+      if(!controls.childElementCount)bindMobile();
+      refreshHud();
+      return;
+    }
     const player = net.localSeat === null ? 'Conectando' : CHARACTERS[net.localSeat].name;
     const online = net.players.filter(p => p.online).length;
     const paused = online < 3;
@@ -177,7 +234,7 @@ function render(): void {
     document.querySelector<HTMLButtonElement>('#solo-restart')?.addEventListener('click',()=>net.restartSolo());
     document.querySelector<HTMLButtonElement>('#solo-cycle')?.addEventListener('click',()=>net.advanceLoopCycle());
     document.querySelector<HTMLButtonElement>('#solo-leave')?.addEventListener('click',()=>{
-      soloSetup=false;net.shutdown();
+      net.shutdown();
     });
     ui.querySelectorAll<HTMLButtonElement>('[data-seat]').forEach(button=>{
       button.classList.toggle('active',Number(button.dataset.seat)===net.localSeat);
@@ -190,39 +247,30 @@ function render(): void {
   }
   exitGame();
   const panelStart = '<main class="panel">';
-  if (net.role === 'idle' && soloSetup) {
-    ui.innerHTML=panelStart+'<div class="kicker">MODO SOLO DE TESTES · SEM CONEXÃO</div>'+
-      '<h2>ESCOLHER FASE PARA TESTAR</h2>'+
-      '<p>Controle Téo, Lia e Nino alternando entre 1, 2 e 3. Nenhum personagem tem IA.</p>'+
-      '<div class="solo-select">'+
-      button('solo-1','01 · A BOCA DA NOITE')+
-      button('solo-2','02 · A TRAVESSIA DOS CIPÓS')+
-      button('solo-3','03 · OLHOS NA MATA')+
-      button('solo-4','04 · A TRILHA QUE MENTE')+
-      button('solo-intro','▶ ASSISTIR À INTRODUÇÃO',true)+
-      button('solo-back','VOLTAR AO MENU',true)+'</div></main>';
-    ([1,2,3,4] as const).forEach(level=>
-      ui.querySelector('#solo-'+level)?.addEventListener('click',()=>net.startSolo(level)));
-    ui.querySelector('#solo-intro')?.addEventListener('click',()=>net.startSolo(1,true));
-    ui.querySelector('#solo-back')?.addEventListener('click',()=>{soloSetup=false;render();});
-    return;
-  }
   if (net.role === 'idle') {
     ui.innerHTML = panelStart + banner() + notice() +
-      '<div class="actions"><div class="kicker">AVENTURA PRINCIPAL · A FLORESTA MENTE. MAS O VENTO NÃO.</div>' +
-      button('loop-solo','🌬 NOVA AVENTURA · JOGAR SOZINHO')+
-      button('create','🌿 NOVA AVENTURA · MULTIPLAYER ONLINE')+
-      button('join-menu','🔑 ENTRAR EM SALA',true)+
-      '<div class="kicker">VERSÃO CLÁSSICA / TESTES</div>'+
-      button('solo-menu','🎮 MODO SOLO — TESTES (CLÁSSICO)',true)+
-      button('create-classic','CRIAR SALA CLÁSSICA',true)+'</div>' +
-      '<div class="rules">👥 Três jogadores em aparelhos diferentes. Um cria a sala; os outros entram com o código.<br>' +
-      '🌐 PeerJS Cloud + WebRTC • Conexão P2P depende da compatibilidade das redes.</div></main>';
+      '<div class="actions primary-play">'+
+      button('loop-solo','JOGAR SOZINHO')+
+      button('create','MULTIPLAYER ONLINE')+
+      button('join-menu','ENTRAR COM CÓDIGO',true)+'</div>'+
+      '<details id="dev-tools" class="dev-tools" '+(devToolsOpen?'open':'')+'>'+
+      '<summary>FERRAMENTAS DE DESENVOLVIMENTO</summary>'+
+      '<p>Protótipos antigos, separados da aventura principal.</p>'+
+      '<div class="dev-tools-actions">'+
+      button('dev-loop','TESTAR FLORESTA MUTÁVEL',true)+
+      ([1,2,3,4] as const).map(level=>button('dev-classic-'+level,'TESTAR FASE CLÁSSICA '+level,true)).join('')+
+      button('create-classic','CRIAR SALA CLÁSSICA',true)+'</div></details>'+
+      '<p class="menu-footnote">Multiplayer: três pessoas entram na mesma sala pelo código.</p></main>';
+    ui.querySelector('#dev-tools')?.addEventListener('toggle',()=>{
+      devToolsOpen=(ui.querySelector<HTMLDetailsElement>('#dev-tools')?.open??false);
+    });
     ui.querySelector('#create')?.addEventListener('click',()=>{info='';void net.createRoom('loop');});
     ui.querySelector('#create-classic')?.addEventListener('click',()=>{info='';void net.createRoom('classic');});
     ui.querySelector('#loop-solo')?.addEventListener('click',()=>{info='';net.startLoopSolo();});
-    ui.querySelector('#solo-menu')?.addEventListener('click',()=>{soloSetup=true;render();});
-    ui.querySelector('#join-menu')?.addEventListener('click', showJoin);
+    ui.querySelector('#dev-loop')?.addEventListener('click',()=>{info='';net.startLoopSolo();});
+    ([1,2,3,4] as const).forEach(level=>
+      ui.querySelector('#dev-classic-'+level)?.addEventListener('click',()=>{info='';net.startSolo(level);}));
+    ui.querySelector('#join-menu')?.addEventListener('click',showJoin);
     return;
   }
   if (net.role === 'guest' && net.localSeat === null) {
@@ -291,10 +339,10 @@ function showJoin(): void {
 }
 gameKeys.bind();
 net.on('solo-seat',()=>{gameKeys.clear();controls.replaceChildren();});
-net.on('change', render);
+net.on('change',()=>{if(net.role==='idle')info='';render();});
 net.on('start', () => { info = ''; render(); });
 net.on('phase', () => { info = ''; render(); });
-net.on('notice', text => { info = text; render(); });
+net.on('notice', text => {if(net.role==='idle')return;info=text;render();});
 net.on('win', () => { info = ''; render(); });
 window.addEventListener('keydown', event => {
   if(net.isSolo&&net.playing&&['Digit1','Digit2','Digit3','Numpad1','Numpad2','Numpad3'].includes(event.code)){

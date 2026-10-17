@@ -98,3 +98,103 @@ body.playing #game canvas{image-rendering:auto}
 @media(max-width:730px){.solo-hud{top:35px;padding:5px;gap:5px;font-size:10px}
  .solo-actions button,.solo-switch button{padding:4px 6px;font-size:10px}
  .solo-touch-switch{bottom:78px}}
+
+
+/* ETAPA 10: in-game UI lives in viewport space. World art and collision remain in Phaser. */
+.dev-tools{margin:19px auto 0;max-width:490px;border-top:1px solid #64877357;padding-top:13px;text-align:center}
+.dev-tools summary{list-style:none;cursor:pointer;color:#b7cfc0;font-size:11px;letter-spacing:1.3px;font-weight:800}
+.dev-tools summary::-webkit-details-marker{display:none}
+.dev-tools summary::before{content:'⚙ ';font-size:14px}
+.dev-tools summary:focus-visible,.loop-menu summary:focus-visible{outline:2px solid #b3eca1;outline-offset:4px}
+.dev-tools p{font-size:11px;margin:10px 0;color:#bad0be}
+.dev-tools-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding-top:8px}
+.dev-tools-actions .btn{padding:8px 10px;font-size:11px;min-width:0}
+.primary-play{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-width:470px;margin:25px auto 0}
+.primary-play .btn{padding:15px 9px;font-size:14px}
+.primary-play #join-menu{grid-column:1/-1;background:transparent;border-color:#527b66;color:#bacdbe;padding:8px}
+.menu-footnote{font-size:11px;margin:20px auto 0;color:#99ae9f}
+#ui.in-game .loop-top-left,#ui.in-game .loop-top-right,
+#ui.in-game .loop-bottom-left,#ui.in-game .loop-wind,
+#ui.in-game .loop-seat-switch,#ui.in-game .loop-menu,
+#ui.in-game .loop-alert,#ui.in-game .loop-offline{
+  position:fixed;z-index:34;box-sizing:border-box;
+}
+.loop-top-left,.loop-top-right{
+  top:max(10px,env(safe-area-inset-top));color:#edf9ec;
+  background:linear-gradient(140deg,#0a1f20d9,#112a26ce);
+  border:1px solid #87b79b53;border-radius:10px;
+  padding:8px 12px;box-shadow:0 3px 17px #0006;
+  pointer-events:none;text-shadow:0 1px 2px #000;
+}
+.loop-top-left{left:max(12px,env(safe-area-inset-left));display:flex;flex-direction:column;gap:3px;min-width:125px}
+.loop-top-left strong{color:#d0fda4;font-size:17px}
+.loop-top-left span{font-size:11px;font-weight:800;letter-spacing:.3px}
+.loop-top-left #loop-timer{color:#bed8c3;font-size:11px}
+.loop-top-right{right:max(12px,env(safe-area-inset-right));text-align:right;max-width:min(38vw,305px);
+  display:flex;flex-direction:column;gap:4px}
+.loop-top-right strong{font-size:13px;font-weight:800;line-height:1.35}
+.loop-top-right small{font-size:11px;color:#b7dbb4}
+.loop-wind{top:85px;left:max(16px,env(safe-area-inset-left));font-size:12px;font-weight:900;
+  letter-spacing:1.2px;color:#d3efcf;text-shadow:0 2px 4px #020a08;pointer-events:none}
+.loop-bottom-left{bottom:max(16px,env(safe-area-inset-bottom));
+  left:max(14px,env(safe-area-inset-left));display:flex;align-items:center;gap:9px;
+  background:#0a2421d4;padding:7px 12px;border:1px solid #80ab925e;border-radius:12px;
+  color:#e9fae8;pointer-events:none}
+.loop-avatar{width:12px;height:30px;border-radius:8px;box-shadow:0 0 8px #baf7c155}
+.loop-bottom-left span:last-child{display:flex;flex-direction:column;gap:3px}
+.loop-bottom-left strong{font-size:12px}
+.loop-bottom-left small{font-size:10px;color:#b8d8c0}
+.loop-seat-switch{bottom:max(18px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
+  display:flex;gap:5px;pointer-events:auto}
+.loop-seat-switch button{border:1px solid #60947a;background:#0a2922e6;color:#d1e6d7;
+  padding:7px 9px;font-size:11px;border-radius:8px}
+.loop-seat-switch button.active{border-color:#dcf2b2;color:#fff;background:#35664b}
+.loop-menu{right:max(14px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));
+  pointer-events:auto;color:#d7eadd}
+.loop-menu summary{list-style:none;cursor:pointer;background:#0d2c25d9;border:1px solid #6f9c7d66;
+  border-radius:9px;padding:8px 12px;font-size:12px;font-weight:800}
+.loop-menu summary::-webkit-details-marker{display:none}
+.loop-menu-options{position:absolute;right:0;bottom:42px;min-width:198px;display:flex;flex-direction:column;
+  gap:5px;padding:9px;background:#0b221ff5;border:1px solid #719d8266;border-radius:12px;
+  box-shadow:0 6px 21px #000b}
+.loop-menu-options button,.loop-online-leave{background:#1c3b30;color:#e8f5dc;border:1px solid #608a72;
+  border-radius:7px;font-size:11px;padding:9px 10px}
+.loop-online-leave{background:#0a2723da}
+.loop-alert,.loop-offline{top:120px;left:50%;transform:translateX(-50%);
+  max-width:min(470px,78vw);text-align:center;font-size:11px;padding:7px 11px;
+  border-radius:10px;background:#152924e8;color:#ecedd0;border:1px solid #9ab68477;pointer-events:none}
+.loop-alert{top:155px}
+@media (pointer:coarse){
+  .loop-seat-switch{display:none}
+  .loop-bottom-left{bottom:118px;left:10px;padding:5px 8px}
+  .loop-menu{bottom:113px;right:11px}
+  .solo-touch-switch{bottom:87px;gap:4px}
+  .solo-touch-switch button{padding:5px 8px;font-size:11px}
+}
+@media(max-width:680px){
+  .dev-tools-actions{grid-template-columns:1fr}
+  .primary-play{grid-template-columns:1fr}
+  .loop-top-left{min-width:0;padding:6px 8px;left:7px}
+  .loop-top-left span{font-size:10px}
+  .loop-top-left strong{font-size:14px}
+  .loop-top-left #loop-timer{font-size:10px}
+  .loop-top-right{max-width:50vw;right:7px;padding:6px 8px}
+  .loop-top-right strong{font-size:11px}
+  .loop-top-right small{font-size:10px}
+  .loop-wind{top:65px;left:9px;font-size:10px}
+  .loop-seat-switch button{padding:6px}
+}
+@media (max-height:500px){
+  .loop-top-left,.loop-top-right{top:6px}
+  .loop-wind{top:58px}
+  .loop-bottom-left{bottom:10px}
+  .loop-menu{bottom:10px}
+  .loop-seat-switch{bottom:12px}
+  .loop-alert{top:84px}
+  .loop-offline{top:66px}
+}
+@media (max-height:500px) and (pointer:coarse){
+  .loop-bottom-left{bottom:91px}
+  .loop-menu{bottom:90px}
+  .solo-touch-switch{bottom:69px}
+}
