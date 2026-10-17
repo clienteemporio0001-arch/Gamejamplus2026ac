@@ -65,7 +65,8 @@ ok(!call(2,'dash',5400,1),'dash Nino durante a janela');
 at(2,JOURNEY.farFix.x,JOURNEY.farFix.y);
 ok(call(2,'switch',6500),'Nino prende a segunda ponta da ponte');
 ok(act.world.bridgeFallAt===6500&&!act.world.bridgeReady,'colisão desativada durante queda');
-ok(!act.tick(hero,6900).changed,'animação ainda não acabou');
+act.tick(hero,6900);
+ok(!act.world.bridgeReady,'ponte ainda sem colisão durante a animação');
 ok(act.tick(hero,8601).changed && act.world.bridgeReady,
   'colisão só após animação de 2,1 segundos');
 ok(!act.hasWon(hero),'ponte 1 pronta ainda não é vitória');
