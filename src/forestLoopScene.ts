@@ -32,7 +32,7 @@ export class ForestLoopScene extends Phaser.Scene {
   private blackout!:Phaser.GameObjects.Rectangle;private blackoutText!:Phaser.GameObjects.Text;
   private life!:Phaser.GameObjects.Text;
   private shots=0;private dashes=0;private dashUntil=0;private facing:-1|1=1;
-  private jumps=0;private paused=false;private previousReset=0;
+  private jumps=0;private paused=false;private pendingJump=false;
   private hint='';
   constructor(net:Network,touch:TouchInput,hud?:()=>void){
     super({key:'ForestLoopScene'});this.net=net;this.touch=touch;this.hud=hud;
@@ -171,7 +171,7 @@ export class ForestLoopScene extends Phaser.Scene {
       this.off.push(this.net.on('solo-seat',seat=>{
         this.solo?.select(seat);
         this.local=this.avatars[seat];this.body=this.solo!.body(seat);
-        this.jumps=0;this.dashUntil=0;
+        this.jumps=0;this.dashUntil=0;this.pendingJump=false;
         this.hud?.();
       }));
     }
@@ -213,7 +213,7 @@ export class ForestLoopScene extends Phaser.Scene {
       if(this.net.isSolo)this.solo?.reset(p);
       if(p.seat===this.net.localSeat){
         this.body.reset(p.x,p.y);this.body.setAllowGravity(true);
-        this.jumps=0;this.dashUntil=0;
+        this.jumps=0;this.dashUntil=0;this.pendingJump=false;
       }
     }));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>this.off.forEach(off=>off()));
@@ -240,6 +240,11 @@ export class ForestLoopScene extends Phaser.Scene {
       else if(w.bridge&&!w.final[0]&&Math.abs(x-3320)<95)this.net.act({kind:'lever'});
     }else if(seat===2){
       this.net.act({kind:'switch'});
+    }
+    // Physical co-op: Lia mounts stationary Nino, then Téo mounts Lia.
+    if((seat===0||seat===1)&&x>1930&&x<2230
+      &&(seat!==0||!(allDone(w.marks)&&!w.tree[0]&&Math.abs(x-LOOP_TREE[0].x)<83&&Math.abs(y-LOOP_TREE[0].y)<86))){
+      this.net.act({kind:w.supporting[seat]===null?'support':'detach'});
     }
   }
   private ability(seat:Seat,time:number):void{
@@ -272,7 +277,16 @@ export class ForestLoopScene extends Phaser.Scene {
         'A FLORESTA ESTÁ MUDANDO\nO VENTO NÃO MENTE');
       this.solo?.report();
     }else{
-      this.solo?.beforeFrame();
+      this.solo?.beforeFrame(w.supporting);
+      const base=w.supporting[seat];
+      if(base!==null){
+        const parent=this.avatars[base];
+        this.body.setAllowGravity(false);
+        this.body.reset(parent.x,parent.y-44);this.body.setVelocity(0,0);
+      }else if(!this.body.allowGravity){
+        this.body.setAllowGravity(true);
+        if(this.pendingJump){this.body.setVelocityY(-465);this.jumps=1;this.pendingJump=false;}
+      }
       let dir=0;
       if(this.cursors?.left.isDown||this.keys?.A?.isDown||this.touch.left)dir--;
       if(this.cursors?.right.isDown||this.keys?.D?.isDown||this.touch.right)dir++;
@@ -283,13 +297,18 @@ export class ForestLoopScene extends Phaser.Scene {
       const using=Boolean((this.keys?.E&&Phaser.Input.Keyboard.JustDown(this.keys.E))||this.touch.interact);
       const special=gameKeys.consumeSkill(seat)||this.touch.ability;
       this.touch.jump=false;this.touch.interact=false;this.touch.ability=false;
-      this.body.setVelocityX(dir*(seat===2&&time<this.dashUntil?329:235));
-      if(jumping&&(grounded||(seat===0&&this.jumps<2))){
-        this.body.setVelocityY(-465);this.jumps++;
+      if(base===null){
+        this.body.setVelocityX(dir*(seat===2&&time<this.dashUntil?329:235));
+        if(jumping&&(grounded||(seat===0&&this.jumps<2))){
+          this.body.setVelocityY(-465);this.jumps++;
+        }
+      }else{
+        this.body.setVelocityX(0);
+        if(jumping){this.pendingJump=true;this.net.act({kind:'detach'});}
       }
       if(using)this.action(seat);
       if(special)this.ability(seat,time);
-      this.net.report(this.local.x,this.local.y,this.body.velocity.x,this.body.velocity.y);
+      if(base===null)this.net.report(this.local.x,this.local.y,this.body.velocity.x,this.body.velocity.y);
       this.solo?.report();
     }
     const v=this.net.poses;

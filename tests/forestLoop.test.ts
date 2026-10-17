@@ -50,6 +50,18 @@ ok(r.changed&&r.poses?.length===3,'passagem correta move equipe inteira');
 ok(r.poses![0].x===1880&&a.world.lastRoute==='right','caminho verdadeiro avança setor');
 p.splice(0,p.length,...r.poses!);
 ok(a.world.marks.every(Boolean),'teleporte não apaga memória');
+goto(2,2040,605);goto(1,2040,605);
+ok(!a.act(0,{kind:'support'},p,65000),'Téo não pode subir sem Lia se apoiar em Nino');
+ok(a.act(1,{kind:'support'},p,65030),'Lia sobe em Nino com E');
+a.tick(p,65080);
+goto(0,2040,561);
+ok(a.act(0,{kind:'support'},p,65150),'Téo sobe em Lia após apoio físico');
+a.tick(p,65200);
+ok(a.world.stackMilestone&&p[0].y===p[1].y-44,'marco de apoio físico Nino-Lia-Téo');
+ok(a.act(0,{kind:'detach'},p,65280),'Téo pode saltar do apoio');
+ok(a.act(1,{kind:'detach'},p,65350),'Lia pode soltar Nino');
+ok(a.world.supporting.every(x=>x===null),'vínculos soltos sem teleporte dos corpos');
+
 goto(0,LOOP_TREE[0].x,LOOP_TREE[0].y);
 ok(act(0,'lever',66000),'Téo solta primeira amarra');
 goto(1,2060,604);

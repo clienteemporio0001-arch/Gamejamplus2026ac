@@ -238,7 +238,7 @@ export class Network {
     for(const input of poses) {
       const p={...input,y:Math.max(0,Math.min(700,input.y))};
       if(!validPose(p))continue;
-      const supporting=this.experience==='loop'?null:this.level===1?this.forest.supporting:
+      const supporting=this.experience==='loop'?this.loop.supporting:this.level===1?this.forest.supporting:
         this.level===2?this.journey.supporting:null;
       if(supporting?.[p.seat]!==null && supporting?.[p.seat]!==undefined)continue;
       this.poses[p.seat]={...p};
@@ -429,6 +429,7 @@ export class Network {
         this.lastReceived[seat] = now;
         if (msg.x > (this.level <= 2 ? FOREST_WIDTH : 1200)) return;
         if (this.experience!=='loop' && this.level === 1 && this.forest.restartAt > 0) return;
+        if(this.experience==='loop'&&this.loop.supporting[seat]!==null)return;
         if (this.experience!=='loop' && this.level === 1 && this.forest.supporting[seat] !== null) return;
         if (this.level === 2 && (this.journey.restartAt>0 || this.journey.supporting[seat]!==null)) return;
         this.poses[seat] = { seat, x: msg.x, y: msg.y, vx: msg.vx, vy: msg.vy };
@@ -543,7 +544,7 @@ export class Network {
         }
         break;
       case 'loop':
-        this.loop={...msg.world,marks:[...msg.world.marks] as LoopWorld['marks'],tree:[...msg.world.tree] as LoopWorld['tree'],final:[...msg.world.final] as LoopWorld['final']};
+        this.loop={...msg.world,marks:[...msg.world.marks] as LoopWorld['marks'],tree:[...msg.world.tree] as LoopWorld['tree'],final:[...msg.world.final] as LoopWorld['final'],supporting:[...msg.world.supporting] as LoopWorld['supporting']};
         this.emit('loop',this.loop);
         break;
       case 'forest':
@@ -661,6 +662,7 @@ export class Network {
     const msg = { t: 'pose' as const, x: Math.max(0, Math.min(this.level <= 2 ? FOREST_WIDTH : 1200, x)),
       y: Math.max(0, Math.min(700, y)), vx, vy };
     if (!finite(x) || !finite(y) || !finite(vx) || !finite(vy)) return;
+    if(this.experience==='loop'&&this.loop.supporting[this.localSeat]!==null)return;
     if (this.experience!=='loop' && this.level === 1 && (this.forest.restartAt > 0 || this.forest.supporting[this.localSeat] !== null)) return;
     if (this.level === 2 && (this.journey.restartAt > 0 || this.journey.supporting[this.localSeat]!==null)) return;
     if (this.isHost) this.poses[this.localSeat] = { seat: this.localSeat, ...msg };
@@ -708,7 +710,7 @@ export class Network {
   }
   private shareLoop():void{
     const w=this.loopAuthority.world;
-    this.loop={...w,marks:[...w.marks] as LoopWorld['marks'],tree:[...w.tree] as LoopWorld['tree'],final:[...w.final] as LoopWorld['final']};
+    this.loop={...w,marks:[...w.marks] as LoopWorld['marks'],tree:[...w.tree] as LoopWorld['tree'],final:[...w.final] as LoopWorld['final'],supporting:[...w.supporting] as LoopWorld['supporting']};
     this.broadcast({t:'loop',world:this.loop});
     this.emit('loop',this.loop);
   }

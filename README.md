@@ -14,7 +14,7 @@ O vento indica a passagem correta conforme o estado e os desafios já resolvidos
 
 **Desafio de memória:** observe ÁRVORE OCA, PEDRA RACHADA e TRONCO EM ARCO antes do primeiro apagão. Depois, Téo confirma a árvore com E, Lia atinge a pedra com J e Nino realiza SHIFT seguido de E perto do arco. O progresso é preservado após as transformações.
 
-**Árvore-ponte:** Téo solta a primeira amarra com E, Lia atira na segunda com J e Nino solta a raiz com SHIFT + E. Uma árvore visível inclina e cai por 1,9 segundo antes de receber colisão de ponte sobre o rio. A correnteza e a queda no abismo são fatais: todos reiniciam a aventura no estado A.
+**Árvore-ponte:** primeiro, Nino para na base da árvore, Lia se apoia nele com E, e Téo sobe em Lia com E. Téo se solta com Espaço para alcançar o patamar superior; o apoio é posicional e validado pela autoridade (não usa corpos remotos rígidos). Após esse marco cooperativo, Téo solta a primeira amarra com E, Lia atira na segunda com J e Nino solta a raiz com SHIFT + E. Uma árvore visível inclina e cai por 1,9 segundo antes de receber colisão de ponte sobre o rio. A correnteza e a queda no abismo são fatais: todos reiniciam a aventura no estado A.
 
 **Saída:** no quarto setor, os mesmos três personagens liberam três mecanismos complementares. A saída verdadeira abre após as três ações quando a floresta está no estado C. A vitória exige os três na passagem final. Nenhum puzzle é completado automaticamente.
 

@@ -27,6 +27,7 @@ export const ROUTES:Readonly<Record<Layout,{correct:Route;wrong:Route;barrierX:n
 export type LoopWorld={
   layout:Layout; cycle:number;cycleStart:number;blackoutUntil:number;observed:boolean;
   marks:[boolean,boolean,boolean];tree:[boolean,boolean,boolean];treeFallAt:number;bridge:boolean;
+  supporting:[Seat|null,Seat|null,Seat|null];stackMilestone:boolean;
   final:[boolean,boolean,boolean];exit:boolean;
   lastRoute:'none'|'wrong'|'right'; routeAt:number;routeCount:number;
   deadUntil:number;resetId:number; completed:boolean;
@@ -36,6 +37,7 @@ const nonNegative=(value:unknown):value is number=>typeof value==='number'&&Numb
 export const initLoop=(now=Date.now()):LoopWorld=>({
   layout:0,cycle:0,cycleStart:now,blackoutUntil:0,observed:false,
   marks:[false,false,false],tree:[false,false,false],treeFallAt:0,bridge:false,
+  supporting:[null,null,null],stackMilestone:false,
   final:[false,false,false],exit:false,lastRoute:'none',routeAt:0,routeCount:0,
   deadUntil:0,resetId:0,completed:false
 });
@@ -45,7 +47,9 @@ export function validLoop(value:unknown):value is LoopWorld{
   return (w.layout===0||w.layout===1||w.layout===2)
     &&nonNegative(w.cycle)&&Number.isInteger(w.cycle)
     &&['cycleStart','blackoutUntil','treeFallAt','routeAt','routeCount','deadUntil','resetId'].every(k=>nonNegative(w[k]))
-    &&['observed','bridge','exit','completed'].every(k=>typeof w[k]==='boolean')
+    &&['observed','bridge','exit','completed','stackMilestone'].every(k=>typeof w[k]==='boolean')
+    &&Array.isArray(w.supporting)&&w.supporting.length===3
+    &&w.supporting.every((b:unknown,i:number)=>b===null||(i===0&&b===1)||(i===1&&b===2))
     &&bool3(w.marks)&&bool3(w.tree)&&bool3(w.final)
     &&['none','wrong','right'].includes(String(w.lastRoute));
 }
@@ -66,8 +70,9 @@ export function windGuide(w:LoopWorld,seat:Seat,x:number):{direction:-1|0|1;targ
     target=w.layout===1?1540:1700;
     hint='O VENTO INDICA A PASSAGEM '+(correctRoute(w.layout)==='oca'?'DA ÁRVORE OCA.':'DA PEDRA RACHADA.');
   }else if(!w.bridge){
-    target=LOOP_TREE[w.tree.findIndex(v=>!v)]?.x??2110;
-    hint='TRÊS AMARRAS PRENDEM A ÁRVORE SOBRE O ABISMO.';
+    target=!w.stackMilestone?2050:LOOP_TREE[w.tree.findIndex(v=>!v)]?.x??2110;
+    hint=!w.stackMilestone?'APOIO: NINO FICA PARADO, LIA SOBE COM E, TÉO SOBE EM LIA COM E.':
+      'TRÊS AMARRAS PRENDEM A ÁRVORE SOBRE O ABISMO.';
   }else if(x<2930){target=2750;hint='A PONTE ESTÁ PRONTA. ATRAVESSEM JUNTOS.';}
   else if(!allDone(w.final)){target=LOOP_FINAL[w.final.findIndex(v=>!v)].x-20;hint='CADA AMIGO DEVE LIBERAR UMA PARTE DA SAÍDA.';}
   else if(w.layout!==2){target=3320;hint='A ÚLTIMA PASSAGEM SÓ RESPONDE À FLORESTA INVERTIDA. AGUARDEM O VENTO MUDAR.';}
@@ -102,6 +107,20 @@ export class LoopAuthority{
   act(seat:Seat,action:PuzzleAction,poses:Pose[],now=Date.now()):boolean{
     const w=this.world,p=poses[seat];
     if(!p||p.seat!==seat||w.completed||w.deadUntil>0||blackoutActive(w,now))return false;
+    if(action.kind==='support'&&(seat===0||seat===1)&&w.supporting[seat]===null){
+      const base:Seat=seat===0?1:2,other=poses[base];
+      if(!other||p.x<1950||p.x>2230||Math.abs(p.x-other.x)>55
+        ||Math.abs(p.y-other.y)>75||Math.abs(p.vx)>135||Math.abs(other.vx)>135)return false;
+      if(seat===0&&w.supporting[1]!==2)return false;
+      w.supporting[seat]=base;
+      if(w.supporting[0]===1&&w.supporting[1]===2)w.stackMilestone=true;
+      return true;
+    }
+    if(action.kind==='detach'&&w.supporting[seat]!==null){
+      w.supporting[seat]=null;
+      if(seat===1)w.supporting[0]=null;
+      return true;
+    }
     if(action.kind==='dash'&&seat===2){
       if(now-this.lastDash[2]<1750)return false;
       this.lastDash[2]=now;this.dashOrigin[2]=p.x;return false;
@@ -119,7 +138,7 @@ export class LoopAuthority{
       if(w.observed&&!w.marks[0]&&near(p,LOOP_MARKS[0].x,LOOP_MARKS[0].y,68,87)){
         w.marks[0]=true;return true;
       }
-      if(allDone(w.marks)&&!w.tree[0]&&near(p,LOOP_TREE[0].x,LOOP_TREE[0].y,70,78)){
+      if(w.stackMilestone&&allDone(w.marks)&&!w.tree[0]&&near(p,LOOP_TREE[0].x,LOOP_TREE[0].y,70,78)){
         w.tree[0]=true;this.checkTree(now);return true;
       }
       if(w.bridge&&!w.final[0]&&near(p,LOOP_FINAL[0].x,LOOP_FINAL[0].y,70,81)){
@@ -153,6 +172,14 @@ export class LoopAuthority{
   /** One host clock for all players; secure route teleports are whole-party only. */
   tick(poses:Pose[],now=Date.now()):Tick{
     const w=this.world;
+    // Pose authority for the two supported players. Their bases retain physics.
+    for(const seat of [1,0] as Seat[]){
+      const base=w.supporting[seat];
+      if(base!==null){
+        poses[seat].x=poses[base].x;poses[seat].y=Math.max(30,poses[base].y-44);
+        poses[seat].vx=poses[base].vx;poses[seat].vy=0;
+      }
+    }
     if(w.deadUntil>0){
       if(now<w.deadUntil)return{changed:false};
       this.reset(now);return{changed:true,reset:true,poses:LOOP_START.map(p=>({...p}))};
