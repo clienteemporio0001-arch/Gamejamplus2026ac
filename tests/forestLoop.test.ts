@@ -23,7 +23,7 @@ ok(!a.tick(p,61000).changed,'apagão não gera mudança prematura');
 ok(a.tick(p,62010).changed&&a.world.layout===1&&a.world.observed,'estado B sincronizado');
 ok(a.world.cycle===1&&!blackoutActive(a.world,62010),'novo relógio só começa após apagar');
 ok(validLoop(a.world),'snapshot B válido');
-ok(barriers(a.world)[2].enabled===false&&barriers(a.world)[1].enabled,'barreira B altera colisão');
+ok(!barriers(a.world)[1].enabled&&barriers(a.world)[2].enabled,'barreira B altera colisão');
 ok(correctRoute(0)==='pedra'&&correctRoute(1)==='oca'&&correctRoute(2)==='pedra',
   'rotas determinísticas variam A/B/C');
 for(const x of [0,1,2] as const){
