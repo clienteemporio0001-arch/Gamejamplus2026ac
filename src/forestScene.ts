@@ -5,6 +5,7 @@ import { FOREST_WIDTH, FOREST_SPAWNS, FOREST_VINES, CABO_X, TREE_ACTIONS,
   forestDanger, branchWarning, forestHint, FOREST_GATES, type ForestWorld } from './forest';
 import type { TouchInput } from './game';
 import { SkillVfx } from './skillVfx';
+import { NightArt } from './visuals';
 
 const story=[
   '',
@@ -39,6 +40,8 @@ export class ForestScene extends Phaser.Scene {
   private branches:Phaser.GameObjects.Rectangle[]=[];
   private snake:Phaser.GameObjects.Container[]=[];
   private vfx=new SkillVfx(this,seat=>this.players[seat]);
+  private art!:NightArt;
+  private warning!:Phaser.GameObjects.Ellipse;
   private off:Array<()=>void>=[];
   private arrows?:Phaser.Types.Input.Keyboard.CursorKeys;
   private keys?:Record<string,Phaser.Input.Keyboard.Key>;
@@ -60,7 +63,10 @@ export class ForestScene extends Phaser.Scene {
     const r=this.add.rectangle(x,y,width,height,color).setStrokeStyle(3,0x99af8a).setDepth(6);
     this.physics.add.existing(r,true);
     (r.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
-    this.blocks.push(r);return r;
+    this.blocks.push(r);
+    const surface = height > 120 ? 'gate' : color === 0x825737 ? 'bridge' : 'earth';
+    this.art.platform(r,surface);
+    return r;
   }
   private solid(r:Phaser.GameObjects.Rectangle,active:boolean):void {
     r.visible=active;const b=r.body as Phaser.Physics.Arcade.StaticBody;
@@ -87,37 +93,16 @@ export class ForestScene extends Phaser.Scene {
     this.hud?.();
   }
   private paint():void {
-    const g=this.add.graphics().setDepth(-35);
-    g.fillGradientStyle(0x0a1d30,0x172b32,0x204c3d,0x14372d);
-    g.fillRect(0,0,FOREST_WIDTH,700);
-    for(let x=0;x<FOREST_WIDTH;x+=1250)
-      this.add.circle(x+850,90,54,0xdaf0bb,.55).setDepth(-33);
-    for(let d=0;d<4;d++){
-      const col=[0x102832,0x173b36,0x1b463a,0x27523b][d];
-      for(let i=0;i<65;i++){
-        const x=i*69+d*24-60,height=210+(i*43+d*85)%182;
-        this.add.rectangle(x,618-height/2,23+d*2,height,col).setDepth(-29+d*4);
-        this.add.ellipse(x,613-height,98+d*12,95+d*7,col).setDepth(-28+d*4);
-      }
-    }
-    for(let x=0;x<FOREST_WIDTH;x+=96){
-      this.add.ellipse(x+18,624,93,42,0x30683e,.75).setDepth(3);
-      if(x%3===0)this.add.circle(x,440+(x%90),3,0xdcfda3,.75).setDepth(4);
-    }
+    this.art=new NightArt(this,FOREST_WIDTH,'forest');
     const zones=[
       [330,'A · ENTRADA DA FLORESTA'],[835,'B · CABOQUIM DA MATA'],
       [1540,'C · A ÁRVORE GIGANTE'],[2400,'D · OS CIPÓS SUSPENSOS'],
       [3450,'E · O GRANDE ABISMO'],[4100,'F · A SAÍDA COOPERATIVA']
     ] as const;
-    for(const [x,title] of zones) this.label(x,210,title,21);
-    this.add.rectangle(3720,673,374,70,0x163b61,.9).setDepth(-2);
-    for(let x=3545;x<3890;x+=45){
-      const wave=this.add.rectangle(x,685+(x%3)*3,36,5,0x6acbd0,.25).setDepth(-1);
-      this.tweens.add({targets:wave,alpha:.65,x:wave.x+8,duration:900+x%350,
-        yoyo:true,repeat:-1});
-    }
-    this.label(3700,495,'ABISMO · PRECISAMOS DERRUBAR A ÁRVORE',17,'#fce7a9');
-    this.label(4190,515,'CASA  ◀  REÚNAM OS TRÊS',17);
+    for(const [x,title] of zones) this.label(x,210,title,19,'#d6e3d2');
+    this.art.water(3543,3893,632);
+    this.label(3700,493,'ABISMO · DERRUBEM A ÁRVORE PARA CRUZAR',16,'#f2c7a2');
+    this.label(4170,515,'CASA · REÚNAM OS TRÊS',16);
   }
   create():void {
     this.physics.world.setBounds(0,0,FOREST_WIDTH,900);
@@ -180,13 +165,17 @@ export class ForestScene extends Phaser.Scene {
       const coil=this.add.ellipse(0,9,64,18,0x4a904b).setStrokeStyle(3,0x1f582d);
       const head=this.add.circle(23,1,11,0x69b456);
       const eye=this.add.circle(28,-2,2,0xfaf09c);
-      snake.add([coil,head,eye]);this.snake.push(snake);
+      const eyeTwo=this.add.circle(24,-6,2,0xfcdda4);
+      const stripe=this.add.ellipse(-9,8,31,6,0x163d35,.72);
+      const tongue=this.add.rectangle(34,3,11,2,0xe69c7b,.85);
+      snake.add([coil,stripe,head,eye,eyeTwo,tongue]);this.snake.push(snake);
       this.tweens.add({targets:snake,x:x+19,yoyo:true,repeat:-1,duration:740});
       this.label(x,548,'⚠ COBRA',12,'#f9d38c');
     }
     for(const x of [2720]){
       const branch=this.add.rectangle(x,465,108,14,0x6a5237).setAngle(21).setDepth(11);
-      this.branches.push(branch);this.label(x,416,'⚠ GALHOS INSTÁVEIS',12,'#f9dd9a');
+      this.branches.push(branch);this.label(x,416,'⚠ GALHOS INSTÁVEIS',13,'#f4bf93');
+      this.warning=this.add.ellipse(x,624,155,18,0xeab079,.24).setDepth(10).setVisible(false);
     }
     for(const x of [1080,2130,2900,3260]){
       this.add.rectangle(x,581,12,68,0x76d4ad,.65).setDepth(6);
@@ -197,6 +186,7 @@ export class ForestScene extends Phaser.Scene {
       const body=this.add.rectangle(p.x,p.y,30,44,CHARACTERS[seat].color)
         .setStrokeStyle(3,0x123424).setDepth(19);
       this.players[seat]=body;this.poses[seat]={...p};
+      this.art.character(body,seat);
       this.names[seat]=this.label(p.x,p.y-42,CHARACTERS[seat].name,13,CHARACTERS[seat].hex);
       this.eyes[seat]=this.add.rectangle(p.x+5,p.y-8,9,5,0xfaffdf).setDepth(20);
       if(seat===this.net.localSeat){
@@ -345,6 +335,7 @@ export class ForestScene extends Phaser.Scene {
     }
     // Relógio do anfitrião define quando os galhos oferecem risco.
     const branchState=branchWarning(w.hazardEpoch,now);
+    this.warning.setVisible(branchState!=='safe').setAlpha(branchState==='fall'?.75:.27+Math.abs(Math.sin(time/170))*.48);
     this.branches.forEach(b=>{
       b.y=branchState==='fall'?583:branchState==='warn'?478:465;
       b.setFillStyle(branchState==='fall'?0xf0a068:0x75583a);
@@ -375,6 +366,7 @@ export class ForestScene extends Phaser.Scene {
       this.eyes[i]?.setPosition(actor.x+5,actor.y-8);
       actor.alpha=now<w.safeUntil[i]&&Math.floor(now/100)%2===0?.35:1;
     }
+    this.art.update(time);
     this.vfx.update(time);
     void forestDanger;
   }

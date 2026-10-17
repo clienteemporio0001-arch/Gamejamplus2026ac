@@ -3,6 +3,7 @@ import { gameKeys } from './keyboard';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import type { TouchInput } from './game';
 import { SkillVfx } from './skillVfx';
+import { NightArt } from './visuals';
 import { configureCamera } from './camera';
 import { EYES, TRAIL, LATE_SPAWNS, movingTarget, type ChapterWorld, type Jaguar } from './chapters';
 
@@ -41,6 +42,7 @@ export class LateScene extends Phaser.Scene {
   private jumps=0; private facing:-1|1=1;private dashUntil=0;
   private dashReady=0; private shotReady=0; private paused=false;
   private vfx=new SkillVfx(this,seat=>this.actors[seat]);
+  private art!:NightArt;
   private unsubs:Array<()=>void>=[];
   constructor(net:Network,touch:TouchInput,hud?:()=>void){
     super({key:'LateScene'});
@@ -55,7 +57,9 @@ export class LateScene extends Phaser.Scene {
     const rect=this.add.rectangle(x,y,w,h,c).setStrokeStyle(3,0x93b989).setDepth(5);
     this.physics.add.existing(rect,true);
     (rect.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
-    this.allBlocks.push(rect);return rect;
+    this.allBlocks.push(rect);
+    this.art.platform(rect,h>110?'gate':[0x815a3a,0x665641].includes(c)?'bridge':'earth');
+    return rect;
   }
   private solid(r:Phaser.GameObjects.Rectangle,enable:boolean):void {
     const b=r.body as Phaser.Physics.Arcade.StaticBody;
@@ -87,6 +91,7 @@ export class LateScene extends Phaser.Scene {
       const char=this.add.rectangle(p.x,p.y,30,44,CHARACTERS[seat].color)
         .setStrokeStyle(3,0x102f2b).setDepth(15);
       this.actors[seat]=char;
+      this.art.character(char,seat);
       this.names[seat]=this.text(p.x,p.y-45,CHARACTERS[seat].name,14,CHARACTERS[seat].hex);
       this.eyes[seat]=this.add.rectangle(p.x+5,p.y-8,8,5,0xffffff).setDepth(16);
       this.remote[seat]={...p};
@@ -135,38 +140,17 @@ export class LateScene extends Phaser.Scene {
     }});
   }
   private paintForest(eyes:boolean):void {
-    const g=this.add.graphics().setDepth(-30);
-    g.fillGradientStyle(eyes?0x0b1b2b:0x1b1b30,0x131b30,eyes?0x102f2c:0x15392e,0x0b2c2d);
-    g.fillRect(0,0,1200,700);
-    this.add.circle(1035,105,58,eyes?0xe3f0bb:0xcad6dd,.65).setDepth(-29);
-    for(let layer=0;layer<4;layer++){
-      const color=[0x102a31,0x153a33,0x194437,0x24503d][layer];
-      for(let i=0;i<21;i++){
-        const x=i*66+layer*21-35, h=200+((i*81+layer*55)%185);
-        this.add.rectangle(x,625-h/2,25+layer*2,h,color).setDepth(-25+layer*3);
-        this.add.ellipse(x,623-h,107+layer*5,98+layer*5,color).setDepth(-24+layer*3);
-      }
-    }
-    for(let i=0;i<11;i++){
-      this.add.ellipse(i*120+30,624,96,40,0x2a633d,.5).setDepth(-3);
-      if(eyes && i%3!==0){
-        this.add.circle(60+i*108,340+(i%4)*37,3,0xe8e88b,.8).setDepth(-1);
-        this.add.circle(70+i*108,340+(i%4)*37,3,0xe8e88b,.8).setDepth(-1);
-      }
-    }
-    this.add.rectangle(600,683,1200,27,0x153b2e).setDepth(-1);
+    this.art=new NightArt(this,1200,eyes?'eyes':'trail');
     if(!eyes){
       for(let i=0;i<5;i++){
-        const crown=this.add.ellipse(120+i*218,331+(i%2)*20,86,116,0x1a483a,.83).setDepth(-2);
+        const crown=this.add.ellipse(120+i*218,329+(i%2)*20,89,118,0x29473d,.65).setDepth(-2);
         this.mysticTrees.push(crown);
       }
     }
-    this.text(600,57,eyes?'03 · OLHOS NA MATA':'04 · A TRILHA QUE MENTE',23);
-    this.text(600,84,eyes?'Silêncio. Há olhos na mata.':'A verdade está escondida entre três pistas.',12);
-    for(let i=0;i<10;i++){
-      const fog=this.add.ellipse(i*155-40,510+(i%3)*23,260,68,0xc0d5c1,.055).setDepth(2);
-      this.tweens.add({targets:fog,x:fog.x+45,duration:3600+i*180,yoyo:true,repeat:-1});
-    }
+    this.text(600,57,eyes?'03 · OLHOS NA MATA':'04 · A TRILHA QUE MENTE',23,'#dfebdc');
+    this.text(600,84,eyes?'Silêncio. Há olhos na mata.':'A verdade está escondida entre três pistas.',12,'#c0dcd3');
+    if(eyes)this.art.water(465,575,642);
+    else {this.art.water(403,508,642);this.art.water(885,975,644);}
   }
   private createEyes():void {
     // Buraco entre as duas margens; raízes e plataforma elevada de Téo.
@@ -199,9 +183,12 @@ export class LateScene extends Phaser.Scene {
     const body=this.add.ellipse(0,-13,69,34,0x111918);
     const head=this.add.circle(24,-23,17,0x121c16);
     const tail=this.add.ellipse(-41,-14,29,8,0x121c16).setAngle(-25);
-    const eyes=this.add.circle(32,-27,3,0xffe881);
+    const earLeft=this.add.triangle(13,-39,-8,9,0,-10,7,8,0x111e1d);
+    const earRight=this.add.triangle(33,-39,-8,9,0,-10,7,8,0x111e1d);
+    const marking=this.add.ellipse(-4,-17,26,8,0x2c3d32,.85);
+    const eyes=this.add.circle(32,-27,3,0xe8bc75);
     const muzzle=this.add.circle(34,-17,4,0x8e9270);
-    this.jaguar.add([body,head,tail,eyes,muzzle]);
+    this.jaguar.add([body,tail,marking,head,earLeft,earRight,eyes,muzzle]);
   }
   private createTrail():void {
     this.block(207,650,414,60);
@@ -378,6 +365,7 @@ export class LateScene extends Phaser.Scene {
       this.names[i]?.setPosition(actor.x,actor.y-44);
       actor.setAlpha(this.net.players[i].online?1:.35);
     }
+    this.art.update(time);
     this.vfx.update(time);
   }
   getCooldown():string {

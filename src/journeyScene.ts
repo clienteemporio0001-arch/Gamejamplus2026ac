@@ -5,6 +5,7 @@ import { JOURNEY, JOURNEY_SPAWNS, MATERIALS, RIVER_WIDTH,
   journeyBranchPhase, type JourneyWorld, type JourneyMotion } from './riverJourney';
 import type { TouchInput } from './game';
 import { SkillVfx } from './skillVfx';
+import { NightArt } from './visuals';
 
 /** Fase 2: mundo contínuo, cooperação real, estruturas sólidas somente após montagem. */
 export class JourneyScene extends Phaser.Scene {
@@ -34,6 +35,8 @@ export class JourneyScene extends Phaser.Scene {
   private branch!:Phaser.GameObjects.Rectangle;
   private snake:Phaser.GameObjects.Container[]=[];
   private vfx=new SkillVfx(this,seat=>this.avatars[seat]);
+  private art!:NightArt;
+  private branchWarning!:Phaser.GameObjects.Ellipse;
   private subscriptions:Array<()=>void>=[];
   private cursors?:Phaser.Types.Input.Keyboard.CursorKeys;
   private keys?:Record<string,Phaser.Input.Keyboard.Key>;
@@ -55,7 +58,10 @@ export class JourneyScene extends Phaser.Scene {
     const p=this.add.rectangle(x,y,w,h,color).setStrokeStyle(3,0x9db78a).setDepth(6);
     this.physics.add.existing(p,true);
     (p.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
-    this.blocks.push(p);return p;
+    this.blocks.push(p);
+    const wood = [0x806040,0x87684c,0x9b8457,0x8e6d48,0x987652].includes(color);
+    this.art.platform(p, height > 120 ? 'gate' : wood ? 'bridge' : height < 25 && width > 100 ? 'stone' : 'earth');
+    return p;
   }
   private active(p:Phaser.GameObjects.Rectangle,on:boolean):void {
     p.setVisible(on);
@@ -76,40 +82,18 @@ export class JourneyScene extends Phaser.Scene {
     this.notice.setText(s).setVisible(true);this.noticeUntil=this.time.now+ms;
   }
   private background():void {
-    const g=this.add.graphics().setDepth(-31);
-    g.fillGradientStyle(0x092339,0x112941,0x21483c,0x102e35);
-    g.fillRect(0,0,RIVER_WIDTH,700);
-    for(let i=0;i<4;i++){
-      const color=[0x103338,0x174239,0x21503c,0x2c5d44][i];
-      for(let k=0;k<68;k++){
-        const x=k*67+i*17-38,h=185+((k*83+i*31)%215);
-        this.add.rectangle(x,622-h/2,22+i*3,h,color).setDepth(-27+i*4);
-        this.add.ellipse(x,615-h,99+i*8,95+i*9,color).setDepth(-26+i*4);
-      }
-    }
-    for(let i=0;i<6;i++){
-      const x=490+i*720;
-      this.add.circle(x,107,42,0xd6f0c2,.25).setDepth(-29);
-    }
+    this.art=new NightArt(this,RIVER_WIDTH,'river');
     const regions=[
       [320,'A · MARGEM DO RIO'],[1190,'B · ÁRVORE DOS CIPÓS'],
       [2350,'C · PRIMEIRA TRAVESSIA'],[3070,'D · ILHA DAS RAÍZES'],
       [3770,'E · PONTE SUSPENSA'],[4190,'F · A OUTRA MARGEM']
     ] as const;
-    for(const [x,label] of regions)this.text(x,235,label,20);
-    for(const [a,b] of [[2260,2700],[3000,3320],[3880,4060]]){
-      const cx=(a+b)/2,w=b-a;
-      this.add.rectangle(cx,677,w,77,0x155e7a,.95).setDepth(-4);
-      for(let j=0;j<Math.floor(w/41);j++){
-        const wave=this.add.rectangle(a+j*41+23,677+j%3*4,31,4,0x9ae3db,.25).setDepth(-3);
-        this.tweens.add({targets:wave,alpha:.65,x:wave.x+9,
-          duration:980+(j%4)*180,repeat:-1,yoyo:true});
-      }
-    }
-    this.text(2470,505,'⚠ CORRENTEZA FATAL',15,'#ffddb6');
-    this.text(3130,510,'TRONCOS FLUTUANTES · CALCULE OS SALTOS',13);
-    this.text(3970,502,'PONTE FINAL · OS TRÊS JUNTOS',15);
-    this.text(4180,483,'SAÍDA →',17);
+    for(const [x,title] of regions)this.text(x,234,title,19,'#d9e6d9');
+    for(const [start,end] of [[2260,2700],[3000,3320],[3880,4060]])this.art.water(start,end,634);
+    this.text(2470,500,'⚠ CORRENTEZA FATAL',15,'#ffc7a0');
+    this.text(3120,501,'TRONCOS FLUTUANTES · CALCULE OS SALTOS',13,'#d0eddd');
+    this.text(3970,496,'PONTE FINAL · OS TRÊS JUNTOS',15,'#e5cbb2');
+    this.text(4180,482,'SAÍDA →',17);
   }
   create():void {
     this.physics.world.setBounds(0,0,RIVER_WIDTH,900);
@@ -172,11 +156,18 @@ export class JourneyScene extends Phaser.Scene {
         this.add.circle(20,0,10,0x8eb751),
         this.add.circle(25,-3,2,0xffeea2)
       ]);
+      const ink=this.add.graphics();
+      ink.lineStyle(3,0x142c27,.9);
+      ink.lineBetween(-16,8,1,8);
+      ink.fillStyle(0xf4c896,.95);ink.fillCircle(24,-4,2);
+      ink.lineStyle(2,0xcf937c,1);ink.lineBetween(30,1,38,4);
+      snake.add(ink);
       this.snake.push(snake);
       this.tweens.add({targets:snake,x:x+14,duration:840,yoyo:true,repeat:-1});
       this.text(x,549,'⚠ COBRA',12,'#ffddab');
     }
     this.branch=this.add.rectangle(3380,454,108,16,0x725a3d).setAngle(14).setDepth(13);
+    this.branchWarning=this.add.ellipse(3380,624,154,18,0xf1ad76,.3).setDepth(11).setVisible(false);
     this.text(3380,416,'⚠ GALHOS INSTÁVEIS',13);
     for(const x of [1120,2120,2780,3430]){
       this.add.rectangle(x,583,13,60,0x7fe2b4,.7).setDepth(8);
@@ -187,6 +178,7 @@ export class JourneyScene extends Phaser.Scene {
       const avatar=this.add.rectangle(p.x,p.y,30,44,CHARACTERS[seat].color)
         .setStrokeStyle(3,0x12312b).setDepth(16);
       this.avatars[seat]=avatar;this.remote[seat]={...p};
+      this.art.character(avatar,seat);
       this.names[seat]=this.text(p.x,p.y-43,CHARACTERS[seat].name,14,CHARACTERS[seat].hex);
       this.eyes[seat]=this.add.rectangle(p.x+4,p.y-7,9,5,0xf5ffe2).setDepth(17);
       if(seat===this.net.localSeat){
@@ -351,9 +343,12 @@ export class JourneyScene extends Phaser.Scene {
         log.x=next;(log.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
       }
     });
-    this.branch.y=journeyBranchPhase(w.hazardEpoch,now)==='fall'?586:
-      journeyBranchPhase(w.hazardEpoch,now)==='warn'?481:454;
-    this.branch.setFillStyle(journeyBranchPhase(w.hazardEpoch,now)==='fall'?0xf0a174:0x73543e);
+    const branchPhase=journeyBranchPhase(w.hazardEpoch,now);
+    this.branchWarning.setVisible(branchPhase!=='safe').setAlpha(
+      branchPhase==='fall'?.82:.28+Math.abs(Math.sin(time/175))*.52);
+    this.branch.y=branchPhase==='fall'?586:
+      branchPhase==='warn'?481:454;
+    this.branch.setFillStyle(branchPhase==='fall'?0xf0a174:0x73543e);
     const build=w.bridgeFallAt>0?Math.min(1,(now-w.bridgeFallAt)/2100):0;
     this.ropeVisual.forEach((plank,i)=>{
       plank.setVisible(w.bridgeFallAt>0&&!w.bridgeReady);
@@ -382,6 +377,7 @@ export class JourneyScene extends Phaser.Scene {
       this.eyes[i]?.setPosition(actor.x+4,actor.y-8);
       actor.alpha=now<w.safeUntil[i]&&Math.floor(now/100)%2===0?.35:1;
     }
+    this.art.update(time);
     this.vfx.update(time);
   }
   getCooldown():string {

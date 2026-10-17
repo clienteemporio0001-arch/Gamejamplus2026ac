@@ -86,3 +86,16 @@ Os testes de lógica cobrem desbloqueio, pré-requisitos de checkpoints, instru�
 No computador: **Espaço OU ↑ = pular/salto duplo**, **Shift esquerdo/direito = dash de Nino**, **J = baladeira de Lia**, **E = interagir** e **A/D ou ←/→ = movimentar**. Q deixou de ativar habilidades; W deixou de pular. Para o celular permanecem os botões virtuais, com rótulo J ou SHIFT conforme o personagem.
 
 As teclas de ação usam captura pelo window antes do foco dos botões HTML, com proteção contra auto-repeat (um keydown gera no máximo um salto). Ao trocar de fase ou perder o foco, comandos pendentes são limpos. A introdução tem botão **PULAR INTRODUÇÃO** fixo no canto superior direito, coordenando o avanço pelo anfitrião para os três jogadores.
+
+
+## ETAPA 07-A — Overhaul visual dark (sem alterar gameplay)
+
+As fases 1 e 2 receberam cenário noturno com quatro planos visuais, céu cinematográfico, lua e feixes de luz discretos, silhuetas de árvores gigantes com raízes, vegetação densa, cipós e folhagens de primeiro plano, sombras, névoa, vagalumes e folhas caindo. As fases 3 e 4 reutilizam o mesmo núcleo artístico com variações de clima; não foram recriados os puzzles nem o mapa jogável.
+
+O código de decoração está em src/visuals.ts e os auxiliares matemáticos sem dependência de Phaser em src/visualMath.ts. Camadas distantes usam scrollFactor 0.23/0.49/0.76, a camada física mantém scrollFactor 1. Árvores e solo são desenhados em lotes Phaser Graphics (sem imagens gigantes), mantendo até 24 pontos de luz, 14 folhas e 6 bancos de névoa no PC; em tela touch/estreita, no máximo 10 vagalumes, 6 folhas e 3 bancos de névoa. Coordenadas cosméticas seguem seeds estáveis. Nenhum dado visual passa pela conexão P2P.
+
+Colisão conservada: os retângulos de Phaser Arcade Physics continuam exatamente no mesmo tamanho e posição; um Graphics é desenhado SOBRE cada plataforma/ponte/corpo e segue seu x/y, ângulo, opacidade e visibilidade, incluindo pontes temporárias e troncos móveis. Os personagens têm silhuetas distintas (chapéu verde de Téo; cabelo e traje laranja de Lia; capuz azul de Nino), mas os retângulos de colisão permanecem 30×44. O primeiro plano tem transparência baixa e fica atrás dos personagens e dos elementos principais do HUD. Os alertas de galhos ganharam marcação pulsante de chão; cobras, rio e onça ganharam contraste e contorno.
+
+Nenhum asset externo foi importado, nenhuma dependência adicional foi criada, e não há recursos de arte gerados por IA incorporados nessa etapa. A geometria, narrativa, checkpoints, desbloqueios, rede WebRTC, controles, transições e build itch.io continuam sob os mesmos contratos.
+
+Os testes automatizados incluem matemática/limites de partículas e inspeção de integração das cenas; o resultado da build não comprova desempenho de GPU, legibilidade perfeita ou FPS mobile. Ainda é indispensável verificar visualmente as quatro fases em PC e celular, inclusive neblina sobre objetivos, plataformas móveis, colisões habilitadas e ações dos três personagens em redes diferentes.
