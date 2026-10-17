@@ -399,7 +399,7 @@ export class Network {
         }
         break;
       case 'chapter':
-        if (msg.world.level !== this.level && this.stage === 'playing') break;
+        // Snapshot de reconexão pode chegar ANTES da mensagem de mudança de fase.
         this.chapter = { ...msg.world };
         this.emit('chapter', this.chapter);
         this.emit('change', undefined);

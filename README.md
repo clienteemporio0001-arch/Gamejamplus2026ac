@@ -57,3 +57,14 @@ A reconexão do convidado com vaga reservada restaura a fase corrente, posição
 - O efeito de ilusão da ponte utiliza um marcador de evento definido pelo anfitrião; a animação não desloca a colisão física, para evitar bloqueios.
 - Gráficos e efeitos visuais desta fase são formas geométricas procedurais desenhadas em Phaser, sem arquivos de imagem, vídeo ou áudio externos nem recursos de arte gerados por IA. A biblioteca de fonte pode ser carregada do Google Fonts; a fonte alternativa do sistema funciona sem ela.
 - A conclusão no rio é temporária; não existe fim definitivo nem Fases 03–05 nesta versão.
+
+## Fase 04 do desenvolvimento — Capítulos 03 e 04
+
+- **03 — Olhos na Mata:** onça controlada pelo anfitrião, patrulha/perseguição, distração pelo estilingue, alavanca elevada de Téo, corrida cronometrada de Nino, combinação final dos três e checkpoints de queda/colisão.
+- **04 — A Trilha que Mente:** placas mutáveis e caminho enganoso com retorno ao checkpoint, pistas personalizadas (Lua, Folha, Estrela), totens na ordem Téo → Lia → Nino, plataformas que alternam por mensagens de mundo do anfitrião e sequência final de placa/alvo móvel/dash.
+- **Transições:** Fase 01 → 02 → 03 → 04, todas determinadas pelo anfitrião. Somente os três juntos liberam a conclusão temporária; capítulo 05 continua reservado.
+- **Câmera:** adaptação do tamanho lógico do canvas para janelas estreitas e câmera Phaser seguindo o jogador nas fases jogáveis; mundo permanece em coordenadas 1200×700.
+- **Efeitos:** estilingue e dash continuam usando eventos compartilhados e animação local; pré-requisitos das habilidades persistem entre fases.
+- **Segurança e conectividade:** quartos do PeerJS/WebRTC, 20 Hz de poses, atualizações de puzzles por alteração e posição da onça em snapshots compactos; não há backend próprio.
+
+**Limitações:** ainda é obrigatória uma rodada manual completa com três aparelhos/redes, inclusive dinâmica da onça, alvos e dash em condições reais de latência. O movimento dos convidados continua simulado localmente, com validação de puzzle pelo anfitrião. A plataforma de observação no capítulo 03 é fixa na física; o alvo visual móvel do capítulo 04 é determinístico por relógio local e a validação ocorre no relógio do anfitrião.

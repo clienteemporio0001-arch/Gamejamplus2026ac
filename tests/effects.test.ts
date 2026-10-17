@@ -28,7 +28,9 @@ expect(gate.accept(2,2,{kind:'dash'},p(2),[true,true,true],6000) === null,'dire�
 expect(gate.accept(1,1,{kind:'collect'},p(1),[true,true,true],6000) === null,'ações de puzzle não geram efeito');
 expect(!validSkillFx({kind:'dash',seat:1,level:1,x:500,y:500,facing:1}),'pacote com jogador falsificado rejeitado');
 expect(!validSkillFx({kind:'shoot',seat:1,level:1,x:Infinity,y:500,facing:1}),'coordenadas inválidas rejeitadas');
-expect(!validSkillFx({kind:'shoot',seat:1,level:3,x:500,y:500,facing:1}),'fase desconhecida rejeitada');
+expect(validSkillFx({kind:'shoot',seat:1,level:3,x:500,y:500,facing:1}),'fase 3 admite disparos sincronizados');
+expect(validSkillFx({kind:'dash',seat:2,level:4,x:500,y:500,facing:-1}),'fase 4 admite dash sincronizado');
+expect(!validSkillFx({kind:'shoot',seat:1,level:5,x:500,y:500,facing:1}),'fase 5 ainda não implementada');
 expect(!validSkillFx({kind:'shoot',seat:1,level:1,x:500,y:500,facing:0}),'direção inválida rejeitada');
 gate.reset();
 expect(gate.accept(1,1,shot,p(1),[true,true,true],1000) !== null,'reset permite novo ciclo');

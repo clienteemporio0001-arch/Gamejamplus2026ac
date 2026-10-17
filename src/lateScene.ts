@@ -97,7 +97,8 @@ export class LateScene extends Phaser.Scene {
     if(this.local)configureCamera(this,this.local);
     this.keys=this.input.keyboard?.addKeys('A,D,W,E,Q') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
     this.cursors=this.input.keyboard?.createCursorKeys();
-    this.info=this.text(600,115,'',19).setWordWrapWidth(960);
+    this.info=this.text(this.scale.gameSize.width/2,104,'',18).setWordWrapWidth(Math.min(850,this.scale.gameSize.width-20));
+    this.info.setScrollFactor(0);
     this.clue=this.text(130,157,'',15,'#ffeea7').setDepth(30);
     this.clue.setScrollFactor(0).setOrigin(0,0);
     this.clue.setPosition(15,135);
