@@ -46,6 +46,7 @@ ok(done.stage==='ponte'&&done.progress===1&&done.rotation===0,'árvore permanece
 ok(treeBridgeAligned(),'posição final coincide com a colisão Arcade');
 ok(TREE_BRIDGE.rootX+TREE_BRIDGE.length===3890,'árvore alcança outra margem');
 ok(TREE_BRIDGE.collisionHeight===34,'altura física da ponte preservada');
+world.caboStep=5;world.unlocked=true;world.vines=[true,true,true];
 ok(forestHint(world,0,3500).includes('PONTE DE ÁRVORE PRONTA'),'orientação depois da travessia');
 world.bridge=false;
 ok(forestHint(world,0,3500).includes('AFASTEM-SE'),'alerta de impacto antes da conclusão');
