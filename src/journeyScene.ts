@@ -6,6 +6,7 @@ import { JOURNEY, JOURNEY_SPAWNS, MATERIALS, RIVER_WIDTH,
 import type { TouchInput } from './game';
 import { SkillVfx } from './skillVfx';
 import { NightArt } from './visuals';
+import { SoloBodies } from './soloBodies';
 
 /** Fase 2: mundo contínuo, cooperação real, estruturas sólidas somente após montagem. */
 export class JourneyScene extends Phaser.Scene {
@@ -36,6 +37,7 @@ export class JourneyScene extends Phaser.Scene {
   private snake:Phaser.GameObjects.Container[]=[];
   private vfx=new SkillVfx(this,seat=>this.avatars[seat]);
   private art!:NightArt;
+  private solo?:SoloBodies;
   private branchWarning!:Phaser.GameObjects.Ellipse;
   private subscriptions:Array<()=>void>=[];
   private cursors?:Phaser.Types.Input.Keyboard.CursorKeys;
@@ -189,6 +191,16 @@ export class JourneyScene extends Phaser.Scene {
         for(const b of this.blocks)this.physics.add.collider(avatar,b);
       }
     }
+    if(this.net.isSolo){
+      this.solo=new SoloBodies(this,this.net,this.avatars,this.blocks,405,950);
+      this.solo.select(this.net.localSeat??0);
+      this.subscriptions.push(this.net.on('solo-seat',seat=>{
+        this.solo?.select(seat);this.avatar=this.avatars[seat];
+        this.body=this.solo!.body(seat);
+        this.jumps=0;this.pendingJump=false;this.dashUntil=0;
+        this.hud?.();
+      }));
+    }
     if(this.avatar){
       const cam=this.cameras.main;
       cam.setBounds(0,0,RIVER_WIDTH,700);
@@ -214,6 +226,7 @@ export class JourneyScene extends Phaser.Scene {
     }));
     this.subscriptions.push(this.net.on('respawn',p=>{
       this.remote[p.seat]={...p};
+      if(this.net.isSolo)this.solo?.reset(p);
       if(p.seat===this.net.localSeat&&this.body){
         this.avatar.setPosition(p.x,p.y);this.body.reset(p.x,p.y);
         this.body.setAllowGravity(true);this.jumps=0;this.pendingJump=false;this.dashUntil=0;
@@ -297,6 +310,7 @@ export class JourneyScene extends Phaser.Scene {
     const seat=this.net.localSeat,now=Date.now(),w=this.world;
     const pause=!this.net.playing||!this.net.everyoneConnected||w.restartAt>0;
     if(pause!==this.paused){this.paused=pause;if(pause)this.physics.pause();else this.physics.resume();}
+    this.solo?.beforeFrame(w.supporting);
     const support=w.supporting[seat];
     if(support!==null){
       const p=this.remote[support]??this.net.poses[support];
@@ -369,7 +383,7 @@ export class JourneyScene extends Phaser.Scene {
     if(this.noticeUntil&&time>this.noticeUntil&&this.notice.visible)this.notice.setVisible(false);
     for(const i of [0,1,2] as Seat[]){
       const actor=this.avatars[i],p=this.remote[i];
-      if(i!==seat){
+      if(i!==seat&&!this.net.isSolo){
         actor.x=Phaser.Math.Linear(actor.x,p.x,lerp);
         actor.y=Phaser.Math.Linear(actor.y,p.y,lerp);
       }
@@ -377,6 +391,7 @@ export class JourneyScene extends Phaser.Scene {
       this.eyes[i]?.setPosition(actor.x+4,actor.y-8);
       actor.alpha=now<w.safeUntil[i]&&Math.floor(now/100)%2===0?.35:1;
     }
+    this.solo?.report();
     this.art.update(time);
     this.vfx.update(time);
   }

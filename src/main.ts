@@ -17,6 +17,7 @@ const touch: TouchInput = { left: false, right: false, jump: false, interact: fa
 let game: Phaser.Game | null = null;
 let activeMode: 'none' | 'intro' | 'level1' | 'level2' | 'level3' | 'level4' = 'none';
 let info = '';
+let soloSetup=false;
 
 function safeText(value: string): string {
   return value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] ?? c));
@@ -82,12 +83,17 @@ setInterval(refreshHud, 150);
 function bindMobile(): void {
   const skillLabel = net.localSeat === 1 ? 'J' : net.localSeat === 2 ? 'SHIFT' : '—';
   const skillAria = net.localSeat === 1 ? 'Disparar baladeira' : net.localSeat === 2 ? 'Ativar dash' : 'Sem habilidade nesta tecla';
-  controls.innerHTML = '<div class="control-group"><button class="touch-btn" id="left" aria-label="Esquerda">◀</button>' +
+  controls.innerHTML = (net.isSolo
+    ? '<div class="solo-touch-switch"><button data-seat="0">1 TÉO</button><button data-seat="1">2 LIA</button><button data-seat="2">3 NINO</button></div>'
+    : '') + '<div class="control-group"><button class="touch-btn" id="left" aria-label="Esquerda">◀</button>' +
     '<button class="touch-btn" id="right" aria-label="Direita">▶</button></div>' +
     '<div class="control-group"><button class="touch-btn" id="interact" aria-label="Interagir">E</button>' +
     '<button class="touch-btn" id="ability" aria-label="' + skillAria + '"' +
     (net.localSeat === 0 ? ' disabled' : '') + '>' + skillLabel + '</button>' +
     '<button class="touch-btn jump" id="jump" aria-label="Pular">PULAR</button></div>';
+  if(net.isSolo)controls.querySelectorAll<HTMLButtonElement>('[data-seat]').forEach(button=>{
+    button.addEventListener('click',()=>net.selectSoloSeat(Number(button.dataset.seat) as 0|1|2));
+  });
   for (const key of ['left', 'right', 'jump', 'interact', 'ability'] as const) {
     const el = controls.querySelector<HTMLButtonElement>('#' + key)!;
     if (el.disabled) continue;
@@ -138,7 +144,14 @@ function render(): void {
     const player = net.localSeat === null ? 'Conectando' : CHARACTERS[net.localSeat].name;
     const online = net.players.filter(p => p.online).length;
     const paused = online < 3;
-    ui.innerHTML = '<div class="hud">🌳 A FLORESTA MENTE · <span class="text-muted">' +
+    ui.innerHTML = (net.isSolo
+      ? '<div class="solo-hud"><strong>MODO SOLO DE TESTES · CONTROLANDO: <span style="color:' +
+        CHARACTERS[net.localSeat??0].hex + '">' + safeText(player.toUpperCase()) + '</span></strong>' +
+        '<div class="solo-actions"><button id="solo-restart">↻ REINICIAR FASE</button>' +
+        '<button id="solo-leave">VOLTAR AO MENU</button></div>' +
+        '<div class="solo-switch"><button data-seat="0">1 · TÉO</button>' +
+        '<button data-seat="1">2 · LIA</button><button data-seat="2">3 · NINO</button></div></div>'
+      : '') + '<div class="hud">🌳 A FLORESTA MENTE · <span class="text-muted">' +
       safeText(player) + ' · FASE 0' + net.level + ' · Sala ' + safeText(net.code) + ' · ' + online + '/3</span> · <span id="skill-status"></span> ' +
       '<span id="team-status" class="team-status"></span><button id="leave" class="hud-leave" title="Sair da sala">✕</button></div>' +
       (net.level === 1 && net.forest.caboStep >= 1 && net.forest.caboStep < 5
@@ -150,6 +163,14 @@ function render(): void {
           ? '<div class="game-toast">⚠️ Aguardando reconexão. O avanço cooperativo está pausado.</div>'
           : info ? '<div class="game-toast">' + safeText(info) + '</div>' : '');
     document.querySelector<HTMLButtonElement>('#leave')?.addEventListener('click', () => net.shutdown());
+    document.querySelector<HTMLButtonElement>('#solo-restart')?.addEventListener('click',()=>net.restartSolo());
+    document.querySelector<HTMLButtonElement>('#solo-leave')?.addEventListener('click',()=>{
+      soloSetup=false;net.shutdown();
+    });
+    ui.querySelectorAll<HTMLButtonElement>('[data-seat]').forEach(button=>{
+      button.classList.toggle('active',Number(button.dataset.seat)===net.localSeat);
+      button.addEventListener('click',()=>net.selectSoloSeat(Number(button.dataset.seat) as 0|1|2));
+    });
     document.querySelector<HTMLButtonElement>('#cabo-next')?.addEventListener('click', () => net.act({kind:'talk'}));
     document.querySelector<HTMLButtonElement>('#leave-win')?.addEventListener('click', () => net.shutdown());
     if (!controls.childElementCount) bindMobile();
@@ -157,13 +178,32 @@ function render(): void {
   }
   exitGame();
   const panelStart = '<main class="panel">';
+  if (net.role === 'idle' && soloSetup) {
+    ui.innerHTML=panelStart+'<div class="kicker">MODO SOLO DE TESTES · SEM CONEXÃO</div>'+
+      '<h2>ESCOLHER FASE PARA TESTAR</h2>'+
+      '<p>Controle Téo, Lia e Nino alternando entre 1, 2 e 3. Nenhum personagem tem IA.</p>'+
+      '<div class="solo-select">'+
+      button('solo-1','01 · A BOCA DA NOITE')+
+      button('solo-2','02 · A TRAVESSIA DOS CIPÓS')+
+      button('solo-3','03 · OLHOS NA MATA')+
+      button('solo-4','04 · A TRILHA QUE MENTE')+
+      button('solo-intro','▶ ASSISTIR À INTRODUÇÃO',true)+
+      button('solo-back','VOLTAR AO MENU',true)+'</div></main>';
+    ([1,2,3,4] as const).forEach(level=>
+      ui.querySelector('#solo-'+level)?.addEventListener('click',()=>net.startSolo(level)));
+    ui.querySelector('#solo-intro')?.addEventListener('click',()=>net.startSolo(1,true));
+    ui.querySelector('#solo-back')?.addEventListener('click',()=>{soloSetup=false;render();});
+    return;
+  }
   if (net.role === 'idle') {
     ui.innerHTML = panelStart + banner() + notice() +
-      '<div class="actions">' + button('create', '🌿 CRIAR SALA') +
+      '<div class="actions">' + button('solo-menu','🎮 MODO SOLO — TESTES') +
+      '<div class="kicker">MULTIPLAYER ONLINE</div>' + button('create', '🌿 CRIAR SALA') +
       button('join-menu', '🔑 ENTRAR EM SALA', true) + '</div>' +
       '<div class="rules">👥 Três jogadores em aparelhos diferentes. Um cria a sala; os outros entram com o código.<br>' +
       '🌐 PeerJS Cloud + WebRTC • Conexão P2P depende da compatibilidade das redes.</div></main>';
     ui.querySelector('#create')?.addEventListener('click', () => { info = ''; void net.createRoom(); });
+    ui.querySelector('#solo-menu')?.addEventListener('click',()=>{soloSetup=true;render();});
     ui.querySelector('#join-menu')?.addEventListener('click', showJoin);
     return;
   }
@@ -232,12 +272,18 @@ function showJoin(): void {
   });
 }
 gameKeys.bind();
+net.on('solo-seat',()=>{gameKeys.clear();controls.replaceChildren();});
 net.on('change', render);
 net.on('start', () => { info = ''; render(); });
 net.on('phase', () => { info = ''; render(); });
 net.on('notice', text => { info = text; render(); });
 net.on('win', () => { info = ''; render(); });
 window.addEventListener('keydown', event => {
+  if(net.isSolo&&net.playing&&['Digit1','Digit2','Digit3','Numpad1','Numpad2','Numpad3'].includes(event.code)){
+    event.preventDefault();
+    net.selectSoloSeat(Number(event.code.slice(-1))-1 as 0|1|2);
+    return;
+  }
   if (net.playing && ['ArrowLeft', 'ArrowRight'].includes(event.code)) event.preventDefault();
 });
 window.addEventListener('beforeunload', () => net.shutdown());

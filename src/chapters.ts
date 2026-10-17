@@ -1,4 +1,5 @@
 import type { Pose, Seat } from './network';
+import { SOLO_TIMING } from './soloRules';
 import type { PuzzleAction } from './puzzles';
 export type LateLevel = 3 | 4;
 export type Jaguar = { platformX: number; x: number; y: number; mode: 'patrol' | 'chase' | 'distracted'; facing: -1 | 1; target: Seat | null };
@@ -73,6 +74,7 @@ export function movingTarget(now: number): {x:number;y:number} {
   return {x: 1040 + Math.sin(now/650)*38, y: TRAIL.movingTargetY};
 }
 export class ChapterAuthority {
+  solo=false;
   world: ChapterWorld;
   jaguar=defaultJaguar();
   private lastTick=0;
@@ -111,25 +113,25 @@ export class ChapterAuthority {
         this.lastShot=now;
         const hit=(x:number,y:number)=> x>p.x && x-p.x<=345 && Math.abs(p.y-18-y)<=57;
         if(w.roots && hit(EYES.distraction.x,EYES.distraction.y)){
-          w.distractedUntil=now+6700;return true;
+          w.distractedUntil=now+(this.solo?SOLO_TIMING.chapterDistraction:6700);return true;
         }
         if(w.passage && w.pressure && !w.finalGate && hit(EYES.finalTarget.x,EYES.finalTarget.y)){
-          w.shotUntil=now+5000;return true;
+          w.shotUntil=now+(this.solo?SOLO_TIMING.chapterShot:5000);return true;
         }
       }
       if(a.kind==='timer' && seat===2 && w.roots && !w.passage && near(p,EYES.timer.x,EYES.timer.y,53,70)){
         if(w.timerUntil>now)return false;
-        w.timerUntil=now+3900;this.dashAt=0;return true;
+        w.timerUntil=now+(this.solo?SOLO_TIMING.chapterTemporary:3900);this.dashAt=0;return true;
       }
       if(a.kind==='switch' && seat===2){
         if(!w.passage && w.timerUntil>now && near(p,EYES.switch.x,EYES.switch.y,52,74)
-          && this.dashAt>=w.timerUntil-3900 && this.dashAt<=now
+          && this.dashAt>=w.timerUntil-(this.solo?SOLO_TIMING.chapterTemporary:3900) && this.dashAt<=now
           && this.dashX<780 && p.x-this.dashX>=160){
           w.passage=true;w.timerUntil=0;return true;
         }
         if(w.passage && w.pressure && w.shotUntil>now && !w.finalGate
           && near(p,EYES.finalSwitch.x,EYES.finalSwitch.y,50,74)
-          && this.lateDashAt>0 && now-this.lateDashAt<=2000
+          && this.lateDashAt>0 && now-this.lateDashAt<=(this.solo?SOLO_TIMING.chapterDashContact:2000)
           && p.x-this.lateDashX>=55){
           w.finalGate=true;w.shotUntil=0;return true;
         }
@@ -149,7 +151,7 @@ export class ChapterAuthority {
       }
       const target=movingTarget(now);
       if(w.transformed && w.pressure && !w.finalGate && hit(target.x,target.y)){
-        w.shotUntil=now+5000;return true;
+        w.shotUntil=now+(this.solo?SOLO_TIMING.chapterShot:5000);return true;
       }
     }
     if(a.kind==='switch' && seat===2 && !w.finalGate){
@@ -161,7 +163,7 @@ export class ChapterAuthority {
       }
       if(w.transformed && w.pressure && w.shotUntil>now
         && near(p,TRAIL.finalSwitch.x,TRAIL.finalSwitch.y,47,77)
-        && this.lateDashAt>0 && now-this.lateDashAt<=2000
+        && this.lateDashAt>0 && now-this.lateDashAt<=(this.solo?SOLO_TIMING.chapterDashContact:2000)
         && p.x-this.lateDashX>=65){
         w.finalGate=true;w.platformsOn=true;w.shotUntil=0;return true;
       }

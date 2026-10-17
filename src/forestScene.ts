@@ -6,6 +6,7 @@ import { FOREST_WIDTH, FOREST_SPAWNS, FOREST_VINES, CABO_X, TREE_ACTIONS,
 import type { TouchInput } from './game';
 import { SkillVfx } from './skillVfx';
 import { NightArt } from './visuals';
+import { SoloBodies } from './soloBodies';
 import { GUIDE_DIALOGUES, GUIDE_NAME } from './forestPresentation';
 import { IndigenousGuideVisual, GiantBridgeTree } from './forestArt';
 
@@ -37,6 +38,7 @@ export class ForestScene extends Phaser.Scene {
   private snake:Phaser.GameObjects.Container[]=[];
   private vfx=new SkillVfx(this,seat=>this.players[seat]);
   private art!:NightArt;
+  private solo?:SoloBodies;
   private warning!:Phaser.GameObjects.Ellipse;
   private off:Array<()=>void>=[];
   private arrows?:Phaser.Types.Input.Keyboard.CursorKeys;
@@ -190,6 +192,16 @@ export class ForestScene extends Phaser.Scene {
         for(const plat of this.blocks)this.physics.add.collider(body,plat);
       }
     }
+    if(this.net.isSolo){
+      this.solo=new SoloBodies(this,this.net,this.players,this.blocks,400,960);
+      this.solo.select(this.net.localSeat??0);
+      this.off.push(this.net.on('solo-seat',seat=>{
+        this.solo?.select(seat);
+        this.me=this.players[seat];this.body=this.solo!.body(seat);
+        this.jumps=0;this.dashUntil=0;this.pendingJump=false;
+        this.hud?.();
+      }));
+    }
     if(this.me){
       const cam=this.cameras.main;
       cam.setBounds(0,0,FOREST_WIDTH,700);
@@ -217,6 +229,7 @@ export class ForestScene extends Phaser.Scene {
     this.off.push(this.net.on('effect',fx=>this.vfx.play(fx)));
     this.off.push(this.net.on('respawn',p=>{
       this.poses[p.seat]={...p};
+      if(this.net.isSolo)this.solo?.reset(p);
       if(p.seat===this.net.localSeat && this.body){
         this.body.reset(p.x,p.y);this.me.setPosition(p.x,p.y);
         this.body.setAllowGravity(true);this.jumps=0;this.pendingJump=false;
@@ -302,6 +315,7 @@ export class ForestScene extends Phaser.Scene {
     const seat=this.net.localSeat,now=Date.now(),w=this.world;
     const pause=!this.net.playing||!this.net.everyoneConnected||w.restartAt>0;
     if(pause!==this.paused){this.paused=pause;if(pause)this.physics.pause();else this.physics.resume();}
+    this.solo?.beforeFrame(w.supporting);
     const base=w.supporting[seat];
     if(base!==null){
       const p=this.poses[base];if(p){
@@ -375,7 +389,7 @@ export class ForestScene extends Phaser.Scene {
     const smooth=1-Math.exp(-Math.min(dt,80)/110);
     for(const i of [0,1,2] as Seat[]){
       const actor=this.players[i];
-      if(i!==seat){
+      if(i!==seat && !this.net.isSolo){
         const p=this.poses[i];actor.x=Phaser.Math.Linear(actor.x,p.x,smooth);
         actor.y=Phaser.Math.Linear(actor.y,p.y,smooth);
       }
@@ -383,6 +397,7 @@ export class ForestScene extends Phaser.Scene {
       this.eyes[i]?.setPosition(actor.x+5,actor.y-8);
       actor.alpha=now<w.safeUntil[i]&&Math.floor(now/100)%2===0?.35:1;
     }
+    this.solo?.report();
     this.art.update(time);
     this.vfx.update(time);
     void forestDanger;

@@ -1,6 +1,7 @@
 import type { Pose, Seat } from './network';
 import type { PuzzleAction } from './puzzles';
 import { applyDamage, allAlive, type Hearts, type SafeTimes } from './survival';
+import { SOLO_TIMING } from './soloRules';
 
 /** Segunda fase extensa; a autoridade vive apenas na instância do anfitrião. */
 export const RIVER_WIDTH = 4300;
@@ -106,6 +107,7 @@ export function isGapJumpFeasible(gap:number,runup=0):boolean {
 }
 
 export class JourneyAuthority {
+  solo=false;
   world:JourneyWorld=initialJourney();
   private lastShot=0;
   private lastDash=0;
@@ -171,7 +173,7 @@ export class JourneyAuthority {
         w.counterweight=true;return true;
       }
       if(w.bridgeReady&&w.pressure&&!w.finalReady&&hit(JOURNEY.finalTarget.x,JOURNEY.finalTarget.y)){
-        w.finalShotUntil=now+6800;return true;
+        w.finalShotUntil=now+(this.solo?SOLO_TIMING.riverFinalShot:6800);return true;
       }
       return false;
     }
@@ -188,13 +190,13 @@ export class JourneyAuthority {
     }
     if(action.kind==='timer'&&seat===2&&w.anchor&&w.counterweight&&!w.farFix
       &&near(p,JOURNEY.timer.x,JOURNEY.timer.y,60,74)&&w.tempUntil<=now){
-      w.tempUntil=now+9000;
+      w.tempUntil=now+(this.solo?SOLO_TIMING.riverTemporary:9000);
       this.bridgeDashAt=0;this.bridgeDashFrom=0;
       return true;
     }
     if(action.kind==='switch'&&seat===2&&w.anchor&&w.counterweight&&!w.farFix
       &&w.tempUntil>now&&near(p,JOURNEY.farFix.x,JOURNEY.farFix.y,54,80)
-      &&this.bridgeDashAt>=w.tempUntil-9000&&this.bridgeDashAt<now
+      &&this.bridgeDashAt>=w.tempUntil-(this.solo?SOLO_TIMING.riverTemporary:9000)&&this.bridgeDashAt<now
       &&p.x-this.bridgeDashFrom>=240){
       w.farFix=true;w.tempUntil=0;w.bridgeFallAt=now;return true;
     }

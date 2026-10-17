@@ -113,3 +113,19 @@ Os testes automatizados incluem matemática/limites de partículas e inspeção 
 Verificações automatizadas: estado puro da árvore nas quatro situações, geometria alinhada ao retângulo Arcade, validação de ações pelos personagens, degrau acessível e referências públicas sem nome antigo. A árvore e o guia são produzidos com Phaser Graphics, sem assets baixados e sem alteração da lógica P2P.
 
 Ainda é obrigatório testar visualmente em três navegadores e celular: antes/durante/depois da queda, posição da copa e cordas na câmera, latência das interações E/J/Shift, colisão real após 1900ms, avanço para a Fase 2 e renderização após reconexão. Testes unitários e build não substituem inspeção do canvas em execução.
+
+## ETAPA 07-C — MODO SOLO DE TESTES, SEM IA
+
+A página inicial permite escolher MULTIPLAYER ONLINE (inalterado) ou MODO SOLO — TESTES. Selecione diretamente qualquer uma das quatro fases ou assista à introdução antes da primeira fase. Não há código de sala, login nem conexão PeerJS no modo solo.
+
+Controles no computador: 1 para controlar Téo, 2 para Lia, 3 para Nino; A/D ou setas esquerda/direita para mover; Espaço ou seta para cima para pular; E para interagir; J para o estilingue de Lia; Shift para o dash de Nino. Em telas móveis, existem botões individuais de seleção, movimento, PULAR, E e habilidade. O HUD identifica o personagem controlado e oferece REINICIAR FASE e VOLTAR AO MENU.
+
+Cada personagem possui seu próprio Arcade Body, gravidade e colisões com as plataformas. Apenas o selecionado recebe comandos de movimento. Os outros não têm IA e não ativam habilidades por conta própria. A câmera passa a acompanhá-lo sem reiniciar a cena. O apoio dos amigos continua validado pelas mesmas regras cooperativas da partida online. As posições dos três são enviadas com seus próprios seats à autoridade local em vez de simular conexões WebRTC.
+
+A sessão solo reutiliza as autoridades ForestAuthority, JourneyAuthority e ChapterAuthority por meio de Network.role solo. Não modifica as salas multiplayer. O seletor de fases, disponível exclusivamente fora de salas, restaura os puzzles e materiais corretos, dá as habilidades já obtidas no capítulo escolhido e bloqueia o salto duplo de Téo apenas no início da Fase 1. Ao morrer ou reiniciar, volta-se ao início da fase selecionada sem reiniciar o jogo inteiro.
+
+Para um usuário alternando personagens, as janelas dos mecanismos temporizados foram ampliadas exclusivamente no modo solo por src/soloRules.ts (passagem da Fase 2: 18s; disparo final: 23s; Fases 3–4 também têm tempos maiores). O multiplayer continua usando seus valores anteriores. Os personagens ainda precisam realizar cada desafio com sua identidade correta.
+
+Arquivos novos: src/soloBodies.ts, src/soloRules.ts e tests/solo.test.ts. Arquivos adaptados: src/network.ts, src/main.ts, src/forestScene.ts, src/journeyScene.ts, src/lateScene.ts, src/chapters.ts, src/riverJourney.ts, src/style.css, package.json.
+
+Validação pendente: jogar manualmente os quatro capítulos em um navegador real para conferir colisões físicas dos três atores, troca durante o apoio, plataformas móveis, adequação dos temporizadores, checkpoints, morte e progressão. Um build ou teste de lógica aprovado não comprova conclusões jogáveis no browser.

@@ -54,6 +54,7 @@ type Events = {
   hazard: Jaguar;
   phase: PhaseInfo;
   win: undefined;
+  'solo-seat': Seat;
 };
 const names = ['Téo', 'Lia', 'Nino'] as const;
 export const CHARACTERS = [
@@ -128,7 +129,7 @@ function parseWire(value: unknown): Wire | null {
 
 /** Estrela: convidados conectam somente ao anfitrião; anfitrião retransmite estados a 20Hz. */
 export class Network {
-  role: 'idle' | 'host' | 'guest' = 'idle';
+  role: 'idle' | 'host' | 'guest' | 'solo' = 'idle';
   code = '';
   localSeat: Seat | null = null;
   players: Slot[] = slots();
@@ -180,7 +181,8 @@ export class Network {
     const callbacks = this.listeners[event] as Array<(v: Events[K]) => void> | undefined;
     callbacks?.forEach(fn => fn(payload));
   }
-  get isHost(): boolean { return this.role === 'host'; }
+  get isSolo(): boolean { return this.role === 'solo'; }
+  get isHost(): boolean { return this.role === 'host' || this.isSolo; }
   get everyoneConnected(): boolean { return this.players.every(p => p.online); }
   get canStart(): boolean { return this.isHost && this.stage === 'lobby' && this.players.every(p => p.online && p.ready); }
   private message(conn: DataConnection | null, wire: Wire): void {
@@ -190,6 +192,63 @@ export class Network {
   }
   private broadcast(wire: Wire): void {
     for (const conn of this.conns.values()) this.message(conn, wire);
+  }
+  /** Local session: three physical players, zero Peer instances / DataChannels. */
+  startSolo(level: Level = 1, showIntro = false): void {
+    this.shutdown();
+    this.shuttingDown=false;
+    this.role='solo';this.code='SOLO';this.localSeat=0;
+    this.players=([0,1,2] as Seat[]).map(seat=>({seat,online:true,ready:true}));
+    this.authority.reset();this.effectGate.reset();
+    this.forestAuthority.reset();this.forest=this.forestAuthority.world;
+    this.journeyAuthority.reset();this.journey=this.journeyAuthority.world;
+    this.chapterAuthority.reset(level>=3?level as LateLevel:3);
+    this.chapter={...this.chapterAuthority.world};this.jaguar={...this.chapterAuthority.jaguar};
+    this.puzzle=initialWorld();
+    this.authority.world.unlocked=[level!==1,true,true];
+    this.puzzle={...this.authority.world,unlocked:[...this.authority.world.unlocked] as WorldState['unlocked']};
+    this.poses=(level===1?FOREST_SPAWNS:level===2?JOURNEY_SPAWNS:LATE_SPAWNS).map(p=>({...p}));
+    this.journeyMotion={logs:floatingLogs(Date.now(),this.journey.hazardEpoch),now:Date.now()};
+    this.journeyAuthority.solo=true;this.chapterAuthority.solo=true;
+    this.heartbeat=setInterval(()=>this.hostTick(),50);
+    this.setPhase(showIntro&&level===1?'intro':'playing',level,
+      showIntro&&level===1?Date.now()+24000:0);
+  }
+  selectSoloSeat(seat: Seat): void {
+    if(!this.isSolo||!this.playing||this.localSeat===seat)return;
+    this.localSeat=seat;
+    this.lastInput=0;this.lastAction.clear();
+    this.emit('solo-seat',seat);this.emit('change',undefined);
+  }
+  /** Physics-owned poses from all three local Arcade bodies. */
+  reportSoloBodies(poses: Pose[]):void {
+    if(!this.isSolo||!this.playing||poses.length!==3)return;
+    for(const input of poses) {
+      const p={...input,y:Math.max(0,Math.min(700,input.y))};
+      if(!validPose(p))continue;
+      const supporting=this.level===1?this.forest.supporting:
+        this.level===2?this.journey.supporting:null;
+      if(supporting?.[p.seat]!==null && supporting?.[p.seat]!==undefined)continue;
+      this.poses[p.seat]={...p};
+    }
+  }
+  restartSolo():void {
+    if(!this.isSolo||!this.playing)return;
+    this.effectGate.reset();this.lastAction.clear();
+    if(this.level===1){
+      this.forestAuthority.reset();this.shareForest();
+      this.authority.world.unlocked=[false,true,true];this.sharePuzzle();
+    }else if(this.level===2){
+      this.journeyAuthority.reset();this.shareJourney();
+    }else{
+      this.chapterAuthority.reset(this.level as LateLevel);this.shareChapter();
+      this.jaguar={...this.chapterAuthority.jaguar};this.emit('hazard',this.jaguar);
+    }
+    this.poses=(this.level===1?FOREST_SPAWNS:this.level===2?JOURNEY_SPAWNS:LATE_SPAWNS)
+      .map(p=>({...p}));
+    for(const pose of this.poses)this.emit('respawn',pose);
+    this.emit('snapshot',this.poses);
+    this.emit('notice','FASE REINICIADA: os três personagens retornaram ao início.');
   }
   private updateRoster(): void {
     this.broadcast({ t: 'roster', players: this.players, playing: this.playing });
@@ -568,7 +627,7 @@ export class Network {
     if (!finite(x) || !finite(y) || !finite(vx) || !finite(vy)) return;
     if (this.level === 1 && (this.forest.restartAt > 0 || this.forest.supporting[this.localSeat] !== null)) return;
     if (this.level === 2 && (this.journey.restartAt > 0 || this.journey.supporting[this.localSeat]!==null)) return;
-    if (this.isHost) this.poses[0] = { seat: 0, ...msg };
+    if (this.isHost) this.poses[this.localSeat] = { seat: this.localSeat, ...msg };
     else this.message(this.hostConn, msg);
   }
   act(action: PuzzleAction): void {
@@ -607,7 +666,7 @@ export class Network {
       if (otherSeat !== seat) this.message(connection, { t: 'fx', fx: effect });
     }
     // O host já animou suas próprias habilidades; convidados animam no host aqui.
-    if (seat !== 0) this.emit('effect', effect);
+    if (seat !== 0 && !this.isSolo) this.emit('effect', effect);
   }
   private shareForest(): void {
     this.forest={...this.forestAuthority.world,
@@ -786,6 +845,7 @@ export class Network {
     this.hostConn?.close(); this.hostConn = null;
     this.peer?.destroy(); this.peer = null;
     this.role = 'idle'; this.code = ''; this.localSeat = null;
+    this.journeyAuthority.solo=false;this.chapterAuthority.solo=false;
     this.players = slots(); this.poses = SPAWNS.map(p => ({ ...p }));
     this.playing = false; this.completed = false;
     this.stage = 'lobby'; this.level = 1; this.phaseSince = 0; this.phaseUntil = 0;

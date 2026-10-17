@@ -4,6 +4,7 @@ import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import type { TouchInput } from './game';
 import { SkillVfx } from './skillVfx';
 import { NightArt } from './visuals';
+import { SoloBodies } from './soloBodies';
 import { configureCamera } from './camera';
 import { EYES, TRAIL, LATE_SPAWNS, movingTarget, type ChapterWorld, type Jaguar } from './chapters';
 
@@ -43,6 +44,7 @@ export class LateScene extends Phaser.Scene {
   private dashReady=0; private shotReady=0; private paused=false;
   private vfx=new SkillVfx(this,seat=>this.actors[seat]);
   private art!:NightArt;
+  private solo?:SoloBodies;
   private unsubs:Array<()=>void>=[];
   constructor(net:Network,touch:TouchInput,hud?:()=>void){
     super({key:'LateScene'});
@@ -102,6 +104,14 @@ export class LateScene extends Phaser.Scene {
         for(const b of this.allBlocks)this.physics.add.collider(char,b);
       }
     }
+    if(this.net.isSolo){
+      this.solo=new SoloBodies(this,this.net,this.actors,this.allBlocks,390,920);
+      this.solo.select(this.net.localSeat??0);
+      this.unsubs.push(this.net.on('solo-seat',seat=>{
+        this.solo?.select(seat);this.local=this.actors[seat];this.body=this.solo!.body(seat);
+        this.jumps=0;this.dashUntil=0;this.setClue();this.hud?.();
+      }));
+    }
     if(this.local)configureCamera(this,this.local);
     this.keys=this.input.keyboard?.addKeys('A,D,E') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
     this.cursors=this.input.keyboard?.createCursorKeys();
@@ -125,6 +135,7 @@ export class LateScene extends Phaser.Scene {
     }));
     this.unsubs.push(this.net.on('respawn',p=>{
       this.remote[p.seat]={...p};
+      if(this.net.isSolo)this.solo?.reset(p);
       if(p.seat===this.net.localSeat && this.body){
         this.local.setPosition(p.x,p.y);this.body.reset(p.x,p.y);
         this.jumps=0;this.dashUntil=0;
@@ -308,6 +319,7 @@ export class LateScene extends Phaser.Scene {
   update(time:number,delta:number):void {
     if(!this.body||!this.local||this.net.localSeat===null)return;
     const seat=this.net.localSeat;
+    this.solo?.beforeFrame();
     const pause=!this.net.playing||!this.net.everyoneConnected||this.net.completed;
     if(pause!==this.paused){this.paused=pause;if(pause)this.physics.pause();else this.physics.resume();}
     if(!pause){
@@ -357,7 +369,7 @@ export class LateScene extends Phaser.Scene {
     const smooth=1-Math.exp(-Math.min(delta,80)/100);
     for(const i of [0,1,2] as Seat[]){
       const actor=this.actors[i];
-      if(i!==seat){
+      if(i!==seat&&!this.net.isSolo){
         const p=this.remote[i];actor.x=Phaser.Math.Linear(actor.x,p.x,smooth);
         actor.y=Phaser.Math.Linear(actor.y,p.y,smooth);
       }
@@ -365,6 +377,7 @@ export class LateScene extends Phaser.Scene {
       this.names[i]?.setPosition(actor.x,actor.y-44);
       actor.setAlpha(this.net.players[i].online?1:.35);
     }
+    this.solo?.report();
     this.art.update(time);
     this.vfx.update(time);
   }
