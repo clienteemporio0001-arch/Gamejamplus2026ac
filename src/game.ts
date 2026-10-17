@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CHARACTERS, SPAWNS, type Network, type Pose, type Seat } from './network';
 import { EXIT, LEVER, PEDAL, PICKUPS, SWITCH, TARGET, type WorldState } from './puzzles';
+import { SkillVfx } from './skillVfx';
 
 export type TouchInput = { left: boolean; right: boolean; jump: boolean; interact: boolean; ability: boolean };
 
@@ -9,6 +10,7 @@ export class DemoScene extends Phaser.Scene {
   private net: Network;
   private touch: TouchInput;
   private figures = new Map<Seat, Phaser.GameObjects.Rectangle>();
+  private vfx = new SkillVfx(this, seat => this.figures.get(seat));
   private labels = new Map<Seat, Phaser.GameObjects.Text>();
   private eyes = new Map<Seat, Phaser.GameObjects.Rectangle>();
   private targets = new Map<Seat, Pose>();
@@ -144,6 +146,7 @@ export class DemoScene extends Phaser.Scene {
       for (const pose of poses) if (pose.seat !== this.net.localSeat) this.targets.set(pose.seat, { ...pose });
     }));
     this.unsub.push(this.net.on('puzzle', world => this.syncPuzzles(world)));
+    this.unsub.push(this.net.on('effect', fx => this.vfx.play(fx)));
     this.unsub.push(this.net.on('respawn', pose => {
       if (pose.seat === this.net.localSeat) {
         this.player.setPosition(pose.x, pose.y);
@@ -246,17 +249,16 @@ export class DemoScene extends Phaser.Scene {
     }
     if (me === 1 && now >= this.shotReadyAt) {
       this.shotReadyAt = now + 520;
-      const startX = this.player.x + this.facing * 23, startY = this.player.y - 18;
-      const bullet = this.add.circle(startX, startY, 7, 0xffd586).setDepth(16);
-      this.tweens.add({ targets: bullet, x: startX + 340 * this.facing, duration: 470,
-        onComplete: () => { this.flash(bullet.x, bullet.y, 0xf3bd75, 4); bullet.destroy(); } });
+      this.vfx.play({ kind: 'shoot', seat: me, level: this.net.level,
+        x: this.player.x, y: this.player.y, facing: this.facing });
       this.net.act({ kind: 'shoot', facing: this.facing });
       this.onHud?.();
     } else if (me === 2 && now >= this.dashReadyAt) {
       this.dashUntil = now + 800;
       this.dashReadyAt = now + 2000;
+      this.vfx.play({ kind: 'dash', seat: me, level: this.net.level,
+        x: this.player.x, y: this.player.y, facing: this.facing });
       this.net.act({ kind: 'dash', facing: this.facing });
-      this.flash(this.player.x, this.player.y, 0x93d8ff, 5);
       this.onHud?.();
     }
   }
@@ -302,10 +304,6 @@ export class DemoScene extends Phaser.Scene {
       if (use) this.interact(me);
       if (ability) this.abilityPress(now, me);
       if (!this.net.puzzle.unlocked[me] && Math.abs(this.player.x - PICKUPS[me].x) < 42) this.net.act({ kind: 'collect' });
-      if (me === 2 && now < this.dashUntil && dir !== 0 && Math.floor(time / 60) !== Math.floor((time - delta) / 60)) {
-        const shadow = this.add.rectangle(this.player.x - this.facing * 12, this.player.y, 27, 39, 0x8bcfff, .45).setDepth(5);
-        this.tweens.add({ targets: shadow, alpha: 0, duration: 300, onComplete: () => shadow.destroy() });
-      }
       this.net.report(this.player.x, this.player.y, this.body.velocity.x, this.body.velocity.y);
     }
     if (this.lastNarration && time >= this.lastNarration && this.messageLabel.visible) this.messageLabel.setVisible(false);
@@ -332,6 +330,7 @@ export class DemoScene extends Phaser.Scene {
       this.eyes.get(seat)?.setPosition(figure.x + 4, figure.y - 7);
       figure.alpha = this.net.players[seat].online ? 1 : .33;
     }
+    this.vfx.update(time);
     // Região CASA não dá vitória localmente; somente o anfitrião confere os três.
     void EXIT;
   }

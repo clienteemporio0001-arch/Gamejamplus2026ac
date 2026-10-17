@@ -1,6 +1,7 @@
 import Peer, { type DataConnection } from 'peerjs';
 import { PuzzleAuthority, initialWorld, validWorld, validAction, CHECKPOINTS, type WorldState, type PuzzleAction } from './puzzles';
 import { RiverAuthority, initialRiver, validRiver, RIVER_CHECKPOINTS, RIVER_SPAWNS, type RiverWorld } from './river';
+import { SkillFxGate, validSkillFx, type SkillFx } from './effects';
 
 export type Stage = 'lobby' | 'intro' | 'playing' | 'transition' | 'final';
 export type Level = 1 | 2;
@@ -18,6 +19,7 @@ type Wire =
   | { t: 'begin' }
   | { t: 'state'; poses: Pose[] }
   | { t: 'act'; action: PuzzleAction }
+  | { t: 'fx'; fx: SkillFx }
   | { t: 'puzzle'; world: WorldState }
   | { t: 'respawn'; pose: Pose }
   | { t: 'river'; world: RiverWorld }
@@ -32,6 +34,7 @@ type Events = {
   notice: string;
   start: undefined;
   snapshot: Pose[];
+  effect: SkillFx;
   puzzle: WorldState;
   respawn: Pose;
   river: RiverWorld;
@@ -87,6 +90,7 @@ function parseWire(value: unknown): Wire | null {
     case 'state': return Array.isArray(p.poses) && p.poses.length === 3 && p.poses.every(validPose)
       && p.poses.every((pose: Pose, i: number) => pose.seat === i) ? value as Wire : null;
     case 'act': return validAction(p.action) ? value as Wire : null;
+    case 'fx': return validSkillFx(p.fx) ? value as Wire : null;
     case 'puzzle': return validWorld(p.world) ? value as Wire : null;
     case 'respawn': return validPose(p.pose) ? value as Wire : null;
     case 'river': return validRiver(p.world) ? value as Wire : null;
@@ -121,6 +125,7 @@ export class Network {
   private riverAuthority = new RiverAuthority();
   private authority = new PuzzleAuthority();
   private lastAction = new Map<string, number>();
+  private effectGate = new SkillFxGate();
   private peer: Peer | null = null;
   private hostConn: DataConnection | null = null;
   private conns = new Map<Seat, DataConnection>();
@@ -385,6 +390,13 @@ export class Network {
         this.emit('river', this.river);
         this.emit('change', undefined);
         break;
+      case 'fx':
+        // Apenas a DataConnection autenticada do anfitrião chega a este handler.
+        // O originador não recebe o mesmo efeito, evitando duplicação local.
+        if (this.playing && msg.fx.level === this.level && msg.fx.seat !== this.localSeat) {
+          this.emit('effect', msg.fx);
+        }
+        break;
       case 'puzzle':
         this.puzzle = { ...msg.world, unlocked: [...msg.world.unlocked] as WorldState['unlocked'] };
         this.emit('puzzle', this.puzzle);
@@ -430,7 +442,7 @@ export class Network {
   }
   start(): void {
     if (!this.canStart) return;
-    this.authority.reset(); this.riverAuthority.reset();
+    this.authority.reset(); this.riverAuthority.reset(); this.effectGate.reset();
     this.puzzle = initialWorld(); this.river = initialRiver();
     this.poses = SPAWNS.map(p => ({ ...p }));
     this.sharePuzzle(); this.shareRiver();
@@ -449,7 +461,7 @@ export class Network {
   }
   private advanceLevel(): void {
     if (!this.isHost || this.stage !== 'transition' || !this.everyoneConnected) return;
-    this.riverAuthority.reset();
+    this.riverAuthority.reset(); this.effectGate.reset();
     this.poses = RIVER_SPAWNS.map(p => ({ ...p }));
     this.shareRiver(); this.broadcast({ t: 'state', poses: this.poses });
     this.setPhase('playing', 2);
@@ -477,9 +489,23 @@ export class Network {
   }
   private hostAction(seat: Seat, action: PuzzleAction): void {
     if (!this.isHost || !this.playing || !this.everyoneConnected) return;
+    // O puzzle continua na autoridade original. A animação é um evento leve,
+    // independente do acerto (a pedra também precisa aparecer quando erra).
     if (this.level === 1) {
       if (this.authority.act(seat, action, this.poses)) this.sharePuzzle();
     } else if (this.riverAuthority.act(seat, action, this.poses, this.puzzle.unlocked)) this.shareRiver();
+
+    const effect = this.effectGate.accept(
+      seat, this.level, action, this.poses[seat], this.puzzle.unlocked, performance.now()
+    );
+    if (!effect) return;
+    // Não reenvia ao jogador de origem: ele já renderizou localmente sem latência.
+    // Atribuímos seat pelo DataConnection do host, nunca pelo pacote recebido.
+    for (const [otherSeat, connection] of this.conns) {
+      if (otherSeat !== seat) this.message(connection, { t: 'fx', fx: effect });
+    }
+    // O host já animou suas próprias habilidades; convidados animam no host aqui.
+    if (seat !== 0) this.emit('effect', effect);
   }
   private sharePuzzle(): void {
     this.puzzle = { ...this.authority.world, unlocked: [...this.authority.world.unlocked] as WorldState['unlocked'] };
@@ -566,7 +592,7 @@ export class Network {
     this.playing = false; this.completed = false;
     this.stage = 'lobby'; this.level = 1; this.phaseSince = 0; this.phaseUntil = 0;
     this.riverAuthority.reset(); this.river = initialRiver();
-    this.authority.reset(); this.puzzle = initialWorld(); this.lastAction.clear(); this.pendingRestore = false;
+    this.authority.reset(); this.puzzle = initialWorld(); this.lastAction.clear(); this.effectGate.reset(); this.pendingRestore = false;
     this.tokens = [null, null, null]; this.lastInput = 0; this.lastReceived = [0, 0, 0];
     this.emit('change', undefined);
   }

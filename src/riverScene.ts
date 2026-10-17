@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import { RIVER, RIVER_SPAWNS, type RiverWorld } from './river';
 import type { TouchInput } from './game';
+import { SkillVfx } from './skillVfx';
 
 /** Fase 2: rio amazônico, três peças de ponte, ilusão e mecanismo coletivo. */
 export class RiverScene extends Phaser.Scene {
@@ -12,6 +13,7 @@ export class RiverScene extends Phaser.Scene {
   private bridge: Phaser.GameObjects.Rectangle[] = [];
   private finalBarrier!: Phaser.GameObjects.Rectangle;
   private actors: Phaser.GameObjects.Rectangle[] = [];
+  private vfx = new SkillVfx(this, seat => this.actors[seat]);
   private names: Phaser.GameObjects.Text[] = [];
   private eyes: Phaser.GameObjects.Rectangle[] = [];
   private targets: Pose[] = RIVER_SPAWNS.map(p => ({ ...p }));
@@ -126,6 +128,7 @@ export class RiverScene extends Phaser.Scene {
       for (const p of poses) if (p.seat !== this.net.localSeat) this.targets[p.seat] = { ...p };
     }));
     this.unsub.push(this.net.on('river', w => this.sync(w)));
+    this.unsub.push(this.net.on('effect', fx => this.vfx.play(fx)));
     this.unsub.push(this.net.on('respawn', p => {
       this.targets[p.seat] = { ...p };
       if (p.seat === this.net.localSeat && this.body) {
@@ -199,15 +202,15 @@ export class RiverScene extends Phaser.Scene {
     if (!this.net.puzzle.unlocked[me]) return;
     if (me === 1 && now >= this.shotReady) {
       this.shotReady = now + 520;
-      const x = this.actor.x + this.facing * 23, y = this.actor.y - 18;
-      const pellet = this.add.circle(x, y, 7, 0xffd78b).setDepth(17);
-      this.tweens.add({ targets: pellet, x: x + this.facing * 330, duration: 440,
-        onComplete: () => { this.burst(pellet.x, pellet.y, 0xffd78b, 4); pellet.destroy(); } });
+      this.vfx.play({ kind: 'shoot', seat: me, level: this.net.level,
+        x: this.actor.x, y: this.actor.y, facing: this.facing });
       this.net.act({ kind: 'shoot', facing: this.facing }); this.hud?.();
     }
     if (me === 2 && now >= this.dashReady) {
       this.dashReady = now + 2000;
       this.dashUntil = now + 800;
+      this.vfx.play({ kind: 'dash', seat: me, level: this.net.level,
+        x: this.actor.x, y: this.actor.y, facing: this.facing });
       this.net.act({ kind: 'dash', facing: this.facing }); this.hud?.();
     }
   }
@@ -242,10 +245,6 @@ export class RiverScene extends Phaser.Scene {
       this.touch.interact = false; this.touch.ability = false;
       if (use) this.net.act({ kind: me === 0 ? 'lever' : me === 2 && !this.world.partC && this.actor.x < 770 ? 'timer' : 'switch' });
       if (special) this.ability(now, me);
-      if (me === 2 && now < this.dashUntil && dir !== 0 && Math.floor(time / 65) !== Math.floor((time - dt) / 65)) {
-        const trace = this.add.rectangle(this.actor.x - this.facing * 11, this.actor.y, 27, 40, 0x88d4ff, .5).setDepth(5);
-        this.tweens.add({ targets: trace, alpha: 0, duration: 340, onComplete: () => trace.destroy() });
-      }
       this.net.report(this.actor.x, this.actor.y, this.body.velocity.x, this.body.velocity.y);
     }
     if (this.tipUntil && time > this.tipUntil && this.tip.visible) this.tip.setVisible(false);
@@ -264,6 +263,7 @@ export class RiverScene extends Phaser.Scene {
       this.eyes[seat]?.setPosition(actor.x + 5, actor.y - 8);
       actor.setAlpha(this.net.players[seat].online ? 1 : .3);
     }
+    this.vfx.update(time);
     void this.gateOpen;
   }
   getCooldown(): string {
