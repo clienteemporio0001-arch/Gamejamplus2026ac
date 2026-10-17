@@ -6,7 +6,7 @@ import './style.css';
 const net = new Network();
 const ui = document.querySelector<HTMLDivElement>('#ui')!;
 const controls = document.querySelector<HTMLDivElement>('#mobile-controls')!;
-const touch: TouchInput = { left: false, right: false, jump: false };
+const touch: TouchInput = { left: false, right: false, jump: false, interact: false, ability: false };
 let game: Phaser.Game | null = null;
 let info = '';
 
@@ -33,23 +33,29 @@ function enterGame(): void {
     render: { antialias: true, pixelArt: false },
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     physics: { default: 'arcade', arcade: { debug: false, gravity: { x: 0, y: 0 } } },
-    scene: [new DemoScene(net, touch)],
+    scene: [new DemoScene(net, touch, refreshHud)],
   });
 }
 function exitGame(): void {
   if (!game) return;
   game.destroy(true);
   game = null;
-  touch.left = false; touch.right = false; touch.jump = false;
+  touch.left = false; touch.right = false; touch.jump = false; touch.interact = false; touch.ability = false;
   controls.replaceChildren();
 }
+function refreshHud(): void {
+  const scene = game?.scene.keys['DemoScene'] as DemoScene | undefined;
+  const skill = document.querySelector<HTMLElement>('#skill-status');
+  if (skill && scene?.getCooldown) skill.textContent = scene.getCooldown();
+}
+setInterval(refreshHud, 150);
 function bindMobile(): void {
   controls.innerHTML = '<div class="control-group"><button class="touch-btn" id="left" aria-label="Esquerda">◀</button>' +
     '<button class="touch-btn" id="right" aria-label="Direita">▶</button></div>' +
-    '<div class="control-group"><button class="touch-btn reserved" disabled>E</button>' +
-    '<button class="touch-btn reserved" disabled>Q</button>' +
+    '<div class="control-group"><button class="touch-btn" id="interact" aria-label="Interagir">E</button>' +
+    '<button class="touch-btn" id="ability" aria-label="Habilidade">Q</button>' +
     '<button class="touch-btn jump" id="jump" aria-label="Pular">PULAR</button></div>';
-  for (const key of ['left', 'right', 'jump'] as const) {
+  for (const key of ['left', 'right', 'jump', 'interact', 'ability'] as const) {
     const el = controls.querySelector<HTMLButtonElement>('#' + key)!;
     el.addEventListener('pointerdown', event => {
       event.preventDefault();
@@ -61,7 +67,7 @@ function bindMobile(): void {
       el.addEventListener(type, event => {
         event.preventDefault();
         el.classList.remove('pressed');
-        if (key !== 'jump') touch[key] = false;
+        if (key === 'left' || key === 'right') touch[key] = false;
       });
     }
   }
@@ -75,10 +81,10 @@ function render(): void {
     const online = net.players.filter(p => p.online).length;
     const paused = online < 3;
     ui.innerHTML = '<div class="hud">🌳 A FLORESTA MENTE · <span class="text-muted">' +
-      safeText(player) + ' · Sala ' + safeText(net.code) + ' · ' + online + '/3</span> ' +
+      safeText(player) + ' · Sala ' + safeText(net.code) + ' · ' + online + '/3</span> · <span id="skill-status"></span> ' +
       '<button id="leave" class="hud-leave" title="Sair da sala">✕</button></div>' +
       (net.completed
-        ? '<div class="victory"><h2>🌟 TODOS CHEGARAM!</h2><p>Ninguém ficou para trás.</p>' +
+        ? '<div class="victory"><h2>🌟 NINGUÉM FICA PARA TRÁS!</h2><p>Os três amigos venceram juntos o primeiro desafio da floresta.</p>' +
           button('leave-win', 'VOLTAR AO MENU') + '</div>'
         : paused
           ? '<div class="game-toast">⚠️ Aguardando reconexão. O avanço cooperativo está pausado.</div>'

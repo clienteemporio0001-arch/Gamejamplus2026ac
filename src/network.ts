@@ -1,4 +1,5 @@
 import Peer, { type DataConnection } from 'peerjs';
+import { PuzzleAuthority, initialWorld, validWorld, validAction, CHECKPOINTS, type WorldState, type PuzzleAction } from './puzzles';
 
 export type Seat = 0 | 1 | 2;
 export type Slot = { seat: Seat; online: boolean; ready: boolean };
@@ -11,6 +12,9 @@ type Wire =
   | { t: 'roster'; players: Slot[]; playing: boolean }
   | { t: 'begin' }
   | { t: 'state'; poses: Pose[] }
+  | { t: 'act'; action: PuzzleAction }
+  | { t: 'puzzle'; world: WorldState }
+  | { t: 'respawn'; pose: Pose }
   | { t: 'win' }
   | { t: 'reject'; reason: string }
   | { t: 'closed' };
@@ -20,6 +24,8 @@ type Events = {
   notice: string;
   start: undefined;
   snapshot: Pose[];
+  puzzle: WorldState;
+  respawn: Pose;
   win: undefined;
 };
 const names = ['Téo', 'Lia', 'Nino'] as const;
@@ -70,6 +76,9 @@ function parseWire(value: unknown): Wire | null {
       && p.players.every((s: Slot, i: number) => s.seat === i) && typeof p.playing === 'boolean' ? value as Wire : null;
     case 'state': return Array.isArray(p.poses) && p.poses.length === 3 && p.poses.every(validPose)
       && p.poses.every((pose: Pose, i: number) => pose.seat === i) ? value as Wire : null;
+    case 'act': return validAction(p.action) ? value as Wire : null;
+    case 'puzzle': return validWorld(p.world) ? value as Wire : null;
+    case 'respawn': return validPose(p.pose) ? value as Wire : null;
     case 'reject': return typeof p.reason === 'string' && p.reason.length <= 130 ? value as Wire : null;
     case 'begin': case 'win': case 'closed': return value as Wire;
     default: return null;
@@ -85,6 +94,9 @@ export class Network {
   poses: Pose[] = SPAWNS.map(p => ({ ...p }));
   playing = false;
   completed = false;
+  puzzle: WorldState = initialWorld();
+  private authority = new PuzzleAuthority();
+  private lastAction = new Map<string, number>();
   private peer: Peer | null = null;
   private hostConn: DataConnection | null = null;
   private conns = new Map<Seat, DataConnection>();
@@ -255,12 +267,17 @@ export class Network {
           this.message(conn, { t: 'begin' });
           this.message(conn, { t: 'state', poses: this.poses });
         }
+        // O convidado reconectado recebe sempre o snapshot completo de puzzles.
+        this.message(conn, { t: 'puzzle', world: this.puzzle });
         return;
       }
       if (this.conns.get(seat) !== conn) return;
       if (msg.t === 'ready' && !this.playing) {
         this.players[seat].ready = msg.value;
         this.updateRoster();
+      }
+      if (msg.t === 'act' && this.playing && this.everyoneConnected) {
+        this.hostAction(seat, msg.action);
       }
       if (msg.t === 'pose' && this.playing && this.everyoneConnected) {
         const now = performance.now();
@@ -326,6 +343,15 @@ export class Network {
           this.emit('snapshot', this.poses);
         }
         break;
+      case 'puzzle':
+        this.puzzle = { ...msg.world, unlocked: [...msg.world.unlocked] as WorldState['unlocked'] };
+        this.emit('puzzle', this.puzzle);
+        this.emit('change', undefined);
+        break;
+      case 'respawn':
+        this.poses[msg.pose.seat] = { ...msg.pose };
+        this.emit('respawn', msg.pose);
+        break;
       case 'win':
         this.completed = true; this.emit('win', undefined); this.emit('change', undefined);
         break;
@@ -351,8 +377,11 @@ export class Network {
   start(): void {
     if (!this.canStart) return;
     this.playing = true; this.completed = false;
+    this.authority.reset();
+    this.puzzle = initialWorld();
     this.poses = SPAWNS.map(p => ({ ...p }));
     this.broadcast({ t: 'begin' });
+    this.sharePuzzle();
     this.updateRoster();
     this.emit('start', undefined);
   }
@@ -367,11 +396,41 @@ export class Network {
     if (this.isHost) this.poses[0] = { seat: 0, ...msg };
     else this.message(this.hostConn, msg);
   }
+  act(action: PuzzleAction): void {
+    if (!this.playing || this.completed || !this.everyoneConnected || this.localSeat === null || !validAction(action)) return;
+    const now = performance.now();
+    const key = action.kind;
+    const minInterval = key === 'collect' ? 140 : 90;
+    if (now - (this.lastAction.get(key) ?? -10000) < minInterval) return;
+    this.lastAction.set(key, now);
+    if (this.isHost) this.hostAction(0, action);
+    else this.message(this.hostConn, { t: 'act', action });
+  }
+  private hostAction(seat: Seat, action: PuzzleAction): void {
+    if (!this.isHost || !this.playing || !this.everyoneConnected) return;
+    if (this.authority.act(seat, action, this.poses)) this.sharePuzzle();
+  }
+  private sharePuzzle(): void {
+    this.puzzle = { ...this.authority.world, unlocked: [...this.authority.world.unlocked] as WorldState['unlocked'] };
+    this.broadcast({ t: 'puzzle', world: this.puzzle });
+    this.emit('puzzle', this.puzzle);
+    this.emit('change', undefined);
+  }
   private hostTick(): void {
     if (!this.isHost || !this.playing || this.completed || !this.everyoneConnected) return;
+    if (this.authority.tick(this.poses)) this.sharePuzzle();
+    for (const pose of this.poses) {
+      if (pose.y >= 695) {
+        const checkpoint = CHECKPOINTS[this.puzzle.checkpoint];
+        const replacement: Pose = { seat: pose.seat, x: checkpoint + pose.seat * 24, y: 565, vx: 0, vy: 0 };
+        this.poses[pose.seat] = replacement;
+        this.broadcast({ t: 'respawn', pose: replacement });
+        this.emit('respawn', replacement);
+      }
+    }
     this.broadcast({ t: 'state', poses: this.poses });
     this.emit('snapshot', this.poses);
-    if (this.poses.every(p => p.x >= 1050 && p.x <= 1185 && p.y >= 540 && p.y <= 655)) {
+    if (this.authority.hasWon(this.poses)) {
       this.completed = true;
       this.broadcast({ t: 'win' });
       this.emit('win', undefined);
@@ -418,6 +477,7 @@ export class Network {
     this.role = 'idle'; this.code = ''; this.localSeat = null;
     this.players = slots(); this.poses = SPAWNS.map(p => ({ ...p }));
     this.playing = false; this.completed = false;
+    this.authority.reset(); this.puzzle = initialWorld(); this.lastAction.clear();
     this.tokens = [null, null, null]; this.lastInput = 0; this.lastReceived = [0, 0, 0];
     this.emit('change', undefined);
   }
