@@ -7,7 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test:logic": "esbuild tests/puzzles.test.ts tests/river.test.ts tests/effects.test.ts tests/chapters.test.ts tests/forest.test.ts tests/journey.test.ts tests/controls.test.ts tests/visuals.test.ts tests/forestPresentation.test.ts tests/solo.test.ts --bundle --platform=node --format=esm --outdir=.test-output && node .test-output/puzzles.test.js && node .test-output/river.test.js && node .test-output/effects.test.js && node .test-output/chapters.test.js && node .test-output/forest.test.js && node .test-output/journey.test.js && node .test-output/controls.test.js && node .test-output/visuals.test.js && node .test-output/forestPresentation.test.js && node .test-output/solo.test.js"
+    "test:logic": "esbuild tests/puzzles.test.ts tests/river.test.ts tests/effects.test.ts tests/chapters.test.ts tests/forest.test.ts tests/journey.test.ts tests/controls.test.ts tests/visuals.test.ts tests/forestPresentation.test.ts tests/solo.test.ts tests/forestLoop.test.ts --bundle --platform=node --format=esm --outdir=.test-output && node .test-output/puzzles.test.js && node .test-output/river.test.js && node .test-output/effects.test.js && node .test-output/chapters.test.js && node .test-output/forest.test.js && node .test-output/journey.test.js && node .test-output/controls.test.js && node .test-output/visuals.test.js && node .test-output/forestPresentation.test.js && node .test-output/solo.test.js && node .test-output/forestLoop.test.js"
   },
   "dependencies": {
     "peerjs": "^1.5.5",

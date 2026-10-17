@@ -1,3 +1,35 @@
+# A FLORESTA MENTE — MAS O VENTO NÃO
+
+**Protótipo principal da Game Jam Plus 2026/2027.** Jogo cooperativo 2D de memória e desorientação ambiental, com Phaser 3, TypeScript, Vite e PeerJS/WebRTC.
+
+**JOGAR:** https://clienteemporio0001-arch.github.io/Gamejamplus2026ac/
+
+## Aventura prioritária: uma fase, quatro setores
+
+No menu, escolha **NOVA AVENTURA · JOGAR SOZINHO** para controlar Téo, Lia e Nino manualmente, ou **NOVA AVENTURA · MULTIPLAYER ONLINE** para criar uma sala de três participantes. A aventura ocupa um mundo único de 3800 pixels dividido em Entrada, Trilha Repetida, Abismo e Saída Real. **VERSÃO CLÁSSICA / TESTES** preserva as quatro fases antigas.
+
+A floresta muda entre estados **A → B → C → A** a cada 60 segundos, precedidos de 10 segundos de vento mais forte e um apagão de aproximadamente 2 segundos. O anfitrião pausa a física, escolhe a próxima configuração predefinida e transmite o estado da floresta aos convidados. As barreiras têm colisão física que realmente muda; os outros jogadores nunca escolhem configuração por conta própria.
+
+O vento indica a passagem correta conforme o estado e os desafios já resolvidos. Duas passagens especiais, da árvore oca e da pedra rachada, podem devolver os três amigos a regiões conhecidas. Uma rota falsa não mata ninguém, apenas consome tempo. Para atravessar, os três devem estar próximos, sobre chão seguro e sem impulso excessivo.
+
+**Desafio de memória:** observe ÁRVORE OCA, PEDRA RACHADA e TRONCO EM ARCO antes do primeiro apagão. Depois, Téo confirma a árvore com E, Lia atinge a pedra com J e Nino realiza SHIFT seguido de E perto do arco. O progresso é preservado após as transformações.
+
+**Árvore-ponte:** Téo solta a primeira amarra com E, Lia atira na segunda com J e Nino solta a raiz com SHIFT + E. Uma árvore visível inclina e cai por 1,9 segundo antes de receber colisão de ponte sobre o rio. A correnteza e a queda no abismo são fatais: todos reiniciam a aventura no estado A.
+
+**Saída:** no quarto setor, os mesmos três personagens liberam três mecanismos complementares. A saída verdadeira abre após as três ações quando a floresta está no estado C. A vitória exige os três na passagem final. Nenhum puzzle é completado automaticamente.
+
+## Controles e teste solo
+
+A/D ou ←/→ = mover; Espaço ou ↑ = pular (Téo tem salto duplo); E = interagir; J = baladeira de Lia; Shift = dash de Nino. No modo solo, 1/2/3 alternam personagens sem IA, com botões de troca no celular. REINICIAR TENTATIVA restaura a nova aventura; ADIANTAR APAGÃO acelera apenas o relógio de teste, sem completar desafios.
+
+A lógica pura está em src/forestLoop.ts. O mundo físico e visual está em src/forestLoopScene.ts, utilizando NightArt e SoloBodies existentes. Network mantém uma escolha entre experiência nova e clássica, com estado autoritativo loop sincronizado por PeerJS/WebRTC quando online; solo não cria PeerJS.
+
+O GitHub Actions executa npm run build e npm run test:logic antes de publicar HTML5 em GitHub Pages; a pasta dist permanece adequada para itch.io. Os testes unitários cobrem ciclos, rotas, vento, ações dos três jogadores, ponte, morte coletiva e vitória, mas não comprovam o percurso jogado em tempo real. Teste manual em PC e celular é necessário para avaliar FPS, navegação, portais e multiplayer sob latência. O áudio ainda pode ser aprimorado sem dependências de terceiros.
+
+---
+
+## Arquivo histórico — versão clássica das quatro fases
+
 # A FLORESTA MENTE — Roteiro definitivo de quatro fases
 
 **Game Jam Plus 2026/2027**, multiplayer cooperativo para três jogadores, Phaser 3 + TypeScript + Vite + PeerJS/WebRTC. A quinta etapa de desenvolvimento não cria uma quinta fase de aventura.

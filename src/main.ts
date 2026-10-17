@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CHARACTERS, Network } from './network';
 import { DemoScene, type TouchInput } from './game';
 import { ForestScene } from './forestScene';
+import { ForestLoopScene } from './forestLoopScene';
 import { IntroScene } from './intro';
 import { RiverScene } from './riverScene';
 import { JourneyScene } from './journeyScene';
@@ -15,7 +16,7 @@ const ui = document.querySelector<HTMLDivElement>('#ui')!;
 const controls = document.querySelector<HTMLDivElement>('#mobile-controls')!;
 const touch: TouchInput = { left: false, right: false, jump: false, interact: false, ability: false };
 let game: Phaser.Game | null = null;
-let activeMode: 'none' | 'intro' | 'level1' | 'level2' | 'level3' | 'level4' = 'none';
+let activeMode: 'none' | 'intro' | 'level1' | 'level2' | 'level3' | 'level4' | 'loop' = 'none';
 let info = '';
 let soloSetup=false;
 
@@ -32,11 +33,12 @@ function banner(): string {
     '<p>Quando chega a boca da noite, a floresta muda de lugar.<br>Três amigos. Uma saída. Ninguém pode ficar para trás.</p>';
 }
 function enterGame(): void {
-  const mode = net.stage === 'intro' ? 'intro' : ('level' + net.level) as 'level1' | 'level2' | 'level3' | 'level4';
+  const mode = net.stage === 'intro' ? 'intro' : net.experience==='loop'?'loop':('level' + net.level) as 'level1' | 'level2' | 'level3' | 'level4';
   if (game && activeMode === mode) return;
   exitGame();
   activeMode = mode;
   const scene = mode === 'intro' ? new IntroScene() :
+    mode === 'loop' ? new ForestLoopScene(net,touch,refreshHud) :
     mode === 'level2' ? new JourneyScene(net, touch, refreshHud) :
     net.level >= 3 ? new LateScene(net, touch, refreshHud) : new ForestScene(net, touch, refreshHud);
   // Aspecto variável no canvas: nas janelas altas o mundo é recortado pela câmera,
@@ -64,7 +66,7 @@ function exitGame(): void {
   controls.replaceChildren();
 }
 function refreshHud(): void {
-  const scene = game?.scene.keys[net.level >= 3 ? 'LateScene' : net.level === 2 ? 'JourneyScene' : 'ForestScene'] as DemoScene | ForestScene | RiverScene | JourneyScene | LateScene | undefined;
+  const scene = game?.scene.keys[net.experience==='loop'?'ForestLoopScene':net.level >= 3 ? 'LateScene' : net.level === 2 ? 'JourneyScene' : 'ForestScene'] as DemoScene | ForestScene | RiverScene | JourneyScene | LateScene | ForestLoopScene | undefined;
   const skill = document.querySelector<HTMLElement>('#skill-status');
   if (skill && scene?.getCooldown) skill.textContent = scene.getCooldown();
   const team=document.querySelector<HTMLElement>('#team-status');
@@ -134,6 +136,13 @@ function render(): void {
         '</p><p>'+(net.level===2?'Mas a noite ainda esconde perigos...':'Os três amigos seguem juntos...')+'</p><strong>FASE 0'+(net.level+1)+' · '+titles[net.level+1]+'</strong></div>';
       return;
     }
+    if (net.stage === 'final' && net.experience==='loop') {
+      ui.innerHTML = '<div class="victory"><h2>NINGUÉM FICA PARA TRÁS!</h2>' +
+        '<p>A FLORESTA MENTE. MAS O VENTO NÃO.</p><p>Os três encontraram a saída verdadeira.</p>' +
+        button('leave-final','VOLTAR AO MENU')+'</div>';
+      ui.querySelector('#leave-final')?.addEventListener('click',()=>net.shutdown());
+      return;
+    }
     if (net.stage === 'final') {
       ui.innerHTML = '<div class="victory"><h2>🌟 VOCÊS DESCOBRIRAM A VERDADE!</h2>' +
         '<p>Mas ainda existe algo protegendo a saída da floresta...</p><p>O último capítulo chegará em breve.</p>' +
@@ -147,15 +156,16 @@ function render(): void {
     ui.innerHTML = (net.isSolo
       ? '<div class="solo-hud"><strong>MODO SOLO DE TESTES · CONTROLANDO: <span style="color:' +
         CHARACTERS[net.localSeat??0].hex + '">' + safeText(player.toUpperCase()) + '</span></strong>' +
-        '<div class="solo-actions"><button id="solo-restart">↻ REINICIAR FASE</button>' +
+        '<div class="solo-actions"><button id="solo-restart">↻ '+(net.experience==='loop'?'REINICIAR TENTATIVA':'REINICIAR FASE')+'</button>' +
+         (net.experience==='loop'?'<button id="solo-cycle">☾ ADIANTAR APAGÃO</button>':'') +
         '<button id="solo-leave">VOLTAR AO MENU</button></div>' +
         '<span class="solo-timing">⏱ Tempos de cooperação adaptados para troca manual.</span>' +
         '<div class="solo-switch"><button data-seat="0">1 · TÉO</button>' +
         '<button data-seat="1">2 · LIA</button><button data-seat="2">3 · NINO</button></div></div>'
       : '') + '<div class="hud">🌳 A FLORESTA MENTE · <span class="text-muted">' +
-      safeText(player) + ' · FASE 0' + net.level + ' · Sala ' + safeText(net.code) + ' · ' + online + '/3</span> · <span id="skill-status"></span> ' +
+      safeText(player) + (net.experience==='loop'?' · FLORESTA QUE MUDA':' · FASE 0'+net.level) + ' · Sala ' + safeText(net.code) + ' · ' + online + '/3</span> · <span id="skill-status"></span> ' +
       '<span id="team-status" class="team-status"></span><button id="leave" class="hud-leave" title="Sair da sala">✕</button></div>' +
-      (net.level === 1 && net.forest.caboStep >= 1 && net.forest.caboStep < 5
+      (net.experience==='classic' && net.level === 1 && net.forest.caboStep >= 1 && net.forest.caboStep < 5
         ? '<div class="forest-dialogue"><p>'+safeText(GUIDE_DIALOGUES[net.forest.caboStep])+'</p>'+button('cabo-next','CONTINUAR · E')+'</div>' : '') +
       (net.completed
         ? '<div class="victory"><h2>🌟 NINGUÉM FICA PARA TRÁS!</h2><p>Os três amigos venceram juntos o primeiro desafio da floresta.</p>' +
@@ -165,6 +175,7 @@ function render(): void {
           : info ? '<div class="game-toast">' + safeText(info) + '</div>' : '');
     document.querySelector<HTMLButtonElement>('#leave')?.addEventListener('click', () => net.shutdown());
     document.querySelector<HTMLButtonElement>('#solo-restart')?.addEventListener('click',()=>net.restartSolo());
+    document.querySelector<HTMLButtonElement>('#solo-cycle')?.addEventListener('click',()=>net.advanceLoopCycle());
     document.querySelector<HTMLButtonElement>('#solo-leave')?.addEventListener('click',()=>{
       soloSetup=false;net.shutdown();
     });
@@ -198,12 +209,18 @@ function render(): void {
   }
   if (net.role === 'idle') {
     ui.innerHTML = panelStart + banner() + notice() +
-      '<div class="actions">' + button('solo-menu','🎮 MODO SOLO — TESTES') +
-      '<div class="kicker">MULTIPLAYER ONLINE</div>' + button('create', '🌿 CRIAR SALA') +
-      button('join-menu', '🔑 ENTRAR EM SALA', true) + '</div>' +
+      '<div class="actions"><div class="kicker">AVENTURA PRINCIPAL · A FLORESTA MENTE. MAS O VENTO NÃO.</div>' +
+      button('loop-solo','🌬 NOVA AVENTURA · JOGAR SOZINHO')+
+      button('create','🌿 NOVA AVENTURA · MULTIPLAYER ONLINE')+
+      button('join-menu','🔑 ENTRAR EM SALA',true)+
+      '<div class="kicker">VERSÃO CLÁSSICA / TESTES</div>'+
+      button('solo-menu','🎮 TESTAR AS QUATRO FASES CLÁSSICAS',true)+
+      button('create-classic','CRIAR SALA CLÁSSICA',true)+'</div>' +
       '<div class="rules">👥 Três jogadores em aparelhos diferentes. Um cria a sala; os outros entram com o código.<br>' +
       '🌐 PeerJS Cloud + WebRTC • Conexão P2P depende da compatibilidade das redes.</div></main>';
-    ui.querySelector('#create')?.addEventListener('click', () => { info = ''; void net.createRoom(); });
+    ui.querySelector('#create')?.addEventListener('click',()=>{info='';void net.createRoom('loop');});
+    ui.querySelector('#create-classic')?.addEventListener('click',()=>{info='';void net.createRoom('classic');});
+    ui.querySelector('#loop-solo')?.addEventListener('click',()=>{info='';net.startLoopSolo();});
     ui.querySelector('#solo-menu')?.addEventListener('click',()=>{soloSetup=true;render();});
     ui.querySelector('#join-menu')?.addEventListener('click', showJoin);
     return;
