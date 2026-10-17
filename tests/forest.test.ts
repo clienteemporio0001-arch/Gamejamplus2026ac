@@ -1,4 +1,5 @@
 import { ForestAuthority, FOREST_WIDTH, FOREST_SPAWNS, FOREST_CHECKPOINTS,
+  FOREST_GATES, canAdvanceForest, forestHint,
   CABO_X, FOREST_VINES, TREE_ACTIONS, branchWarning, forestDanger, validForest } from '../src/forest';
 import type { Pose, Seat } from '../src/network';
 let count=0;
@@ -65,4 +66,46 @@ ok(f.tick(poses,15801).reset,'reset autorizado pelo anfitrião');
 ok(f.world.health.every(h=>h===3),'três corações restaurados');
 ok(!f.world.unlocked&&f.world.vines.every(v=>!v),'Téo reconquista habilidade e puzzles no reinício');
 ok(validForest(f.world),'snapshot válido após reinício');
+
+// Regressão: um grupo novo NÃO atravessa a mata sem falar com Caboquim.
+const newRun=new ForestAuthority(),team=FOREST_SPAWNS.map(p=>({...p}));
+ok(!canAdvanceForest(newRun.world,1),'portão de Caboquim fechado ao criar sala');
+ok(!canAdvanceForest(newRun.world,4),'portão dos cipós fechado com 0/3');
+for(const p of team){p.x=2000;p.y=590;}
+newRun.tick(team,10000);
+ok(newRun.world.checkpoint===0,'explorar longe não ignora pré-requisitos de checkpoint');
+ok(!newRun.act(2,{kind:'collect'},team,10100),'cipó não reage antes do diálogo');
+for(const p of team){p.x=CABO_X;p.y=590;}
+ok(newRun.tick(team,10500).changed,'encontro conjunto ativa Caboquim');
+for(const ts of [11000,11500,12000,12500]){
+  ok(newRun.act(1,{kind:'talk'},team,ts),'diálogo termina cooperativamente');
+}
+ok(canAdvanceForest(newRun.world,1),'passagem de Caboquim abre com a habilidade liberada');
+ok(!canAdvanceForest(newRun.world,4),'portão do abismo permanece fechado sem 3/3');
+ok(forestHint(newRun.world,2,3060).includes('Q + →'),
+  'Nino recebe dica ao encostar no cipó sem usá-lo');
+ok(forestHint(newRun.world,1,2500).includes('Q'),
+  'Lia recebe instrução do estilingue');
+ok(forestHint(newRun.world,0,1750).includes('Lia'),
+  'Téo recebe dica sobre empilhamento');
+ok(FOREST_GATES.cabo<1200 && FOREST_GATES.vines>3000,
+  'duas barreiras em pontos distintos da fase');
+ok(690>2*(465*465/(2*850))*2,
+  'barreiras altas não são ultrapassadas pelo salto duplo');
+const inv=new ForestAuthority(),arr=FOREST_SPAWNS.map(p=>({...p}));
+inv.world.caboStep=5;inv.world.unlocked=true;
+arr[2]={...arr[2],x:2910,y:590};
+ok(!inv.act(2,{kind:'dash',facing:1},arr,30000),
+  'Nino inicia dash no marcador anterior ao cipó');
+arr[2]={...arr[2],x:3060,y:582};
+ok(inv.act(2,{kind:'collect'},arr,31300),
+  'Nino coleta passando pelo cipó após 1,3s com tolerância de latência');
+ok(!inv.act(2,{kind:'collect'},arr,31400),
+  'coleta de Nino é idempotente');
+inv.world.vines=[true,true,true];
+ok(canAdvanceForest(inv.world,4),
+  'portão das raízes abre quando os três cipós foram coletados');
+ok(forestHint(inv.world,0,3310).includes('Téo'),
+  'depois dos 3 cipós, instruções passam à árvore');
+
 console.log('APROVADO: '+count+' verificações da floresta ampliada, escalada e sobrevivência.');

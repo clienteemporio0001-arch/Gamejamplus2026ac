@@ -70,3 +70,13 @@ As novas regras estão em src/riverJourney.ts; o cenário em src/journeyScene.ts
 Executar npm install, npm run build e npm run test:logic. O GitHub Actions verifica build e suítes de lógica antes do deploy automático. O conteúdo estático da pasta dist permanece compatível com empacotamento HTML5 do itch.io.
 
 Importante: os testes de autoridade, percurso e cálculo de alcance não substituem o teste da Fase 2 com três pessoas/navegadores. Validar especialmente apoio físico, colisão das tábuas temporárias, troncos móveis com latência, morte na correnteza, reinício simultâneo, mobile e transição para Olhos na Mata. O apoio usa vínculo de posição simplificado pelo anfitrião; não simula rigidbodies remotos completos. Sem migração de host ou backend próprio.
+
+## Correção após teste real — cipós sem reação (Etapa 06.1)
+
+No teste com três navegadores, o HUD de Téo ainda dizia **Procure Caboquim** e o grupo chegou ao abismo com **CIPÓS 0/3**. A regra existente só habilitava a coleta dos cipós após os três jogadores concluírem o diálogo com Caboquim, mas a floresta não bloqueava a passagem até o abismo nem explicava por que os itens não podiam ser coletados.
+
+Agora há **barreiras físicas visíveis**: uma após Caboquim, liberada quando o diálogo termina, e outra antes dos mecanismos da árvore final, removida quando os três cipós forem coletados. Os checkpoints respeitam o progresso, impedindo salvamento além de tarefas incompletas. Os itens usam cores de seus donos (verde Téo, laranja Lia, azul Nino), um marcador mostra onde Nino deve iniciar o dash, e uma dica contextual em tela acompanha a tarefa atual.
+
+**Passo a passo:** reúna os três no Caboquim próximo da entrada e avance as falas com CONTINUAR/E; Téo ganha o salto duplo. Na árvore, Nino fica como base, Lia sobe com E, Téo sobe em Lia com E, salta e alcança o cipó alto. Lia deve atirar Q olhando para a DIREITA, à esquerda de seu cipó. Nino inicia Q+→ sobre a marca azul **antes** do cipó e corre através dele; a janela de coleta aceita até 1,75s de latência. O contador deve subir para 3/3; só então a barreira das raízes desaparece e os três podem ativar os mecanismos da árvore-ponte.
+
+Os testes de lógica cobrem desbloqueio, pré-requisitos de checkpoints, instruções, distância e tempo do dash de Nino. A abertura real das barreiras no Phaser e o percurso físico continuam exigindo reteste nos três navegadores.

@@ -10,6 +10,8 @@ export const FOREST_CHECKPOINTS = [110,1080,2130,2900,3260] as const;
 export const CABO_X = 785;
 export const TREE_BASE_X = 3545;
 export const FOREST_EXIT = 4160;
+/** Barreiras reais que impedem saltar objetivos antes de completar a etapa. */
+export const FOREST_GATES = { cabo: 1080, vines: 3140 } as const;
 export const FOREST_VINES = [
   {x:1790,y:342,seat:0},
   {x:2570,y:562,seat:1},
@@ -41,6 +43,45 @@ const validNum=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n)&
 const near=(p:Pose,x:number,y:number,dx=58,dy=76):boolean=>
   Math.abs(p.x-x)<=dx&&Math.abs(p.y-y)<=dy;
 const clamp=(n:number):number=>Math.max(0,Math.min(FOREST_WIDTH,n));
+/** Progressão autoritativa — uma região só libera checkpoint após a tarefa anterior. */
+export function canAdvanceForest(w:ForestWorld,checkpoint:number):boolean {
+  switch(checkpoint){
+    case 1:return w.unlocked && w.caboStep===5;
+    case 2:return w.vines[0];
+    case 3:return w.vines[0]&&w.vines[1];
+    case 4:return w.vines.every(Boolean);
+    default:return false;
+  }
+}
+/** Dica localizada, sem alterar autoridade de quebra-cabeças. */
+export function forestHint(w:ForestWorld,seat:Seat,x:number):string {
+  if(!w.unlocked){
+    return x>1000?'VOLTE! Reúnam Téo, Lia e Nino no CABOQUIM e terminem o diálogo.'
+      :x>590?'CABOQUIM: os 3 amigos devem ficar perto dele. Use E / CONTINUAR.'
+      :'OBJETIVO: encontrem CABOQUIM DA MATA, juntos, antes de avançar.';
+  }
+  if(!w.vines.every(Boolean)){
+    if(x>3050 && !w.vines[2] && seat===2)
+      return 'NINO: recue até o raio azul e aperte Q + →. Atravesse o cipó durante o DASH.';
+    if(x>FOREST_GATES.vines-170)
+      return 'BARREIRA DE CIPÓS: faltam materiais ('+w.vines.filter(Boolean).length+'/3). Voltem e coletem.';
+    if(seat===0&&!w.vines[0])
+      return x<1230?'TÉO: vá até a árvore gigante; os amigos ajudarão você a subir.'
+        :'TÉO: Lia sobe em Nino com E, você sobe em Lia com E; pule até o cipó verde alto.';
+    if(seat===1&&!w.vines[1])
+      return 'LIA: fique À ESQUERDA do cipó laranja e atire Q olhando para a DIREITA.';
+    if(seat===2&&!w.vines[2])
+      return 'NINO: comece o DASH (Q + →) no raio azul, ANTES do cipó, e atravesse-o.';
+    return 'AJUDE SEUS AMIGOS: todos precisam coletar seu cipó antes do grande abismo.';
+  }
+  if(!w.treeSteps.every(Boolean))return [
+    'ÁRVORE-PONTE: Téo ativa a corda elevada com E.',
+    'ÁRVORE-PONTE: Lia corta a amarra com Q, olhando para a direita.',
+    'ÁRVORE-PONTE: Nino usa DASH vindo da esquerda e E junto à raiz.'
+  ][w.treeSteps.findIndex(x=>!x)] ?? 'Concluam os 3 mecanismos.';
+  return w.bridge?'PONTE PRONTA! Os três devem cruzar juntos para a CASA.'
+    :'A ÁRVORE ESTÁ CAINDO! Aguarde formar uma ponte sólida.';
+}
 export function initialForest(epoch=Date.now()):ForestWorld {
   return {
     caboStep:0,unlocked:false,health:[3,3,3],safeUntil:[0,0,0],
@@ -124,7 +165,7 @@ export class ForestAuthority {
     }
     if(a.kind==='dash'){
       if(seat!==2)return false;
-      if(p.x>2790&&p.x<3020){this.dashOrigin=p.x;this.dashAt=now;}
+      if(p.x>=2840&&p.x<=3020){this.dashOrigin=p.x;this.dashAt=now;}
       if(p.x>3170&&p.x<3335){this.treeDashOrigin=p.x;this.treeDashAt=now;}
       return false;
     }
@@ -134,7 +175,7 @@ export class ForestAuthority {
         w.vines[0]=true;return true;
       }
       if(seat===2&&!w.vines[2]&&near(p,FOREST_VINES[2].x,FOREST_VINES[2].y,58,85)
-        &&this.dashAt>0&&now-this.dashAt<1250&&p.x-this.dashOrigin>=100){
+        &&this.dashAt>0&&now-this.dashAt<=1750&&p.x-this.dashOrigin>=95){
         w.vines[2]=true;return true;
       }
       return false;
@@ -196,7 +237,7 @@ export class ForestAuthority {
     }
     const cp=[1080,2130,2900,3260];
     for(let i=cp.length-1;i>=0;i--){
-      if(w.checkpoint<i+1 && poses.every(p=>p.x>=cp[i])){
+      if(w.checkpoint<i+1 && canAdvanceForest(w,i+1) && poses.every(p=>p.x>=cp[i])){
         w.checkpoint=(i+1) as ForestWorld['checkpoint'];changed=true;break;
       }
     }

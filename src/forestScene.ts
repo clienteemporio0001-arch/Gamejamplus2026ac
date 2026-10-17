@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import { FOREST_WIDTH, FOREST_SPAWNS, FOREST_VINES, CABO_X, TREE_ACTIONS,
-  forestDanger, branchWarning, type ForestWorld } from './forest';
+  forestDanger, branchWarning, forestHint, FOREST_GATES, type ForestWorld } from './forest';
 import type { TouchInput } from './game';
 import { SkillVfx } from './skillVfx';
 
@@ -23,6 +23,11 @@ export class ForestScene extends Phaser.Scene {
   private me!:Phaser.GameObjects.Rectangle;private body!:Phaser.Physics.Arcade.Body;
   private blocks:Phaser.GameObjects.Rectangle[]=[];
   private fallen!:Phaser.GameObjects.Rectangle;
+  private caboGate!:Phaser.GameObjects.Rectangle;
+  private vinesGate!:Phaser.GameObjects.Rectangle;
+  private caboGateNote!:Phaser.GameObjects.Text;
+  private vinesGateNote!:Phaser.GameObjects.Text;
+  private hintLabel!:Phaser.GameObjects.Text;
   private treeTrunk!:Phaser.GameObjects.Rectangle;
   private cabo!:Phaser.GameObjects.Container;
   private vines:Phaser.GameObjects.Container[]=[];
@@ -120,6 +125,14 @@ export class ForestScene extends Phaser.Scene {
     // Terreno contínuo, exceto o abismo que requer ponte com colisão REAL.
     this.ground(1765,653,3530,64);
     this.ground(4086,653,428,64);
+    // Paredes físicas bem sinalizadas: os personagens não podem simplesmente
+    // ignorar Caboquim e os 3 cipós, alcançando o abismo sem meios de vencer.
+    this.caboGate=this.ground(FOREST_GATES.cabo,300,44,690,0x35674b);
+    this.vinesGate=this.ground(FOREST_GATES.vines,300,44,690,0x54764a);
+    this.solid(this.caboGate,!this.world.unlocked);
+    this.solid(this.vinesGate,!this.world.vines.every(Boolean));
+    this.caboGateNote=this.label(FOREST_GATES.cabo-12,290,'OS 3 AMIGOS\nDEVEM FALAR COM CABOQUIM',12,'#fbeab8');
+    this.vinesGateNote=this.label(FOREST_GATES.vines-35,265,'PRECISA DOS\n3 CIPÓS',12,'#fbeab8');
     this.ground(1190,570,145,19,0x4d7654);
     this.ground(1460,424,148,18,0x607d58); // degrau alcançável após empilhar 3 amigos
     this.ground(1540,309,220,18,0x566e4c); // altura inacessível sem a coluna de amigos
@@ -142,8 +155,8 @@ export class ForestScene extends Phaser.Scene {
     this.tweens.add({targets:this.cabo,y:590,duration:980,yoyo:true,repeat:-1});
     this.label(CABO_X,490,'CABOQUIM DA MATA',15,'#c2f7ac');
     this.vines=FOREST_VINES.map((v,i)=>{
-      const ring=this.add.circle(0,0,21,0x75c179,.14).setStrokeStyle(2,0x9de59f);
-      const glyph=this.add.text(0,0,'❧',{fontSize:'29px',color:'#a9ff8f'}).setOrigin(.5);
+      const ring=this.add.circle(0,0,24,CHARACTERS[i].color,.20).setStrokeStyle(3,CHARACTERS[i].color);
+      const glyph=this.add.text(0,0,'❧',{fontSize:'31px',color:CHARACTERS[i].hex}).setOrigin(.5);
       const container=this.add.container(v.x,v.y,[ring,glyph]).setDepth(16);
       this.tweens.add({targets:container,y:v.y-11,duration:850+i*160,
         repeat:-1,yoyo:true,ease:'Sine.easeInOut'});
@@ -151,7 +164,10 @@ export class ForestScene extends Phaser.Scene {
     });
     this.label(1790,225,'TÉO · CIPÓ ALTO',14);
     this.label(2570,490,'LIA · Q · AMARRA',14);
-    this.label(3060,492,'NINO · DASH + CIPÓ',14);
+    this.label(3060,492,'NINO · DASH PELO CIPÓ',14);
+    // Ponto de partida necessário para realizar a corrida com Nino.
+    this.add.rectangle(2898,622,82,10,0x4bbef7,.78).setDepth(9);
+    this.label(2898,519,'NINO: INICIE Q + → AQUI',13,'#a4e9ff');
     this.label(3310,321,'TÉO · E · SOLTE A CORDA',14);
     this.add.circle(TREE_ACTIONS.teo.x,TREE_ACTIONS.teo.y,14,0x8ef2b0).setDepth(17);
     this.add.circle(TREE_ACTIONS.lia.x,TREE_ACTIONS.lia.y,13,0xffcc79).setDepth(17);
@@ -203,6 +219,8 @@ export class ForestScene extends Phaser.Scene {
     this.textLabel=this.label(this.scale.gameSize.width/2,125,'',16,'#e7ffdc').setScrollFactor(0)
       .setWordWrapWidth(this.scale.gameSize.width-24);
     this.zoneLabel=this.label(this.scale.gameSize.width/2,32,'',14).setScrollFactor(0);
+    this.hintLabel=this.label(this.scale.gameSize.width/2,166,'',13,'#f5e9aa')
+      .setScrollFactor(0).setWordWrapWidth(Math.max(290,this.scale.gameSize.width-38));
     this.sync(this.net.forest,false);
     this.notify('Entrem na mata juntos. Lia tem estilingue, Nino tem dash.\nEncontrem Caboquim para Téo aprender o salto duplo!',5400);
     this.off.push(this.net.on('snapshot',ps=>{
@@ -228,6 +246,10 @@ export class ForestScene extends Phaser.Scene {
       vines:[...w.vines] as ForestWorld['vines'],
       treeSteps:[...w.treeSteps] as ForestWorld['treeSteps']};
     this.vines.forEach((v,i)=>v.setVisible(!w.vines[i]));
+    this.solid(this.caboGate,!w.unlocked);
+    this.solid(this.vinesGate,!w.vines.every(Boolean));
+    this.caboGateNote.setVisible(!w.unlocked);
+    this.vinesGateNote.setVisible(!w.vines.every(Boolean));
     this.solid(this.fallen,w.bridge);
     this.treeTrunk.setVisible(w.treeFallAt>0&&!w.bridge);
     if(!announce||!this.textLabel?.active){this.setHud();return;}
@@ -251,6 +273,15 @@ export class ForestScene extends Phaser.Scene {
   }
   private interact(seat:Seat):void {
     const x=this.me.x;
+    if(seat===0&&!this.world.vines[0] &&
+      Math.abs(x-FOREST_VINES[0].x)<=75 &&
+      Math.abs(this.me.y-FOREST_VINES[0].y)<=90){
+      this.net.act({kind:'collect'});return;
+    }
+    if(seat===2&&!this.world.vines[2] &&
+      Math.abs(x-FOREST_VINES[2].x)<=72){
+      this.net.act({kind:'collect'});return;
+    }
     if(x>630&&x<935&&this.world.caboStep<5){this.net.act({kind:'talk'});return;}
     if(x>1240&&x<1880){this.net.act({kind:this.world.supporting[seat]===null?'support':'detach'});return;}
     if(x>3140&&seat===0){this.net.act({kind:'lever'});return;}
@@ -319,6 +350,8 @@ export class ForestScene extends Phaser.Scene {
       b.y=branchState==='fall'?583:branchState==='warn'?478:465;
       b.setFillStyle(branchState==='fall'?0xf0a068:0x75583a);
     });
+    const guidance=forestHint(w,seat,this.me.x);
+    if(this.hintLabel.text!==guidance)this.hintLabel.setText(guidance);
     const region=Math.min(5,Math.floor(this.me.x/720));
     if(region!==this.lastRegion){
       this.lastRegion=region;
