@@ -1,70 +1,50 @@
-# A FLORESTA MENTE — Ninguém fica para trás
+# A FLORESTA MENTE — Roteiro definitivo de quatro fases
 
-Jogo cooperativo 2D para três pessoas, desenvolvido para Game Jam Plus 2026/2027. Temas: **Better Together** e **Something's Off**.
+**Game Jam Plus 2026/2027**, multiplayer cooperativo para três jogadores, Phaser 3 + TypeScript + Vite + PeerJS/WebRTC. A quinta etapa de desenvolvimento não cria uma quinta fase de aventura.
 
-**Tecnologias:** Phaser 3, TypeScript, Vite, PeerJS Cloud (sinalização) e WebRTC DataChannels (jogabilidade P2P entre cada convidado e anfitrião). Não possui Socket.IO, Express, backend de gameplay, banco de dados ou servidor multiplayer próprio.
+## Jogar
 
-## Como jogar
+https://clienteemporio0001-arch.github.io/Gamejamplus2026ac/
 
-1. No navegador, abra: https://clienteemporio0001-arch.github.io/Gamejamplus2026ac/
-2. Um jogador escolhe **CRIAR SALA**; compartilha código de 6 caracteres com dois amigos.
-3. Ambos entram em **ENTRAR EM SALA**, todos escolhem **ESTOU PRONTO** e o anfitrião inicia.
-4. Assistam à **introdução de 24 segundos** (4 cenas em Phaser). Qualquer jogador pode solicitar **PULAR INTRODUÇÃO**, mas o anfitrião avança as três telas juntas.
-5. Na **Fase 01 — A Boca da Noite**, coletem cada habilidade: Téo (salto duplo), Lia (estilingue), Nino (dash). Destravem ponte, cipós e porta final; os três devem chegar juntos à saída.
-6. Após **FASE CONCLUÍDA**, o anfitrião conduz a transição visual. Todos carregam a **Fase 02 — A Ponte Quebrada** com habilidades preservadas.
-7. No rio, Téo usa salto duplo e E na alavanca elevada para descer a primeira parte da ponte; Lia usa Q no alvo para soltar a segunda; Nino usa E no temporizador, pula, usa Q para dash e aperta E junto ao interruptor oposto para fixar a terceira.
-8. Mecanismo final simultâneo: Téo fica sobre a placa de pressão na outra margem, Lia acerta o alvo com Q, Nino usa Q para dash e E no último interruptor **antes de o tempo acabar**. Depois todos chegam juntos à saída.
-9. A fase termina com **VOCÊS ATRAVESSARAM O RIO!** e **A floresta ainda guarda seus segredos...**. As fases 03, 04 e 05 ainda não são jogáveis.
+Abrir em três navegadores, um jogador cria a sala e compartilha o código de seis caracteres. Todos marcam PRONTO e o host inicia. A introdução é sincronizada. A/D ou setas para andar; Espaço/↑ para pular; **E** para interagir/apoio; **Q** para habilidade especial. Celulares possuem botões touch.
 
-**Controles:** A/D ou setas para andar, Espaço/↑ para pular e salto duplo, E para interagir, Q para disparo/dash. Celular: direção, botão PULAR e botões E e Q; usar orientação horizontal.
+## Os quatro capítulos
 
-## Desenvolvimento e testes
+1. **A Boca da Noite — mapa expandido 4.300px:** os três entram na mata, conversam com Caboquim da Mata (botão CONTINUAR ou E), e Téo adquire salto duplo. Lia já começa com estilingue e Nino com dash. Na Árvore Gigante, Nino fica na base, Lia se apoia nele por E e Téo se apoia em Lia por E; Téo salta para as plataformas superiores. Os jogadores coletam os três cipós (Téo na copa, Lia por disparo, Nino por dash). Na região final, Téo solta cipó no alto, Lia corta a amarra com o estilingue e Nino libera raiz com dash+E. A árvore cai por 1,9 segundos e vira ponte **com colisão física**. Três jogadores vivos atravessam juntos e avançam.
+2. **A Ponte Quebrada / Travessia dos Cipós:** rio, mecanismos de Téo, Lia e Nino e ponte coletiva.
+3. **Olhos na Mata:** onça, distração, mecanismos temporizados e checkpoints.
+4. **A Trilha que Mente:** totens Lua→Folha→Estrela, placas enganosas, plataformas alternadas e saída cooperativa. O guardião final e a cinematografia de retorno para casa serão desenvolvidos mais tarde, *dentro da Fase 4*.
 
-Requisito: Node 20.19+ ou 22+.
+## Sistema de sobrevivência (primeira fase)
+
+Todos têm três corações, controlados pelo anfitrião e sincronizados em `ForestWorld`. Cobras e galhos causam um coração de dano com 1,2s de invulnerabilidade. O aviso de galhos precede a queda. Cair no abismo provoca morte imediata. Ao zerar qualquer personagem: **UM AMIGO CAIU NA FLORESTA**, pausa cooperativa por ~3,2s e reinício coletivo da fase com três corações e habilidades iniciais de Lia/Nino. Téo reconquista o salto duplo ao falar novamente com Caboquim; depois da Fase 1, o salto duplo permanece habilitado.
+
+## Apoio cooperativo
+
+Vínculos simplificados **autoritativos pelo anfitrião**: Lia usa E perto de Nino parado na região de escalada, e Téo usa E perto de Lia já apoiada; os pés/corpos são posicionados a 44px de diferença vertical de forma estável em todos os aparelhos. O host valida identidade, posição, ordem, e não permite ciclos. Espaço solta o vínculo e inicia salto; E solta manualmente. O marco da escalada tríplice é necessário para coletar o cipó no alto. Não é uma simulação rígida geral de colisões entre três Arcade Bodies: suporte e posicionamento são vinculados e sincronizados; a robustez precisa ser confirmada manualmente com três dispositivos.
+
+## Sincronização
+
+- `src/network.ts`: PeerJS Cloud só para sinalização; jogabilidade P2P em WebRTC DataChannels. Slots com reconexão, lobby, habilidade e progresso autoritativos. Posições de x=0 até **4300** no nível 1; níveis 2–4 usam x até 1200; 20 snapshots/segundo.
+- `src/forest.ts`: regras puras de Caboquim, estado de vida, invulnerabilidade, cadeia de apoios, cipós, árvore, checkpoints, reinício e vitória.
+- `src/forestScene.ts`: cenário Phaser 4300px, câmera local, plataformas, física da ponte, Caboquim, cobras e galhos, HUD de corações.
+- `src/game.ts` e `src/puzzles.ts`: implementação anterior preservada para regressão, não utilizada na primeira fase atual.
+- `src/riverScene.ts`, `src/river.ts`: Fase 2; `src/lateScene.ts`, `src/chapters.ts`: Fases 3 e 4; `src/effects.ts` e `src/skillVfx.ts`: efeitos compartilhados de estilingue e dash.
+
+## Build, testes e itch.io
+
+Com Node.js 22+:
 
 ```bash
 npm install
-npm run dev
 npm run build
 npm run test:logic
 ```
 
-O GitHub Actions executa build TypeScript/Vite, testes de lógica das duas fases e publica no GitHub Pages. O workflow disponibiliza ZIP HTML5 em **Actions → Publicar jogo no GitHub Pages → Artifacts**. Para itch.io, compactar o **conteúdo** de `dist/` incluindo `index.html` e `assets/` (o Vite já configura caminhos relativos com `base: './'`).
+GitHub Actions executa build TypeScript/Vite e todas as suítes antes de publicar em GitHub Pages. O artefato ZIP HTML5 está disponível em Actions. O `dist/` mantém `index.html` e `assets/` com caminhos relativos para itch.io.
 
-## Organização
+## Limitações ainda a verificar
 
-- `src/main.ts`: menu, lobby, controles móveis e renderização sincronizada de intro, fases, transição e epílogo.
-- `src/network.ts`: PeerJS, salas, mensagens tipadas e validadas, autorização do anfitrião, 20 Hz, fases e restauração após reconexão.
-- `src/intro.ts`: intro de 4 cenas ilustradas em Phaser (sem MP4, sem downloads de arte).
-- `src/game.ts`: primeira fase, personagens e puzzles legados preservados.
-- `src/puzzles.ts`: autoridade e regras da primeira fase.
-- `src/riverScene.ts`: segunda fase no rio, cenário e controles do jogo.
-- `src/river.ts`: autoridade dos puzzles, tempo, checkpoints, mistério sincronizado e conclusão da segunda fase.
-- `src/levels.ts`: registro das 5 fases planejadas.
-- `tests/puzzles.test.ts`, `tests/river.test.ts`: testes de regras de ambos os mapas.
+**Obrigatório testar em três navegadores/aparelhos reais:** escalada sincronizada e salto sobre amigos; progresso de cipós; abismo/ponte; perdas de vida e reinício; latência de ações E/Q; reconexão e progressão para fases 2–4. Testes unitários validam regras, não garantem geometria ou experiência real. Não existe migração de anfitrião, backend próprio, persistência entre partidas nem simulação Arcade de colisão entre corpos remotos: o suporte usa vínculos verificados pelo anfitrião. As vidas foram implementadas no capítulo 1 e a base de estado pode ser reutilizada nas outras fases, mas os perigos das fases 2–4 não utilizam corações nesta versão.
 
-## Multiplayer e reconexão
-
-O anfitrião recebe intenções dos convidados e valida a vaga, a habilidade, a distância ao mecanismo e o estado do desafio. Somente o anfitrião pode atualizar o estado compartilhado e autorizar transições e conclusão. A sincronização envia posições ~20 vezes/segundo e atualizações de puzzle **apenas quando o estado muda**, não o mapa inteiro.
-
-A reconexão do convidado com vaga reservada restaura a fase corrente, posição e estado dos mecanismos; a desconexão pausa a partida cooperativa. Janela de reconexão: até 30 segundos. Não há migração de anfitrião.
-
-## Limitações e créditos
-
-- É necessário testar manualmente os três aparelhos, os controles por toque, os temporizadores com latência real, a reconexão e a execução do itch.io em iframe; testes automatizados não provam isso.
-- PeerJS Cloud é um serviço público de sinalização; o P2P pode falhar sob CGNAT/firewall sem servidor TURN adicional.
-- Movimentação de cada convidado é simulada localmente e reportada ao host; mecanismos são validados pelo anfitrião, mas não há sistema antifraude determinístico.
-- O efeito de ilusão da ponte utiliza um marcador de evento definido pelo anfitrião; a animação não desloca a colisão física, para evitar bloqueios.
-- Gráficos e efeitos visuais desta fase são formas geométricas procedurais desenhadas em Phaser, sem arquivos de imagem, vídeo ou áudio externos nem recursos de arte gerados por IA. A biblioteca de fonte pode ser carregada do Google Fonts; a fonte alternativa do sistema funciona sem ela.
-- A conclusão no rio é temporária; não existe fim definitivo nem Fases 03–05 nesta versão.
-
-## Fase 04 do desenvolvimento — Capítulos 03 e 04
-
-- **03 — Olhos na Mata:** onça controlada pelo anfitrião, patrulha/perseguição, distração pelo estilingue, alavanca elevada de Téo, corrida cronometrada de Nino, combinação final dos três e checkpoints de queda/colisão.
-- **04 — A Trilha que Mente:** placas mutáveis e caminho enganoso com retorno ao checkpoint, pistas personalizadas (Lua, Folha, Estrela), totens na ordem Téo → Lia → Nino, plataformas que alternam por mensagens de mundo do anfitrião e sequência final de placa/alvo móvel/dash.
-- **Transições:** Fase 01 → 02 → 03 → 04, todas determinadas pelo anfitrião. Somente os três juntos liberam a conclusão temporária; capítulo 05 continua reservado.
-- **Câmera:** adaptação do tamanho lógico do canvas para janelas estreitas e câmera Phaser seguindo o jogador nas fases jogáveis; mundo permanece em coordenadas 1200×700.
-- **Efeitos:** estilingue e dash continuam usando eventos compartilhados e animação local; pré-requisitos das habilidades persistem entre fases.
-- **Segurança e conectividade:** quartos do PeerJS/WebRTC, 20 Hz de poses, atualizações de puzzles por alteração e posição da onça em snapshots compactos; não há backend próprio.
-
-**Limitações:** ainda é obrigatória uma rodada manual completa com três aparelhos/redes, inclusive dinâmica da onça, alvos e dash em condições reais de latência. O movimento dos convidados continua simulado localmente, com validação de puzzle pelo anfitrião. A plataforma de observação no capítulo 03 recebe posição do anfitrião com atualização compacta e ajusta sua colisão local; o alvo visual móvel do capítulo 04 é determinístico por relógio local e sua validação ocorre no relógio do anfitrião.
+Arte/áudio: visuais vetoriais desenhados proceduralmente no Phaser, sem vídeo externo, sem arquivos de arte gerados por IA ou áudio de terceiros nesta etapa.

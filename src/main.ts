@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CHARACTERS, Network } from './network';
 import { DemoScene, type TouchInput } from './game';
+import { ForestScene } from './forestScene';
 import { IntroScene } from './intro';
 import { RiverScene } from './riverScene';
 import { LateScene } from './lateScene';
@@ -33,7 +34,7 @@ function enterGame(): void {
   activeMode = mode;
   const scene = mode === 'intro' ? new IntroScene() :
     mode === 'level2' ? new RiverScene(net, touch, refreshHud) :
-    net.level >= 3 ? new LateScene(net, touch, refreshHud) : new DemoScene(net, touch, refreshHud);
+    net.level >= 3 ? new LateScene(net, touch, refreshHud) : new ForestScene(net, touch, refreshHud);
   // Aspecto variável no canvas: nas janelas altas o mundo é recortado pela câmera,
   // em vez de ficar minúsculo como na captura com três janelas lado a lado.
   const ratio = window.innerWidth / Math.max(1, window.innerHeight);
@@ -59,7 +60,7 @@ function exitGame(): void {
   controls.replaceChildren();
 }
 function refreshHud(): void {
-  const scene = game?.scene.keys[net.level >= 3 ? 'LateScene' : net.level === 2 ? 'RiverScene' : 'DemoScene'] as DemoScene | RiverScene | LateScene | undefined;
+  const scene = game?.scene.keys[net.level >= 3 ? 'LateScene' : net.level === 2 ? 'RiverScene' : 'ForestScene'] as DemoScene | ForestScene | RiverScene | LateScene | undefined;
   const skill = document.querySelector<HTMLElement>('#skill-status');
   if (skill && scene?.getCooldown) skill.textContent = scene.getCooldown();
   const team=document.querySelector<HTMLElement>('#team-status');
@@ -113,9 +114,9 @@ function render(): void {
       return;
     }
     if (net.stage === 'transition') {
-      const titles=['','A BOCA DA NOITE','A PONTE QUEBRADA','OLHOS NA MATA','A TRILHA QUE MENTE','O ÚLTIMO CAMINHO'];
+      const titles=['','A BOCA DA NOITE','A PONTE QUEBRADA','OLHOS NA MATA','A TRILHA QUE MENTE'];
       ui.innerHTML = '<div class="interlevel"><h2>🌿 FASE CONCLUÍDA!</h2><p>' +
-        (net.level===2?'VOCÊS ATRAVESSARAM O RIO!':net.level===3?'VOCÊS SOBREVIVERAM À ESCURIDÃO!':'NINGUÉM FICA PARA TRÁS!') +
+        (net.level===1?'VOCÊS CONSEGUIRAM ATRAVESSAR!':net.level===2?'VOCÊS ATRAVESSARAM O RIO!':'VOCÊS SOBREVIVERAM À ESCURIDÃO!') +
         '</p><p>Os três amigos seguem juntos...</p><strong>FASE 0'+(net.level+1)+' · '+titles[net.level+1]+'</strong></div>';
       return;
     }
@@ -132,6 +133,13 @@ function render(): void {
     ui.innerHTML = '<div class="hud">🌳 A FLORESTA MENTE · <span class="text-muted">' +
       safeText(player) + ' · FASE 0' + net.level + ' · Sala ' + safeText(net.code) + ' · ' + online + '/3</span> · <span id="skill-status"></span> ' +
       '<span id="team-status" class="team-status"></span><button id="leave" class="hud-leave" title="Sair da sala">✕</button></div>' +
+      (net.level === 1 && net.forest.caboStep >= 1 && net.forest.caboStep < 5
+        ? '<div class="forest-dialogue"><p>'+safeText([
+            '', 'CABOQUIM: Ocês se perderam na mata, foi?',
+            'TÉO: A gente só quer voltar pra casa!',
+            'CABOQUIM: Essa floresta num mostra o mesmo caminho duas vezes...',
+            'CABOQUIM: Mas se ficarem juntos, talvez consigam encontrar a saída.'
+          ][net.forest.caboStep])+'</p>'+button('cabo-next','CONTINUAR · E')+'</div>' : '') +
       (net.completed
         ? '<div class="victory"><h2>🌟 NINGUÉM FICA PARA TRÁS!</h2><p>Os três amigos venceram juntos o primeiro desafio da floresta.</p>' +
           button('leave-win', 'VOLTAR AO MENU') + '</div>'
@@ -139,6 +147,7 @@ function render(): void {
           ? '<div class="game-toast">⚠️ Aguardando reconexão. O avanço cooperativo está pausado.</div>'
           : info ? '<div class="game-toast">' + safeText(info) + '</div>' : '');
     document.querySelector<HTMLButtonElement>('#leave')?.addEventListener('click', () => net.shutdown());
+    document.querySelector<HTMLButtonElement>('#cabo-next')?.addEventListener('click', () => net.act({kind:'talk'}));
     document.querySelector<HTMLButtonElement>('#leave-win')?.addEventListener('click', () => net.shutdown());
     if (!controls.childElementCount) bindMobile();
     return;
@@ -188,7 +197,7 @@ function render(): void {
       'Você controla ' + (me === null ? 'seu personagem' : CHARACTERS[me].name) + '. Aguarde o anfitrião iniciar.') +
     '</div><div class="rules"><b>COMPUTADOR:</b> A/D ou ←/→ para andar; Espaço/↑ para pular.<br>' +
     '<b>CELULAR:</b> setas na esquerda e PULAR na direita. Coloque na horizontal.<br>' +
-    '<b>OBJETIVO:</b> os três precisam chegar juntos à área CASA.</div></main>';
+    '<b>OBJETIVO:</b> encontrem Caboquim, apoiem-se uns nos outros, coletem 3 cipós e derrubem a árvore para atravessar juntos.</div></main>';
   ui.querySelector('#copy')?.addEventListener('click', () => {
     navigator.clipboard?.writeText(net.code).then(() => { info = 'Código copiado!'; render(); })
       .catch(() => { info = 'Copie este código: ' + net.code; render(); });

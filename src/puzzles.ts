@@ -1,6 +1,6 @@
 import type { Pose, Seat } from './network';
 
-export type ActionKind = 'collect' | 'lever' | 'shoot' | 'timer' | 'dash' | 'switch';
+export type ActionKind = 'collect' | 'lever' | 'shoot' | 'timer' | 'dash' | 'switch' | 'talk' | 'support' | 'detach';
 export type PuzzleAction = { kind: ActionKind; facing?: -1 | 1 };
 export type WorldState = {
   unlocked: [boolean, boolean, boolean];
@@ -40,7 +40,7 @@ export function validWorld(value: unknown): value is WorldState {
 export function validAction(value: unknown): value is PuzzleAction {
   if (!value || typeof value !== 'object') return false;
   const v = value as Record<string, unknown>;
-  return ['collect', 'lever', 'shoot', 'timer', 'dash', 'switch'].includes(String(v.kind))
+  return ['collect', 'lever', 'shoot', 'timer', 'dash', 'switch', 'talk', 'support', 'detach'].includes(String(v.kind))
     && (v.facing === undefined || v.facing === -1 || v.facing === 1);
 }
 

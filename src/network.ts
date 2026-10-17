@@ -4,6 +4,7 @@ import { RiverAuthority, initialRiver, validRiver, RIVER_CHECKPOINTS, RIVER_SPAW
 import { SkillFxGate, validSkillFx, type SkillFx } from './effects';
 import { ChapterAuthority, initialEyes, initialTrail, defaultJaguar, validChapter, validJaguar, LATE_SPAWNS, LATE_CHECKPOINTS, type ChapterWorld, type Jaguar, type LateLevel } from './chapters';
 import { nextPlayableLevel } from './levels';
+import { ForestAuthority, FOREST_WIDTH, FOREST_SPAWNS, FOREST_CHECKPOINTS, forestDanger, validForest, initialForest, type ForestWorld } from './forest';
 
 export type Stage = 'lobby' | 'intro' | 'playing' | 'transition' | 'final';
 export type Level = 1 | 2 | 3 | 4;
@@ -23,6 +24,7 @@ type Wire =
   | { t: 'act'; action: PuzzleAction }
   | { t: 'fx'; fx: SkillFx }
   | { t: 'puzzle'; world: WorldState }
+  | { t: 'forest'; world: ForestWorld }
   | { t: 'respawn'; pose: Pose }
   | { t: 'river'; world: RiverWorld }
   | { t: 'chapter'; world: ChapterWorld }
@@ -40,6 +42,7 @@ type Events = {
   snapshot: Pose[];
   effect: SkillFx;
   puzzle: WorldState;
+  forest: ForestWorld;
   respawn: Pose;
   river: RiverWorld;
   chapter: ChapterWorld;
@@ -73,7 +76,7 @@ const validPose = (v: unknown): v is Pose => {
   if (!v || typeof v !== 'object') return false;
   const p = v as Record<string, unknown>;
   return seatValid(p.seat) && finite(p.x) && finite(p.y) && finite(p.vx) && finite(p.vy)
-    && p.x >= 0 && p.x <= 1200 && p.y >= 0 && p.y <= 700
+    && p.x >= 0 && p.x <= FOREST_WIDTH && p.y >= 0 && p.y <= 700
     && Math.abs(p.vx) <= 1200 && Math.abs(p.vy) <= 1500;
 };
 const validSlot = (v: unknown): v is Slot => {
@@ -88,7 +91,7 @@ function parseWire(value: unknown): Wire | null {
     case 'hello': return typeof p.token === 'string' && /^[a-f0-9-]{20,50}$/.test(p.token) ? value as Wire : null;
     case 'ready': return typeof p.value === 'boolean' ? value as Wire : null;
     case 'pose': return finite(p.x) && finite(p.y) && finite(p.vx) && finite(p.vy)
-      && p.x >= 0 && p.x <= 1200 && p.y >= 0 && p.y <= 700
+      && p.x >= 0 && p.x <= FOREST_WIDTH && p.y >= 0 && p.y <= 700
       && Math.abs(p.vx) <= 1200 && Math.abs(p.vy) <= 1500 ? value as Wire : null;
     case 'welcome': return seatValid(p.seat) && typeof p.code === 'string' && /^[A-Z0-9]{6}$/.test(p.code) ? value as Wire : null;
     case 'roster': return Array.isArray(p.players) && p.players.length === 3 && p.players.every(validSlot)
@@ -98,6 +101,7 @@ function parseWire(value: unknown): Wire | null {
     case 'act': return validAction(p.action) ? value as Wire : null;
     case 'fx': return validSkillFx(p.fx) ? value as Wire : null;
     case 'puzzle': return validWorld(p.world) ? value as Wire : null;
+    case 'forest': return validForest(p.world) ? value as Wire : null;
     case 'respawn': return validPose(p.pose) ? value as Wire : null;
     case 'river': return validRiver(p.world) ? value as Wire : null;
     case 'chapter': return validChapter(p.world) ? value as Wire : null;
@@ -125,6 +129,8 @@ export class Network {
   playing = false;
   completed = false;
   puzzle: WorldState = initialWorld();
+  forest: ForestWorld = initialForest();
+  private forestAuthority = new ForestAuthority();
   river: RiverWorld = initialRiver();
   chapter: ChapterWorld = initialEyes();
   jaguar: Jaguar = defaultJaguar();
@@ -306,6 +312,7 @@ export class Network {
         this.message(conn, { t: 'welcome', seat, code: this.code });
         this.updateRoster();
         this.message(conn, { t: 'puzzle', world: this.puzzle });
+        this.message(conn, { t: 'forest', world: this.forest });
         this.message(conn, { t: 'river', world: this.river });
         this.message(conn, { t: 'chapter', world: this.chapter });
         this.message(conn, { t: 'hazard', jaguar: this.jaguar });
@@ -326,6 +333,9 @@ export class Network {
         const now = performance.now();
         if (now - this.lastReceived[seat] < 35) return; // ~28 Hz no máximo por convidado.
         this.lastReceived[seat] = now;
+        if (msg.x > (this.level === 1 ? FOREST_WIDTH : 1200)) return;
+        if (this.level === 1 && this.forest.restartAt > 0) return;
+        if (this.level === 1 && this.forest.supporting[seat] !== null) return;
         this.poses[seat] = { seat, x: msg.x, y: msg.y, vx: msg.vx, vy: msg.vy };
       }
     });
@@ -383,7 +393,7 @@ export class Network {
         this.phaseSince = msg.info.since; this.phaseUntil = msg.info.until;
         this.playing = this.stage === 'playing'; this.completed = this.stage === 'final';
         if (this.stage === 'playing') this.pendingRestore = true;
-        if (oldLevel !== this.level) this.poses = (this.level === 2 ? RIVER_SPAWNS : this.level >= 3 ? LATE_SPAWNS : SPAWNS).map(p => ({ ...p }));
+        if (oldLevel !== this.level) this.poses = (this.level === 1 ? FOREST_SPAWNS : this.level === 2 ? RIVER_SPAWNS : LATE_SPAWNS).map(p => ({ ...p }));
         this.emit('phase', this.phaseInfo());
         if (this.playing && (oldStage !== 'playing' || oldLevel !== this.level)) this.emit('start', undefined);
         this.emit('change', undefined);
@@ -420,6 +430,15 @@ export class Network {
         if (this.playing && msg.fx.level === this.level && msg.fx.seat !== this.localSeat) {
           this.emit('effect', msg.fx);
         }
+        break;
+      case 'forest':
+        this.forest = { ...msg.world, health:[...msg.world.health] as ForestWorld['health'],
+          safeUntil:[...msg.world.safeUntil] as ForestWorld['safeUntil'],
+          supporting:[...msg.world.supporting] as ForestWorld['supporting'],
+          vines:[...msg.world.vines] as ForestWorld['vines'],
+          treeSteps:[...msg.world.treeSteps] as ForestWorld['treeSteps'] };
+        this.emit('forest', this.forest);
+        this.emit('change', undefined);
         break;
       case 'puzzle':
         this.puzzle = { ...msg.world, unlocked: [...msg.world.unlocked] as WorldState['unlocked'] };
@@ -467,10 +486,12 @@ export class Network {
   start(): void {
     if (!this.canStart) return;
     this.authority.reset(); this.riverAuthority.reset(); this.effectGate.reset();
+    this.forestAuthority.reset();this.forest=this.forestAuthority.world;
+    this.authority.world.unlocked=[false,true,true];
     this.chapterAuthority.reset(3); this.chapter = initialEyes(); this.jaguar = defaultJaguar();
     this.puzzle = initialWorld(); this.river = initialRiver();
-    this.poses = SPAWNS.map(p => ({ ...p }));
-    this.sharePuzzle(); this.shareRiver();
+    this.poses = FOREST_SPAWNS.map(p => ({ ...p }));
+    this.sharePuzzle(); this.shareForest(); this.shareRiver();
     this.setPhase('intro', 1, Date.now() + 24000);
   }
   skipIntro(): void {
@@ -480,7 +501,7 @@ export class Network {
   }
   private finishIntro(): void {
     if (!this.isHost || this.stage !== 'intro' || !this.everyoneConnected) return;
-    this.poses = SPAWNS.map(p => ({ ...p }));
+    this.poses = FOREST_SPAWNS.map(p => ({ ...p }));
     this.broadcast({ t: 'state', poses: this.poses });
     this.setPhase('playing', 1);
   }
@@ -508,9 +529,10 @@ export class Network {
     const now = performance.now();
     if (now - this.lastInput < 50) return;
     this.lastInput = now;
-    const msg = { t: 'pose' as const, x: Math.max(0, Math.min(1200, x)),
+    const msg = { t: 'pose' as const, x: Math.max(0, Math.min(this.level === 1 ? FOREST_WIDTH : 1200, x)),
       y: Math.max(0, Math.min(700, y)), vx, vy };
     if (!finite(x) || !finite(y) || !finite(vx) || !finite(vy)) return;
+    if (this.level === 1 && (this.forest.restartAt > 0 || this.forest.supporting[this.localSeat] !== null)) return;
     if (this.isHost) this.poses[0] = { seat: 0, ...msg };
     else this.message(this.hostConn, msg);
   }
@@ -529,7 +551,13 @@ export class Network {
     // O puzzle continua na autoridade original. A animação é um evento leve,
     // independente do acerto (a pedra também precisa aparecer quando erra).
     if (this.level === 1) {
-      if (this.authority.act(seat, action, this.poses)) this.sharePuzzle();
+      if (this.forestAuthority.act(seat, action, this.poses)) {
+        this.shareForest();
+        if (this.authority.world.unlocked[0] !== this.forest.unlocked) {
+          this.authority.world.unlocked=[this.forest.unlocked,true,true];
+          this.sharePuzzle();
+        }
+      }
     } else if (this.level === 2) {
       if (this.riverAuthority.act(seat, action, this.poses, this.puzzle.unlocked)) this.shareRiver();
     } else if (this.chapterAuthority.act(seat, action, this.poses, this.puzzle.unlocked)) this.shareChapter();
@@ -545,6 +573,18 @@ export class Network {
     }
     // O host já animou suas próprias habilidades; convidados animam no host aqui.
     if (seat !== 0) this.emit('effect', effect);
+  }
+  private shareForest(): void {
+    this.forest={...this.forestAuthority.world,
+      health:[...this.forestAuthority.world.health] as ForestWorld['health'],
+      safeUntil:[...this.forestAuthority.world.safeUntil] as ForestWorld['safeUntil'],
+      supporting:[...this.forestAuthority.world.supporting] as ForestWorld['supporting'],
+      vines:[...this.forestAuthority.world.vines] as ForestWorld['vines'],
+      treeSteps:[...this.forestAuthority.world.treeSteps] as ForestWorld['treeSteps']
+    };
+    this.broadcast({t:'forest',world:this.forest});
+    this.emit('forest',this.forest);
+    this.emit('change',undefined);
   }
   private sharePuzzle(): void {
     this.puzzle = { ...this.authority.world, unlocked: [...this.authority.world.unlocked] as WorldState['unlocked'] };
@@ -576,7 +616,24 @@ export class Network {
     }
     if (!this.playing || this.completed) return;
     if (this.level === 1) {
-      if (this.authority.tick(this.poses)) this.sharePuzzle();
+      const now=Date.now();
+      const result=this.forestAuthority.tick(this.poses,now);
+      if(result.reset){
+        this.authority.world.unlocked=[false,true,true];this.sharePuzzle();
+        this.poses=FOREST_SPAWNS.map(p=>({...p}));
+        for(const pose of this.poses){this.broadcast({t:'respawn',pose});this.emit('respawn',pose);}
+      }
+      if(this.forestAuthority.world.restartAt===0){
+        for(const pose of this.poses){
+          if(pose.y>=690){
+            if(this.forestAuthority.damage(pose.seat,now,true))this.shareForest();
+          }else{
+            const danger=forestDanger(pose.x,pose.y,this.forestAuthority.world.hazardEpoch,now);
+            if(danger && this.forestAuthority.damage(pose.seat,now))this.shareForest();
+          }
+        }
+      }
+      if(result.changed)this.shareForest();
     } else if (this.level === 2) {
       if (this.riverAuthority.tick(this.poses)) this.shareRiver();
     } else {
@@ -600,12 +657,10 @@ export class Network {
         }
       }
     }
-    for (const pose of this.poses) {
-      if (pose.y >= 695) this.respawn(pose.seat);
-    }
+    if(this.level!==1){for (const pose of this.poses) { if (pose.y >= 695) this.respawn(pose.seat); }}
     this.broadcast({ t: 'state', poses: this.poses });
     this.emit('snapshot', this.poses);
-    const passed = this.level === 1 ? this.authority.hasWon(this.poses)
+    const passed = this.level === 1 ? this.forestAuthority.hasWon(this.poses)
       : this.level === 2 ? this.riverAuthority.hasWon(this.poses)
       : this.chapterAuthority.hasWon(this.poses);
     if (passed) {
@@ -669,6 +724,7 @@ export class Network {
     this.stage = 'lobby'; this.level = 1; this.phaseSince = 0; this.phaseUntil = 0;
     this.riverAuthority.reset(); this.river = initialRiver();
     this.chapterAuthority.reset(3);this.chapter=initialEyes();this.jaguar=defaultJaguar();this.lastHazardBroadcast=0;
+    this.forestAuthority.reset();this.forest=initialForest();
     this.authority.reset(); this.puzzle = initialWorld(); this.lastAction.clear(); this.effectGate.reset(); this.pendingRestore = false;
     this.tokens = [null, null, null]; this.lastInput = 0; this.lastReceived = [0, 0, 0];
     this.emit('change', undefined);

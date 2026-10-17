@@ -59,3 +59,11 @@ input.code-input{margin:12px 0;padding:12px 14px;width:min(300px,100%);border-ra
 .hud{max-width:calc(100vw - 12px);flex-wrap:wrap;gap:5px}
 body.playing #game canvas{image-rendering:auto}
 @media(max-width:680px){.hud{font-size:10px;padding:6px 9px;justify-content:center}.team-status{font-size:10px}}
+
+.forest-dialogue{position:absolute;bottom:clamp(10px,8vh,80px);left:50%;transform:translateX(-50%);
+  width:min(700px,94vw);padding:13px 18px;border-radius:15px;text-align:center;
+  background:linear-gradient(140deg,#102f29f5,#081e1def);border:1px solid #86e5a5bb;
+  z-index:20;box-shadow:0 10px 42px #000b}
+.forest-dialogue p{font-size:clamp(12px,2.3vw,17px);margin:0 0 9px;color:#f2ffcf}
+.forest-dialogue .btn{padding:8px 17px;font-size:13px}
+@media(max-height:450px){.forest-dialogue{bottom:8px;padding:7px 10px}.forest-dialogue p{font-size:11px}}
