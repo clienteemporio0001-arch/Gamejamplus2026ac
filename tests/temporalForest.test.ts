@@ -133,8 +133,9 @@ ok(act(a,0,'lever',20000)&&a.world.roots[0],'Téo solta raiz elevada');
 set(1,3350);
 ok(a.authorizeEnergy(1,'shoot',p,21000,1).ok&&a.world.roots[1],
   'Lia atinge raiz protegida sob chuva');
+for(let time=21100;time<=21900;time+=100)a.tickResources(p,time);
 set(2,3620);
-ok(a.authorizeEnergy(2,'dash',p,22000,1).ok,'Nino prepara corrida final');
+ok(a.authorizeEnergy(2,'dash',p,22000,1).ok,'Nino prepara corrida final após recuperar energia');
 set(2,TEMP_ROOTS[2].x);
 ok(act(a,2,'switch',22700)&&a.world.roots.every(Boolean)&&a.world.exit,
   'Nino conclui último mecanismo somente em C');
