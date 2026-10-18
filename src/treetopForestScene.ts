@@ -209,17 +209,30 @@ export class TreetopForestScene extends Phaser.Scene {
   if(id!==null)this.pending.set(id,{seat,kind});
  }
  private interact(seat:Seat):void{
-  const p=this.local;
+  const p=this.local,w=this.w;
+  const base=TREE_TARGETS.tower.base,top=TREE_TARGETS.tower.top;
+  const nearBase=Math.abs(p.x-base.x)<=105&&Math.abs(p.y-base.y)<=105;
+  const nearTop=Math.abs(p.x-top.x)<=64&&Math.abs(p.y-top.y)<=35;
   if(seat===0){
-   if(this.w.supporting[0]!==null)this.net.act({kind:'detach'});
-   else if(Math.abs(p.x-3390)<125&&Math.abs(p.y-this.avatars[1].y)<75
-     &&!this.w.ropeOpen)this.net.act({kind:'support'});
-   else this.net.act({kind:'lever'});
+   // The actual upper mechanism takes priority when Téo has reached it.
+   if(w.bridgeOpen&&!w.ropeOpen&&nearTop&&w.supporting[0]===null){
+    this.net.act({kind:'lever'});return;
+   }
+   if(w.supporting[0]!==null){this.net.act({kind:'detach'});return;}
+   if(w.bridgeOpen&&!w.ropeOpen&&nearBase&&w.supporting[1]===2
+     &&Math.abs(p.x-this.avatars[1].x)<=49
+     &&Math.abs(p.y-this.avatars[1].y)<=69){
+    this.net.act({kind:'support'});return;
+   }
+   this.net.act({kind:'lever'});return;
   }
   if(seat===1){
-   if(this.w.supporting[1]!==null)this.net.act({kind:'detach'});
-   else if(Math.abs(p.x-3390)<125&&Math.abs(p.y-this.avatars[2].y)<75
-     &&!this.w.ropeOpen)this.net.act({kind:'support'});
+   if(w.supporting[1]!==null){this.net.act({kind:'detach'});return;}
+   if(w.bridgeOpen&&!w.ropeOpen&&nearBase
+     &&Math.abs(p.x-this.avatars[2].x)<=49
+     &&Math.abs(p.y-this.avatars[2].y)<=69){
+    this.net.act({kind:'support'});return;
+   }
   }
   if(seat===2)this.net.act({kind:'switch'});
  }
