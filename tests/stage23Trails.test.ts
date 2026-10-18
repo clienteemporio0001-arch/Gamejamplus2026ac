@@ -13,7 +13,7 @@ const make=()=>new LoopAuthority();
 const setPosition=(poses:Pose[],seat:Seat,x:number,y=606)=>{
  poses[seat]={seat,x,y,vx:0,vy:0};
 };
-const partyAt=(x:number):Pose[]=LOOP_START.map((p,i)=>({
+const partyAt = (x) => LOOP_START.map((p,i)=>({
  ...p,x:x+(i-1)*56,y:606,vx:0,vy:0
 }));
 assert.equal(TRAIL_MEET_RADIUS_X,142);
