@@ -1,5 +1,5 @@
 import type {Pose,Seat} from './network';
-import {initVitals,type Vitals} from './loopVitals';
+import {initVitals,validVitals,type Vitals} from './loopVitals';
 
 /** Fase 03 da NOVA aventura. Independente da terceira fase clássica. */
 export const TREE_WIDTH=4400, TREE_HEIGHT=1250, TREE_CYCLE=60000, TREE_BLACKOUT=2000;
@@ -43,7 +43,7 @@ export function validTree(value:unknown):value is TreeWorld{
  &&['cycle','cycleStart','blackoutUntil','deadUntil','resetId','dashAt','dashX'].every(k=>typeof w[k]==='number'&&Number.isFinite(w[k])&&Number(w[k])>=0)
  &&['bridgeOpen','ropeOpen','finalOpen','completed'].every(k=>typeof w[k]==='boolean')
  &&['bridge','tower','time'].every(k=>Array.isArray(w[k])&&(w[k] as unknown[]).length===3&&(w[k] as unknown[]).every(v=>typeof v==='boolean'))
- &&Array.isArray(w.supporting)&&w.supporting.length===3;
+ &&Array.isArray(w.supporting)&&w.supporting.length===3&&validVitals(w);
 }
 export function treePlatforms(w:TreeWorld):TreePlatform[]{
  return TREE_PLATFORMS.filter(p=>p.state===undefined||p.state===w.layout)
