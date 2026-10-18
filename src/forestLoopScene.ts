@@ -33,6 +33,9 @@ export class ForestLoopScene extends Phaser.Scene {
   private suspensionCollider!:Phaser.GameObjects.Rectangle;
   private suspensionCables!:Phaser.GameObjects.Graphics;
   private layoutLedges:Phaser.GameObjects.Rectangle[]=[];
+  private hollowLedge!:Phaser.GameObjects.Rectangle;
+  private stoneHitbox!:Phaser.GameObjects.Rectangle;
+  private pendingVisualLayout:number|null=null;
   private contextText!:Phaser.GameObjects.Text;
    private pipo!:PipoGuide;private missions!:MissionDirector;
   private regionToast!:Phaser.GameObjects.Text;
@@ -206,13 +209,13 @@ export class ForestLoopScene extends Phaser.Scene {
       body.checkCollision.right=false;body.checkCollision.up=true;
     }
     // Hollow-tree cavity is served by an actual branch, not a floating plank.
-    this.ground(LOOP_MARKS[0].x,546,165,20,'wood');
+    this.hollowLedge=this.ground(LOOP_MARKS[0].x,546,165,20,'wood');
     // Physical stone collider matches the artwork's 155x104 silhouette;
     // its top can be cleared by normal jumps. The arch has a free central gap.
     const stoneHitbox=this.add.rectangle(LOOP_MARKS[1].x,592,120,91,0x1b3741,0)
       .setDepth(10);
     this.physics.add.existing(stoneHitbox,true);
-    this.blocks.push(stoneHitbox);
+    this.blocks.push(stoneHitbox);this.stoneHitbox=stoneHitbox;
     const upperSummit=this.ground(SUMMIT_BRANCH.x,SUMMIT_BRANCH.centerY,
       SUMMIT_BRANCH.width,SUMMIT_BRANCH.height,'wood');
     const summitBody=upperSummit.body as Phaser.Physics.Arcade.StaticBody;
@@ -442,12 +445,19 @@ export class ForestLoopScene extends Phaser.Scene {
     });
     this.marks.forEach((mark,i)=>{
       // Static targets must never drift away from host collision coordinates.
-      mark.setX(markPosition(w,i).x);
+      if(layoutChanged)mark.setX(markPosition(w,i).x);
+      else if(w.blackoutUntil===0)mark.setX(markPosition(w,i).x);
       mark.setAlpha(w.marks[i]?.56:1);
       const image=mark.list[0] as Phaser.GameObjects.Image;
       image.setTint(w.marks[i]?[0xa9e5b4,0xe6d69e,0xa4dded][i]:0xffffff);
       image.setScale(w.marks[i]?1.018:1);
     });
+    if(layoutChanged&&this.stoneHitbox){
+      this.hollowLedge.setX(markPosition(w,0).x);
+      this.stoneHitbox.setX(markPosition(w,1).x);
+      (this.hollowLedge.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
+      (this.stoneHitbox.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
+    }
     this.routeCurtains.forEach((curtain,i)=>{
       const unlocked=allDone(w.marks);
       const correct=ROUTES[w.layout].correct===(i===0?'oca':'pedra');
