@@ -411,8 +411,17 @@ export class ForestLoopScene extends Phaser.Scene {
     }
 
     const layoutChanged=this.w.layout!==w.layout;
+    const transformationStarted=w.blackoutUntil>0&&this.w.blackoutUntil!==w.blackoutUntil;
     this.w={...w,marks:[...w.marks],tree:[...w.tree],final:[...w.final],
       suspended:[...w.suspended],supporting:[...w.supporting]};
+    if(transformationStarted){
+      const upcoming=((w.layout+1)%3) as 0|1|2;
+      this.marks.forEach((mark,i)=>this.tweens.add({targets:mark,
+        x:markPosition({layout:upcoming},i).x,duration:1850,ease:'Sine.easeInOut'}));
+      this.movingRoots.forEach((root,i)=>this.tweens.add({targets:root,
+        x:5250+i*105+[0,-34,43][upcoming],duration:1850,ease:'Sine.easeInOut'}));
+      this.pipo?.warnDanger('Ei! As raízes e os marcos estão mudando! Sigam o vento!');
+    }
     if(this.suspensionCollider){
       const settled=w.suspendedX===w.suspendedTo&&w.suspendedOpen;
       const position=w.suspendedX;
@@ -445,14 +454,13 @@ export class ForestLoopScene extends Phaser.Scene {
     });
     this.marks.forEach((mark,i)=>{
       // Static targets must never drift away from host collision coordinates.
-      if(layoutChanged)mark.setX(markPosition(w,i).x);
-      else if(w.blackoutUntil===0)mark.setX(markPosition(w,i).x);
+      if(w.blackoutUntil===0)mark.setX(markPosition(w,i).x);
       mark.setAlpha(w.marks[i]?.56:1);
       const image=mark.list[0] as Phaser.GameObjects.Image;
       image.setTint(w.marks[i]?[0xa9e5b4,0xe6d69e,0xa4dded][i]:0xffffff);
       image.setScale(w.marks[i]?1.018:1);
     });
-    if(layoutChanged&&this.stoneHitbox){
+    if(this.stoneHitbox&&w.blackoutUntil===0){
       this.hollowLedge.setX(markPosition(w,0).x);
       this.stoneHitbox.setX(markPosition(w,1).x);
       (this.hollowLedge.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
