@@ -6,7 +6,7 @@ import {FrameProfiler,SCENARIOS} from './performanceDiagnostics';
 import {animateForestProps} from './forestTransformFX';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import { LOOP_WIDTH, LOOP_GEOMETRY, LOOP_MARKS, markPosition, LOOP_TREE, LOOP_FINAL, ROUTES, barriers,
-  allDone, windGuide, blackoutActive, warningActive,trailOccupants,correctRoute,TRAIL_MEET_RADIUS_X,canStack,suspensionLeverStatus,SUSPENSION_LEVER_FEEDBACK,type LoopWorld, LOOP_START,
+  allDone, windGuide, blackoutActive, warningActive,trailOccupants,correctRoute,TRAIL_MEET_RADIUS_X,canStack,SUSPENSION_LEVER_FEEDBACK,type LoopWorld, LOOP_START,
   UPPER_BRANCH,SUMMIT_BRANCH,upperLandingY,summitLandingY,markerBaseY,hasBranchFooting,hasSummitFooting } from './forestLoop';
 import { NightArt } from './visuals';
 import { loopContext, regionTitle } from './forestLoopUI';
@@ -482,6 +482,8 @@ export class ForestLoopScene extends Phaser.Scene {
       this.trailToast.setX(size.width/2).setY(Math.min(149,size.height*.28));
       this.blackout.setPosition(size.width/2,size.height/2).setSize(size.width+200,size.height+120);
       this.blackoutText.setPosition(size.width/2,size.height/2);
+      this.useFeedback.setPosition(size.width/2,Math.max(170,size.height-158))
+        .setWordWrapWidth(Math.min(350,size.width-36));
     };
     this.scale.on(Phaser.Scale.Events.RESIZE,onResize);
     onResize(this.scale.gameSize);
@@ -507,9 +509,15 @@ export class ForestLoopScene extends Phaser.Scene {
     const layoutChanged=this.w.layout!==w.layout;
     const transformationStarted=w.blackoutUntil>0&&this.w.blackoutUntil!==w.blackoutUntil;
     const wasUnlocked=allDone(this.w.marks),previousRouteCount=this.w.routeCount;
+    const leverWasReleased=this.w.suspended[0];
     const oldSupporting=[...this.w.supporting];
     this.w={...w,marks:[...w.marks],tree:[...w.tree],final:[...w.final],
       suspended:[...w.suspended],supporting:[...w.supporting]};
+    if(!leverWasReleased&&w.suspended[0]&&this.leverArt){
+      this.tweens.add({targets:this.leverArt,angle:-28,duration:380,
+       ease:'Back.easeOut'});
+      this.pipo?.warnDanger('Boa, Téo! A passarela está se movendo. Lia, prepare a baladeira!');
+    }
     // A discrete, pooled-cost (<300ms) confirmation, only when an actual
     // host-approved mounting transition occurs (never every snapshot).
     if(this.avatars.length===3)for(const seat of [1,0] as Seat[]){
