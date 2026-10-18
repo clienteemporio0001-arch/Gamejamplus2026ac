@@ -125,7 +125,7 @@ assert.ok(director.includes("net.on(label,update as never)"));
 assert.ok(director.includes("window.dispatchEvent(new CustomEvent('mission-pipo'"));
 assert.ok(director.includes('this.balloon.setText('));
 assert.ok(director.includes('this.ring.strokeCircle('));
-assert.ok(loopScene.includes('routeCurtains')&&loopScene.includes('woodland passages'));
+assert.ok(loopScene.includes('routeCurtains')&&loopScene.includes('TRILHA DA ÁRVORE OCA'));
 assert.ok(loopScene.includes('new MissionDirector(this,this.net,1,this.avatars)'));
 for(const [num,file] of [[2,'temporalForestScene'],[3,'treetopForestScene'],[4,'burningForestScene']] as const)
  assert.ok(readFileSync('src/'+file+'.ts','utf8').includes('new MissionDirector(this,this.net,'+num));
