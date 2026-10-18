@@ -1,5 +1,111 @@
 # A FLORESTA MENTE — MAS O VENTO NÃO
 
+## Etapa 24 — Performance medida em jogo, plataformas limpas e empilhamento livre
+
+### Diagnóstico estático dos pontos de custo
+
+A investigação do código encontrou fontes concretas de carga, sobretudo
+quando a câmera se desloca pelo cenário de **11.400 px**:
+
+- Quatro camadas procedurais de parallax eram montadas em `Graphics`
+  monolíticos cobrindo toda a largura, incluindo vegetação fora da câmera.
+- `NightArt.update` redesenhava as silhuetas vetoriais de três personagens
+  a **cada frame**, ainda que estivessem distantes do viewport.
+- `ForestLoopScene.update` invocava a atualização do HUD a cada frame,
+  além da atualização global já programada a cada 150 ms.
+- Snapshots da autoridade reindexavam corpos físicos estáticos com
+  `updateFromGameObject` e reconstruíam os cipós da plataforma,
+  mesmo quando os objetos não haviam mudado de posição.
+- Folhas das trilhas tinham 12 tweens permanentes, inclusive fora da câmera.
+
+**Importante:** essas são fontes de trabalho desnecessário identificadas
+por inspeção do código, não uma medição causal de FPS no dispositivo
+do jogador. Ainda não houve benchmark real de navegador/celular.
+
+### Alterações de renderização e física
+
+- O parallax foi particionado em `Graphics` estáticos de até **1.240 px**,
+  com culling visual por câmera e scrollFactor.
+- Animação dos personagens desacoplada da posição física: desenho vetorial
+  com limite de frequência (NORMAL ~40/s, REDUZIDO ~26/s), mantendo
+  atualização das coordenadas e das colisões a cada frame.
+- Objetos puramente decorativos (fog, insetos, folhas, vento e skins de
+  plataformas) deixam de receber trabalho contínuo fora da câmera.
+- Atualizações de corpos estáticos, luz e cabos suspensos ocorrem
+  somente ao mudar posição/estado; as **colisões não são desativadas
+  apenas por estarem fora da câmera**.
+- HUD da fase utiliza o timer global, sem repetição pela cena a cada frame.
+- Folhas das entradas usam cálculo limitado ao viewport, não tweens infinitos.
+
+### Medidor disponível somente em desenvolvimento
+
+No menu principal: **Ferramentas de Desenvolvimento → Testar Fase 01**.
+Dentro da fase: **Opções → Diagnóstico FPS · Ligar/Desligar**.
+
+A sobreposição indica FPS **medido pelo próprio navegador**,
+média/máximo recente dos intervalos entre frames, custo CPU do update,
+objetos e partículas visíveis, quantos blocos do parallax estão ativos,
+câmera (scroll e zoom) e renderizador. Distingue amostras de parado,
+andando para direita/esquerda, pulando, câmera seguindo,
+transformação A/B/C, região suspensa e sessão real de três jogadores.
+Cenários ainda não executados aparecem como **aguardando amostras**.
+O botão **Perfil Gráfico NORMAL/REDUZIDO** diminui detalhes dinâmicos,
+nunca vida, stamina, multiplayer, colisões, Pipo ou vento direcional.
+
+Para aferir multiplayer, pode ser criada uma **sala de diagnóstico**
+pelo submenu de ferramentas, juntando três jogadores de verdade.
+
+### Região da plataforma suspensa
+
+Foram removidas **exatamente duas pranchas pequenas** do registro
+`LOOP_NATURAL_LEDGES`: **X=7200 / Y=585 / largura=112** e
+**X=7480 / Y=586 / largura=110**. O cenário e o rastreador de
+quedas consultam a mesma estrutura: nenhuma colisão invisível
+permanece nesses pontos. Os apoios de travessia necessários em outras
+regiões continuam presentes.
+
+A **viga alta na posição X=7200**, largura 40 e altura 550,
+permanece sólida, impedindo ultrapassagem por salto duplo, dash e
+escada humana. Alavanca de Téo, alvo de Lia, trava de Nino,
+plataforma móvel e árvore-ponte não tiveram as regras de avanço reduzidas.
+
+### Empilhamento cooperativo livre na Fase 1
+
+**Nino (base) → Lia (meio) → Téo (topo)** agora funciona com `E`
+em *qualquer superfície estável e segura da Fase 1*, independentemente
+de estar numa área de puzzle. `E` solta o vínculo; o salto mantém a
+ação de desprendimento que já existia.
+
+O anfitrião exige distância curta, baixa velocidade, vida restante,
+apoio físico verificável, espaço em toda a trajetória da subida e
+ausência de paredes/galhos atravessados. Quando uma base tenta
+transportar a formação para dentro de uma colisão, a autoridade
+desfaz o vínculo. As posições e os vínculos já fazem parte dos
+snapshots transmitidos a convidados e jogadores reconectados.
+
+O empilhamento geral **não** libera amarras ou alavancas sozinho:
+cada puzzle mantém sua checagem física de galho/pouso/interação
+na posição correta. O modo solo continua usando as teclas
+`1`, `2`, `3` para selecionar Téo, Lia e Nino.
+
+As outras três fases não tiveram suas regras de empilhamento alteradas
+nesta etapa para evitar regressões de progressão.
+
+### Verificação e pendências
+
+`npm run build` e `npm run test:logic` incluem agora
+`tests/stage24PerformanceStack.test.ts`, com verificações de
+empilhamento, paredes, trajetórias, restrições de queda, cabos,
+plataformas removidas e cálculo das estatísticas.
+
+Ainda é necessário **medir os FPS reais** parado/andando/pulando,
+testar o celular em perfil NORMAL e REDUZIDO, verificar visualmente
+a região das vigas e jogar em três navegadores/dispositivos para
+avaliar fluidez, reconexão e possíveis softlocks. A build aprovada
+não demonstra, por si só, que todo lag perceptível foi eliminado.
+
+---
+
 ## Etapa 23 — Entradas de trilha identificáveis e reunião dos três
 
 Na Fase 01, após Téo, Lia e Nino concluírem seus três marcos, o HUD
