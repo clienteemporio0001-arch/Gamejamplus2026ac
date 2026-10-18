@@ -4,7 +4,7 @@ import {
  TREE_GRAVITY,TREE_JUMP,TREE_SPEED,TREE_JUMP_RISE,TREE_JUMP_RANGE,TREE_WIND_PERIOD,
  TREE_GUST_WARNING,TREE_GUST_DURATION,TREE_GUST_OFFSET,TreeAuthority,treeWindSchedule,
  treeWindVelocity,treeExposure,treeFatal,treePlatforms,initTree,validTree,treeCameraZoom,
- treeTowerNearBase,treeTowerNearTop,treeObjective
+ treeTowerNearBase,treeTowerNearTop,treeObjective,reconcileTreeSupports
 } from '../src/treetopForest';
 import type {Pose} from '../src/network';
 const base=100000,authority=new TreeAuthority();
@@ -140,3 +140,19 @@ assert.equal(windy.world.layout,0);
 assert.deepEqual(windy.world.health,[3,3,3]);
 assert.equal(windy.world.windPhase,'calm');
 console.log('APROVADO: Etapa 18 — geometria, rajada, abrigos, multiplayer state e puzzles completos');
+
+// Regression: stacked avatars on the host must follow their base in every frame.
+{
+ const climb=new TreeAuthority();climb.world.bridgeOpen=true;
+ const poses:Pose[]=([0,1,2] as const).map(seat=>({seat,x:TREE_TARGETS.tower.base.x,
+  y:TREE_TARGETS.tower.base.y,vx:0,vy:0}));
+ assert.equal(climb.interact(1,'support',poses,base+12000),true);
+ assert.equal(poses[1].y,poses[2].y-44);
+ assert.equal(climb.interact(0,'support',poses,base+12500),true);
+ assert.equal(poses[0].y,poses[2].y-88);
+ poses[2].x+=32;reconcileTreeSupports(poses,climb.world.supporting);
+ assert.equal(poses[1].x,poses[2].x);
+ assert.equal(poses[0].x,poses[2].x);
+ assert.equal(poses[0].y,poses[2].y-88);
+ assert.equal(climb.world.tower.filter(Boolean).length,2);
+}

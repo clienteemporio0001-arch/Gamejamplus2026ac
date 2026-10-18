@@ -92,6 +92,16 @@ export function initTree(now=Date.now()):TreeWorld{return {
  dashAt:0,dashX:0,windPhase:'calm',windDirection:1,windUntil:0,gustCount:0,deathByGust:false,
  ...initVitals()
 };}
+/** Synchronize host poses of stacked friends with their base, rather than old ground positions. */
+export function reconcileTreeSupports(poses:Pose[],supporting:readonly (Seat|null)[]):void{
+ for(const seat of [1,0] as Seat[]){
+  const baseSeat=supporting[seat];
+  if(baseSeat===null||baseSeat===undefined)continue;
+  const base=poses[baseSeat],rider=poses[seat];
+  if(!base||!rider)continue;
+  poses[seat]={seat,x:base.x,y:Math.max(30,base.y-44),vx:0,vy:0};
+ }
+}
 export function validTree(value:unknown):value is TreeWorld{
  if(!value||typeof value!=='object'||Array.isArray(value))return false;
  const w=value as Record<string,unknown>;
@@ -210,6 +220,7 @@ export class TreeAuthority{
  /** Returns new poses only for authoritative team respawn. */
  tick(poses:Pose[],now=Date.now(),protectedUntil=0):{changed:boolean;poses?:Pose[];reset?:boolean;won?:boolean}{
   const w=this.world;
+  reconcileTreeSupports(poses,w.supporting);
   if(w.deadUntil){if(now<w.deadUntil)return {changed:false};this.reset(now);return {changed:true,poses:TREE_START.map(p=>({...p})),reset:true};}
   if(w.completed)return {changed:false,won:true};
   if(w.blackoutUntil){
@@ -278,18 +289,21 @@ export class TreeAuthority{
  /** All puzzle actions use the host's validated positions and actual skill events. */
  interact(seat:Seat,kind:'lever'|'switch'|'shoot'|'support'|'detach'|'dash',
   poses:Pose[],now=Date.now(),facing:-1|1=1):boolean{
-  const w=this.world,p=poses[seat];
+  const w=this.world;
+  reconcileTreeSupports(poses,w.supporting);
+  const p=poses[seat];
   if(!p||w.deadUntil||w.blackoutUntil>now||w.completed)return false;
   const windy=w.windPhase==='gust'&&treeExposure(p)>.35;
   if(kind==='dash'&&seat===2){w.dashAt=now;w.dashX=p.x;return true;}
   if(kind==='support'&&(seat===0||seat===1)){
    const base:Seat=seat===0?1:2,b=poses[base];
-   if(!b||w.supporting[seat]!==null||!close(p,b.x,b.y,49,69)
+   if(!b||w.supporting[seat]!==null||!close(p,b.x,b.y,65,86)
     ||!treeTowerNearBase(p)
     ||!w.bridgeOpen||w.ropeOpen)return false;
    if(seat===0&&w.supporting[1]!==2)return false;
    w.supporting[seat]=base;
    if(seat===1)w.tower[1]=true;else w.tower[0]=true;
+   reconcileTreeSupports(poses,w.supporting);
    return true;
   }
   if(kind==='detach'&&w.supporting[seat]!==null){

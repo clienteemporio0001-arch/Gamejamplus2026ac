@@ -164,12 +164,12 @@ export function pipoHint(source:HintSource):PipoHint{
  if(!w.ropeOpen){
   if(!w.tower[1])return guidance('escada humana das copas',[
    'PIPO: Nino fica na base! Lia precisa subir sobre ele!',
-   'Posicione Nino na plataforma e aproxime Lia.',
+   'Leve Nino à plataforma do abrigo à direita da ponte e aproxime Lia.',
    'Com Lia pressione E para formar o primeiro apoio.'
   ]);
   if(!w.tower[0])return guidance('escada humana das copas',[
    'PIPO: Boa! Agora Téo precisa subir sobre Lia!',
-   'Mantenham a base e aproximem Téo de Lia.',
+   'Com Lia apoiada em Nino, leve Téo aos dois nessa mesma plataforma.',
    'Com Téo pressione E para formar o segundo apoio.'
   ]);
   return guidance('cipó superior',[

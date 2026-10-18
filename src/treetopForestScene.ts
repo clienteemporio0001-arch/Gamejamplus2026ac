@@ -226,8 +226,8 @@ export class TreetopForestScene extends Phaser.Scene {
    }
    if(w.supporting[0]!==null){this.net.act({kind:'detach'});return;}
    if(w.bridgeOpen&&!w.ropeOpen&&nearBase&&w.supporting[1]===2
-     &&Math.abs(p.x-this.avatars[1].x)<=49
-     &&Math.abs(p.y-this.avatars[1].y)<=69){
+     &&Math.abs(p.x-this.avatars[1].x)<=65
+     &&Math.abs(p.y-this.avatars[1].y)<=86){
     this.net.act({kind:'support'});return;
    }
    this.net.act({kind:'lever'});return;
@@ -235,8 +235,8 @@ export class TreetopForestScene extends Phaser.Scene {
   if(seat===1){
    if(w.supporting[1]!==null){this.net.act({kind:'detach'});return;}
    if(w.bridgeOpen&&!w.ropeOpen&&nearBase
-     &&Math.abs(p.x-this.avatars[2].x)<=49
-     &&Math.abs(p.y-this.avatars[2].y)<=69){
+     &&Math.abs(p.x-this.avatars[2].x)<=65
+     &&Math.abs(p.y-this.avatars[2].y)<=86){
     this.net.act({kind:'support'});return;
    }
   }
@@ -343,7 +343,17 @@ export class TreetopForestScene extends Phaser.Scene {
      (owner===1?w.layout===0:owner===0?w.layout===1:w.layout===2);
    ring.setVisible(active);
   });
-  this.hint.setVisible(false);
+  // The human ladder is formed on the right-hand shelter, not the previous one.
+  const byTower=w.bridgeOpen&&!w.ropeOpen&&
+   Math.abs(this.local.x-TREE_TARGETS.tower.base.x)<300;
+  if(byTower){
+   const instruction=!w.tower[1]?'NINO NA BASE • LIA: E PARA SUBIR':
+    !w.tower[0]?'TÉO: APROXIME-SE DE LIA E USE E':
+    'TÉO: ALCANCE O GALHO SUPERIOR E USE E';
+   this.hint.setText(instruction)
+    .setPosition(TREE_TARGETS.tower.base.x,TREE_TARGETS.tower.base.y-136)
+    .setVisible(true);
+  }else this.hint.setVisible(false);
   this.missions.update(time,pause);
    this.pipo.update(time,this.local.x,this.local.y,pause);
    this.exitArt?.update(w.bridgeOpen&&w.ropeOpen&&w.time.every(Boolean)&&w.finalOpen,this.net.poses,w.health,time);
