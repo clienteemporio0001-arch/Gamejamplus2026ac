@@ -11,8 +11,8 @@ export const TREE_JUMP_RISE=TREE_JUMP*TREE_JUMP/(2*TREE_GRAVITY);
 export const TREE_JUMP_RANGE=2*TREE_JUMP/TREE_GRAVITY*TREE_SPEED;
 /** Keep Téo, Lia and Nino larger on screen without altering world physics. */
 export function treeCameraZoom(view:{width:number;height:number},coarse:boolean):number{
- return coarse?Math.max(.88,Math.min(1.16,view.height/420)):
-  Math.max(1.04,Math.min(1.42,view.height/680));
+ return coarse?Math.max(.72,Math.min(1.02,Math.min(view.height/440,view.width/850))):
+  Math.max(.85,Math.min(1.16,view.height/700));
 }
 export type TreeLayout=0|1|2;
 export type TreePlatform={
