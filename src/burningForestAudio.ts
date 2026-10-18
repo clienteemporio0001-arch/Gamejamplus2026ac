@@ -19,7 +19,7 @@ export class BurningForestAudio {
  }
  private async unlock():Promise<void>{
   if(this.ctx){
-   if(this.ctx.state==='suspended')await this.ctx.resume();
+   try{if(this.ctx.state==='suspended')await this.ctx.resume();}catch{/* browser gesture required */}
    return;
   }
   try{
