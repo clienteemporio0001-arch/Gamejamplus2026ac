@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {preloadOfficialLandmarks,officialLandmark} from './officialLandmarks';
 import type {Network,Seat,Pose} from './network';
 import type {TouchInput} from './game';
 import {SoloBodies} from './soloBodies';
@@ -55,10 +56,19 @@ export class BurningForestScene extends Phaser.Scene {
    fontStyle:'bold',color,stroke:'#19161a',strokeThickness:4,align:'center'})
    .setOrigin(.5).setDepth(53);
  }
+ preload():void{preloadOfficialLandmarks(this);}
+
  create():void{
   this.physics.world.setBounds(0,0,FIRE_WIDTH,FIRE_HEIGHT+200);
   this.physics.world.setBoundsCollision(true,true,false,false);
   this.art=new BurningForestArt(this);
+  // The same silhouettes appear at real cooperation points in the fire biome.
+  officialLandmark(this,'hollow','fire',FIRE_TARGETS.log.teo.x,638,
+    FIRE_TARGETS.log.teo.y,.55);
+  officialLandmark(this,'stone','fire',FIRE_TARGETS.smoke.lia.x,674,
+    FIRE_TARGETS.smoke.lia.y,.68);
+  officialLandmark(this,'arch','fire',FIRE_TARGETS.tree.nino.x,674,
+    FIRE_TARGETS.tree.nino.y,.62);
   this.audio=new BurningForestAudio();
   for(const p of FIRE_PLATFORMS){
    const rect=this.add.rectangle(p.x,p.y,p.width,p.height,0xffffff,.001).setDepth(11);
