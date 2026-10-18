@@ -52,6 +52,23 @@ assert.equal(auth.world.climbReady,false);
 assert.equal(auth.world.suspensionClimbReady,false);
 assert.equal(use(1,'detach',1500),true);
 assert.equal(auth.world.supporting[1],null);
+// Movement cannot carry a mounted character through an active wooden shelf.
+const moving=new LoopAuthority();moving.reset(0);
+const movingTeam:Pose[]=LOOP_START.map(p=>({...p}));
+movingTeam[2]={seat:2,x:5650,y:606,vx:0,vy:0};
+movingTeam[1]={seat:1,x:5650,y:606,vx:0,vy:0};
+assert.equal(moving.act(1,{kind:'support'},movingTeam,1200),true);
+moving.tick(movingTeam,1250);
+movingTeam[2].x=2570; // the 155x22 physical ledge intersects Lia's path
+assert.equal(moving.tick(movingTeam,1300).changed,true);
+assert.equal(moving.world.supporting[1],null);
+assert.equal(validLoop(moving.world),true);
+// A shelf between Lia's starting height and the destination cannot be phased through.
+const onLedge=new LoopAuthority();onLedge.reset(0);
+const ledgeTeam:Pose[]=LOOP_START.map(p=>({...p}));
+ledgeTeam[2]={seat:2,x:2570,y:606,vx:0,vy:0};
+ledgeTeam[1]={seat:1,x:2570,y:606,vx:0,vy:0};
+assert.equal(canStack(onLedge.world,1,ledgeTeam),false);
 // Too far, falling, invalid floor or inside real wall: no climbing.
 at(2,5650);at(1,5710);
 assert.equal(canStack(auth.world,1,players),false,'no climbing at a distance');
