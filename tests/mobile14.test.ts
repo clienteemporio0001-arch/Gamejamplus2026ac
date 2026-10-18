@@ -133,7 +133,7 @@ ok(!mobilePadMarkup(true,0).includes('data-touch="ability"'),
 ok(!mobilePadMarkup(false,2).includes('data-seat='),
   'multiplayer mantém personagem fixo sem troca solo');
 
-ok(scene.includes('TEMP_MARK_NAMES')&&scene.includes('this.echoVisuals.push(container)'),
+ok(scene.includes('TEMP_MARK_NAMES')&&scene.includes('this.echoVisuals.push(officialLandmark('),
   'marcos da Fase 2 são objetos distintos desenhados no mundo');
 ok(scene.includes('this.echoLabels.push(')&&scene.includes('label.setVisible(false)')&&
    scene.includes('this.pipo.update(time,this.local.x,this.local.y,pause)'),
