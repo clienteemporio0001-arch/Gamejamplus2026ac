@@ -7,6 +7,7 @@ import {cameraZoomFor,isCoarseDevice} from './mobileViewport';
 import {gameKeys} from './keyboard';
 import type {VitalAction} from './loopVitals';
 import {PipoGuide} from './pipoGuide';
+import {MissionDirector} from './missionDirector';
 import {BurningForestArt} from './burningForestArt';
 import {BurningForestAudio} from './burningForestAudio';
 import {
@@ -19,7 +20,7 @@ import {
 export class BurningForestScene extends Phaser.Scene {
  private net:Network;private touch:TouchInput;private hud?:()=>void;
  private world:FireWorld;
- private art!:BurningForestArt;private pipo!:PipoGuide;
+ private art!:BurningForestArt;private pipo!:PipoGuide;private missions!:MissionDirector;
  private audio!:BurningForestAudio;
  private platforms:Phaser.GameObjects.Rectangle[]=[];
  private skins:Phaser.GameObjects.Graphics[]=[];
@@ -113,6 +114,7 @@ export class BurningForestScene extends Phaser.Scene {
   this.cursors=this.input.keyboard?.createCursorKeys();
   this.keys=this.input.keyboard?.addKeys('A,D,E') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
   this.pipo=new PipoGuide(this,this.net);
+   this.missions=new MissionDirector(this,this.net,4,this.avatars);
   this.dark=this.add.rectangle(this.scale.gameSize.width/2,this.scale.gameSize.height/2,
    this.scale.gameSize.width+150,this.scale.gameSize.height+150,0x190b0e,1)
    .setScrollFactor(0).setDepth(190).setAlpha(0);
@@ -283,7 +285,8 @@ export class BurningForestScene extends Phaser.Scene {
   this.dangerText.setText(warning).setVisible(Boolean(warning)&&!pause);
   this.art.update(w,poses,time,now);
   this.audio.update(w,now);
-  this.pipo.update(time,this.local.x,this.local.y,pause);
+  this.missions.update(time,pause);
+   this.pipo.update(time,this.local.x,this.local.y,pause);
   this.cameras.main.followOffset.x=Phaser.Math.Linear(
    this.cameras.main.followOffset.x,this.facing*42,.035);
   this.cameras.main.followOffset.y=Phaser.Math.Linear(
