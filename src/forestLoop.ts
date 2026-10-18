@@ -8,6 +8,31 @@ export const SUSPENSION={gapStart:8050,gapEnd:8750,lever:{x:7780,y:302},
  initialX:7700,teoX:7890,liaX:8150,finalX:8400,width:790,height:26,
  moveMs:1900} as const;
 export const SUSPENSION_LANDING_Y=SUSPENSION.branch.y-SUSPENSION.branch.height/2-22;
+/** Shared static terrain for rendering, fall sampling and traversal tests. */
+export const LOOP_TERRAIN=[
+ {from:0,to:2000},{from:2260,to:4100},{from:4340,to:6470},
+ {from:6700,to:SUSPENSION.gapStart},
+ {from:SUSPENSION.gapEnd,to:9465},{from:9825,to:LOOP_WIDTH}
+] as const;
+export const LOOP_NATURAL_LEDGES=[
+ {x:2100,y:625,width:105},{x:4210,y:622,width:98},
+ {x:6580,y:625,width:115},{x:2570,y:590,width:155},
+ {x:3800,y:587,width:140},{x:6000,y:587,width:125},
+ {x:7200,y:585,width:112},{x:7480,y:586,width:110},
+ {x:8950,y:590,width:144},{x:10220,y:597,width:155}
+] as const;
+/** Extra alternate tree branches change with the three 60-second layouts.
+ * Every essential path remains reachable using permanent ledges.
+ */
+export const LOOP_LAYOUT_BRANCHES=[
+ {x:1870,y:526,width:155,layout:0},
+ {x:2810,y:530,width:155,layout:1},
+ {x:3580,y:535,width:148,layout:2},
+ {x:6080,y:516,width:145,layout:0},
+ {x:7410,y:520,width:152,layout:1},
+ {x:9030,y:510,width:143,layout:2},
+ {x:10340,y:513,width:153,layout:1}
+] as const;
 export const LOOP_CYCLE_MS = 60000;
 export const LOOP_WARNING_MS = 10000;
 export const LOOP_BLACKOUT_MS = 2000;
