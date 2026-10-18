@@ -44,6 +44,7 @@ export class ForestLoopScene extends Phaser.Scene {
   private hollowLedge!:Phaser.GameObjects.Rectangle;
   private stoneHitbox!:Phaser.GameObjects.Rectangle;
   private pendingVisualLayout:number|null=null;
+  private lastSuspensionCableX=Number.NaN;
   private contextText!:Phaser.GameObjects.Text;
    private pipo!:PipoGuide;private missions!:MissionDirector;
   private regionToast!:Phaser.GameObjects.Text;
@@ -84,9 +85,12 @@ export class ForestLoopScene extends Phaser.Scene {
     this.blocks.push(rect);this.art.platform(rect,material);return rect;
   }
   private active(rect:Phaser.GameObjects.Rectangle,active:boolean):void{
-    (rect.body as Phaser.Physics.Arcade.StaticBody).enable=active;
-    rect.setVisible(active);
-    if(active)(rect.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
+    const body=rect.body as Phaser.Physics.Arcade.StaticBody;
+    // Host snapshots may arrive every resource tick; static collision never
+    // needs its R-tree index updated unless its enabled state actually changes.
+    if(body.enable===active&&rect.visible===active)return;
+    body.enable=active;rect.setVisible(active);
+    if(active)body.updateFromGameObject();
   }
   preload():void{
     this.load.svg('loop-clearing-tree',import.meta.env.BASE_URL+'assets/clearing-tree.svg');
@@ -484,18 +488,23 @@ export class ForestLoopScene extends Phaser.Scene {
     if(this.suspensionCollider){
       const settled=w.suspendedX===w.suspendedTo&&w.suspendedOpen;
       const position=w.suspendedX;
-      this.suspension.setX(position);
-      this.suspensionCollider.setX(position);
-      this.suspensionCollider.setVisible(settled);
-      const body=this.suspensionCollider.body as Phaser.Physics.Arcade.StaticBody;
-      body.enable=settled;
-      if(settled)body.updateFromGameObject();
-      this.suspensionCables.clear();
-      for(const x of [position-SUSPENSION.width/2+45,position+SUSPENSION.width/2-45]){
-        this.suspensionCables.lineStyle(5,0x558f6b,.91);
-        this.suspensionCables.lineBetween(x,260,x,643);
-        this.suspensionCables.lineStyle(1,0xccf5ac,.65);
-        this.suspensionCables.lineBetween(x+3,260,x+3,643);
+      const collider=this.suspensionCollider;
+      const body=collider.body as Phaser.Physics.Arcade.StaticBody;
+      const moved=collider.x!==position,enableChanged=body.enable!==settled;
+      if(this.suspension.x!==position)this.suspension.setX(position);
+      if(moved)collider.setX(position);
+      if(collider.visible!==settled)collider.setVisible(settled);
+      if(enableChanged)body.enable=settled;
+      if(settled&&(moved||enableChanged))body.updateFromGameObject();
+      if(this.lastSuspensionCableX!==position){
+        this.lastSuspensionCableX=position;
+        this.suspensionCables.clear();
+        for(const x of [position-SUSPENSION.width/2+45,position+SUSPENSION.width/2-45]){
+          this.suspensionCables.lineStyle(5,0x558f6b,.91);
+          this.suspensionCables.lineBetween(x,260,x,643);
+          this.suspensionCables.lineStyle(1,0xccf5ac,.65);
+          this.suspensionCables.lineBetween(x+3,260,x+3,643);
+        }
       }
     }
     const walls=barriers(w);
@@ -520,10 +529,15 @@ export class ForestLoopScene extends Phaser.Scene {
       image.setScale(w.marks[i]?1.018:1);
     });
     if(this.stoneHitbox&&w.blackoutUntil===0){
-      this.hollowLedge.setX(markPosition(w,0).x);
-      this.stoneHitbox.setX(markPosition(w,1).x);
-      (this.hollowLedge.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
-      (this.stoneHitbox.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
+      const hollowX=markPosition(w,0).x,stoneX=markPosition(w,1).x;
+      if(this.hollowLedge.x!==hollowX){
+        this.hollowLedge.setX(hollowX);
+        (this.hollowLedge.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
+      }
+      if(this.stoneHitbox.x!==stoneX){
+        this.stoneHitbox.setX(stoneX);
+        (this.stoneHitbox.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
+      }
     }
     
     const unlocked=allDone(w.marks);
@@ -699,7 +713,8 @@ export class ForestLoopScene extends Phaser.Scene {
       mist.x=anchorX+swayAt(w,anchorX,time,i)*65;
     });
     this.art.update(time);
-    this.hud?.();
+    // HUD has its own 150ms timer; rebuilding DOM from every physics frame
+    // doubles layout cost when the camera scrolls.
     void dt;
   }
   getCooldown():string{
