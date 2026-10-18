@@ -133,6 +133,7 @@ export class TemporalForestScene extends Phaser.Scene {
      i===1?'#f5d7a6':'#d7f3d9').setVisible(false));
    this.echoChecks.push(this.text(point.x,point.y-28,'✓',17,'#a8f5aa').setVisible(false));
   }
+  const markColor=[0x8fd9a3,0xf4c293,0x9accea];
   for(const [i,p] of TEMP_ROOTS.entries()){
    this.add.circle(p.x,p.y,12,markColor[i],.52).setDepth(14)
     .setStrokeStyle(2,0xe0e9bc,.55);
