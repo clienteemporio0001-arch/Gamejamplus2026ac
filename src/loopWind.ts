@@ -1,11 +1,11 @@
 import { LOOP_WIDTH, windGuide, type LoopWorld } from './forestLoop';
 
 /** Deterministic world-space leaves; no character pose or camera offset here. */
-export const WIND_LEAVES=25;
+export const WIND_LEAVES=36;
 export function leafAt(w:LoopWorld,index:number,ms:number):{
   x:number;y:number;direction:-1|0|1;angle:number
 }{
-  const baseX=110+index*145;
+  const baseX=110+index*(LOOP_WIDTH-220)/(WIND_LEAVES-1);
   const direction=windGuide(w,0,baseX).direction;
   const lane=116;
   const speed=direction===0?0:0.038;
