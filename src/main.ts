@@ -467,6 +467,7 @@ function render(): void {
           '<details id="loop-options"><summary>⚙ <span>Opções</span></summary>'+
           '<div class="loop-menu-options">'+
           '<button id="sound-options">CONFIGURAÇÕES</button>'+
+          (devSession&&net.level===1?'<button id="dev-performance">DIAGNÓSTICO FPS · LIGAR/DESLIGAR</button>':'')+
           '<button id="leave" title="Sair da sala">SAIR DA SALA</button></div></details>')+
         '</div></div>'+
         (net.players.some(p=>!p.online)?'<div class="loop-offline">Aguardando reconexão da equipe.</div>':'')+
@@ -544,6 +545,7 @@ function render(): void {
       button('dev-temporal','TESTAR FASE 02 · FLORESTA TEMPORAL',true)+
       button('dev-treetop','TESTAR FASE 03 · CAMINHO DAS ÁRVORES',true)+
       button('dev-fire','TESTAR FASE 04 · FLORESTA EM CHAMAS',true)+
+      button('dev-loop-online','CRIAR SALA MULTIPLAYER · DIAGNÓSTICO',true)+
       ([1,2,3,4] as const).map(level=>button('dev-classic-'+level,'TESTAR FASE CLÁSSICA '+level,true)).join('')+
       button('create-classic','CRIAR SALA CLÁSSICA',true)+'</div></details>'+
       '<p class="menu-footnote">Multiplayer: três pessoas entram na mesma sala pelo código.</p></main>';
@@ -560,6 +562,7 @@ function render(): void {
     ui.querySelector('#dev-temporal')?.addEventListener('click',()=>{devSession=true;info='';net.startTemporalSolo();});
     ui.querySelector('#dev-treetop')?.addEventListener('click',()=>{devSession=true;info='';net.startTreetopSolo();});
     ui.querySelector('#dev-fire')?.addEventListener('click',()=>{devSession=true;info='';net.startFireSolo();});
+    ui.querySelector('#dev-loop-online')?.addEventListener('click',()=>{devSession=true;info='';void net.createRoom('loop');});
     ([1,2,3,4] as const).forEach(level=>
       ui.querySelector('#dev-classic-'+level)?.addEventListener('click',()=>{devSession=false;info='';net.startSolo(level);}));
     ui.querySelector('#join-menu')?.addEventListener('click',()=>{devSession=false;showJoin();});
