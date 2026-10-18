@@ -133,9 +133,9 @@ export class BurningForestScene extends Phaser.Scene {
    }));
   }
   this.cameras.main.setBounds(0,0,FIRE_WIDTH,FIRE_HEIGHT);
-  this.cameras.main.setZoom(Math.max(.84,Math.min(1.3,
+  this.cameras.main.setZoom(Math.max(.72,Math.min(1.06,
    cameraZoomFor({width:this.scale.gameSize.width,height:this.scale.gameSize.height},
-    isCoarseDevice())*1.07)));
+    isCoarseDevice())*1.0)));
   this.cameras.main.startFollow(this.local,false,.085,.10,0,-24);
   this.cameras.main.setDeadzone(Math.min(155,this.scale.gameSize.width*.17),Math.min(100,this.scale.gameSize.height*.18));
   this.cursors=this.input.keyboard?.createCursorKeys();
@@ -188,8 +188,8 @@ export class BurningForestScene extends Phaser.Scene {
    }
   }));
   const onResize=(size:Phaser.Structs.Size)=>{
-   this.cameras.main.setZoom(Math.max(.84,Math.min(1.3,
-    cameraZoomFor({width:size.width,height:size.height},isCoarseDevice())*1.07)));
+   this.cameras.main.setZoom(Math.max(.72,Math.min(1.06,
+    cameraZoomFor({width:size.width,height:size.height},isCoarseDevice())*1.0)));
    this.cameras.main.setBounds(0,0,FIRE_WIDTH,FIRE_HEIGHT);
    this.cameras.main.setDeadzone(Math.min(155,size.width*.17),Math.min(100,size.height*.18));
    this.dark.setPosition(size.width/2,size.height/2).setSize(size.width+150,size.height+150);
