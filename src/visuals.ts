@@ -26,6 +26,15 @@ export class NightArt {
   private parallaxChunks:Array<{ink:Phaser.GameObjects.Graphics;from:number;to:number;scroll:number}>=[];
   private lastPaint=0;
 
+  setReducedVisuals(reduced:boolean):void{this.lowPower=reduced;}
+  /** Number of visible, animated, purely decorative objects; excludes physics. */
+  visibleDecorationCount():number{
+    return this.fog.filter(p=>p.shape.visible).length+
+      this.leaves.filter(p=>p.shape.visible).length+
+      this.lights.filter(p=>p.dot.visible).length;
+  }
+  visibleChunkCount():number{return this.parallaxChunks.filter(p=>p.ink.visible).length;}
+  totalChunkCount():number{return this.parallaxChunks.length;}
   constructor(private readonly scene: Phaser.Scene, readonly width: number, readonly biome: Biome) {
     this.drawSky();
     this.drawSilhouettes();
