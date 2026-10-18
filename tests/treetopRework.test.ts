@@ -106,6 +106,8 @@ party[0]={seat:0,x:TREE_TARGETS.tower.top.x,y:landingY,vx:0,vy:0};
 assert.equal(authority.interact(0,'lever',party,base+2600),true);
 assert.ok(w.ropeOpen);
 assert.equal(w.tower.filter(Boolean).length,3);
+// Lia must leave the human ladder before walking to the next puzzle.
+assert.equal(authority.interact(1,'detach',party,base+2750),true);
 party[1]={seat:1,x:4660,y:275,vx:0,vy:0};
 assert.equal(authority.authorizeEnergy(1,'shoot',party,base+3000,1).ok,true);
 assert.equal(w.time[1],true);
