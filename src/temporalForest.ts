@@ -1,3 +1,4 @@
+import {exitPresence} from './sharedExit';
 import type {Pose,Seat} from './network';
 import type {PuzzleAction} from './puzzles';
 import {VITALS,initVitals,validVitals,spendVital,regenVitals,damageVitals,type VitalAction,type Vitals} from './loopVitals';
@@ -226,7 +227,7 @@ export class TemporalAuthority{
   }
   if(w.bridgeAt&&!w.bridge&&now-w.bridgeAt>=1900){w.bridge=true;return{changed:true};}
   if(w.bridge&&w.roots.every(Boolean)&&w.layout===2&&!w.exit){w.exit=true;return{changed:true};}
-  if(w.bridge&&w.exit&&poses.every(p=>p.x>=4070&&p.x<=4187&&p.y>=540&&p.y<=660)){
+  if(w.bridge&&w.exit&&exitPresence(2,poses,w.health).ready){
    w.completed=true;return{changed:true,won:true};
   }
   // A deceptive detour sends the whole party to its known safe clearing.
