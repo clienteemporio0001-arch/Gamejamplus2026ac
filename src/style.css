@@ -458,3 +458,41 @@ body.playing{overflow:hidden;touch-action:none;overscroll-behavior:none}
 @media(pointer:coarse) and (orientation:landscape){
  #ui.in-game #pipo-help{top:calc(var(--game-tools-top,64px) + 38px);right:var(--game-tools-right,8px)}
 }
+
+/* ETAPA 19 — the last transition is a cinematic horizon, not a menu. */
+#ui.in-game .fire-transition{
+ background:linear-gradient(164deg,#090f16f2 0%,#21131ae8 41%,#512119ed 78%,#090d12f0 100%);
+ border:1px solid #ea8c5b80;
+ box-shadow:0 0 110px #e34d132e,inset 0 0 35px #f36a152b,0 20px 80px #000c;
+ text-align:center;gap:clamp(9px,2vh,18px)
+}
+#ui.in-game .fire-transition h2{color:#ffdfa9;letter-spacing:1px}
+#ui.in-game .fire-transition>strong{
+ color:#ffb372;font-size:clamp(17px,3.8vh,27px);letter-spacing:1.7px;
+ text-shadow:0 0 20px #ed6e4599
+}
+#ui.in-game .fire-transition p{color:#f0c7b6;max-width:540px}
+#ui.in-game .fire-horizon{
+ font-size:clamp(22px,5vh,52px);letter-spacing:clamp(3px,2vw,17px);
+ background:radial-gradient(ellipse at center,#b752285c,transparent 68%);
+ width:100%;text-align:center;padding:clamp(5px,1.7vh,15px) 3px;
+ animation:fire-horizon-pulse 1.8s ease-in-out infinite alternate;
+ filter:drop-shadow(0 0 20px #ec662171)
+}
+@keyframes fire-horizon-pulse{
+ from{opacity:.67;filter:drop-shadow(0 0 4px #b7441380)}
+ to{opacity:1;filter:drop-shadow(0 0 30px #fa8d3280)}
+}
+#ui.in-game .fire-victory{
+ background:linear-gradient(160deg,#111a1bec,#202a24f2);
+ border:1px solid #a5ce9f;
+ box-shadow:0 22px 90px #020e10bb,0 0 65px #8bc99827;
+ text-align:center;max-width:min(590px,calc(100vw - 30px))
+}
+#ui.in-game .fire-victory h2{color:#eaf7d0;font-size:clamp(19px,4vw,32px)}
+#ui.in-game .fire-victory strong{color:#b1edaf;letter-spacing:.5px}
+#ui.in-game .fire-victory p{color:#d7e5d6}
+#ui.in-game .fire-finale-symbol{font-size:46px}
+@media(prefers-reduced-motion:reduce){
+ #ui.in-game .fire-horizon{animation:none}
+}
