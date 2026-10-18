@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import {PipoGuide} from './pipoGuide';
 import {MissionDirector} from './missionDirector';
+import {animateForestProps} from './forestTransformFX';
 import {TreetopArt} from './treetopArt';
 import {TreetopWindAudio} from './treetopWindAudio';
 import {CHARACTERS,type Network,type Seat} from './network';
@@ -164,6 +165,18 @@ export class TreetopForestScene extends Phaser.Scene {
   });
  }
  private sync(w:TreeWorld):void{
+   if(w.blackoutUntil>0&&w.blackoutUntil!==this.w.blackoutUntil){
+    const old=TREE_PLATFORMS.filter(p=>p.state===w.layout);
+    const next=TREE_PLATFORMS.filter(p=>p.state===((w.layout+1)%3));
+    animateForestProps(this,old.map(p=>{
+     const destination=[...next].sort((a,b)=>
+       Math.abs(a.x-p.x)+Math.abs(a.y-p.y)-
+       Math.abs(b.x-p.x)-Math.abs(b.y-p.y))[0]??p;
+     return {from:{x:p.x,y:p.y,width:p.width,height:p.height},
+       to:{x:destination.x,y:destination.y,width:destination.width,height:destination.height},
+       kind:'branch' as const};
+    }));
+   }
    const layoutChanged=this.w.layout!==w.layout;
    if(layoutChanged)this.pipo?.warnDanger('Os galhos trocaram de lugar! Procurem abrigo!');
   this.w={...w,bridge:[...w.bridge],tower:[...w.tower],time:[...w.time],
