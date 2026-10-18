@@ -438,3 +438,23 @@ body.playing{overflow:hidden;touch-action:none;overscroll-behavior:none}
 @media(pointer:coarse) and (orientation:landscape) and (max-height:390px){
  #mobile-controls .analog-stick{width:84px;height:84px}
 }
+
+/* ETAPA 17 — botão de ajuda do Pipo, discreto e fora da área dos saltos. */
+#ui.in-game #pipo-help{
+ position:fixed;right:max(12px,env(safe-area-inset-right));bottom:clamp(100px,19vh,155px);
+ z-index:65;min-width:75px;padding:8px 11px;border:1px solid #9ed4a5a8;
+ border-radius:24px;background:#092b29ed;color:#edffe9;font-size:12px;
+ font-weight:800;box-shadow:0 4px 14px #0007;cursor:pointer;touch-action:manipulation
+}
+#ui.in-game #pipo-help small{font-size:9px;opacity:.75}
+#ui.in-game #pipo-help:hover,#ui.in-game #pipo-help:focus-visible{
+ background:#185146;outline:2px solid #aedfa1
+}
+@media(pointer:coarse){
+ #ui.in-game #pipo-help{right:max(9px,env(safe-area-inset-right));bottom:auto;
+  top:calc(env(safe-area-inset-top) + 95px);padding:5px 9px;min-width:58px;font-size:10px}
+ #ui.in-game #pipo-help small{display:none}
+}
+@media(pointer:coarse) and (orientation:landscape){
+ #ui.in-game #pipo-help{top:calc(var(--game-tools-top,64px) + 38px);right:var(--game-tools-right,8px)}
+}
