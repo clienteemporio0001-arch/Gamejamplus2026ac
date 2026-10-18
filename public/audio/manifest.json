@@ -1,0 +1,47 @@
+{
+  "boca_da_noite": {
+    "file": "boca_da_noite.mp3",
+    "durationSeconds": 96.0,
+    "bpm": 80,
+    "bars": 32,
+    "sizeBytes": 960829,
+    "origin": "Original procedural composition for A Floresta Mente",
+    "license": "Original game soundtrack; use and distribution with the game project authorized"
+  },
+  "floresta_temporal": {
+    "file": "floresta_temporal.mp3",
+    "durationSeconds": 87.273,
+    "bpm": 88,
+    "bars": 32,
+    "sizeBytes": 873580,
+    "origin": "Original procedural composition for A Floresta Mente",
+    "license": "Original game soundtrack; use and distribution with the game project authorized"
+  },
+  "caminho_das_arvores": {
+    "file": "caminho_das_arvores.mp3",
+    "durationSeconds": 69.818,
+    "bpm": 110,
+    "bars": 32,
+    "sizeBytes": 699082,
+    "origin": "Original procedural composition for A Floresta Mente",
+    "license": "Original game soundtrack; use and distribution with the game project authorized"
+  },
+  "floresta_em_chamas": {
+    "file": "floresta_em_chamas.mp3",
+    "durationSeconds": 76.8,
+    "bpm": 100,
+    "bars": 32,
+    "sizeBytes": 768829,
+    "origin": "Original procedural composition for A Floresta Mente",
+    "license": "Original game soundtrack; use and distribution with the game project authorized"
+  },
+  "depois_das_cinzas": {
+    "file": "depois_das_cinzas.mp3",
+    "durationSeconds": 82.286,
+    "bpm": 70,
+    "bars": 24,
+    "sizeBytes": 823686,
+    "origin": "Original procedural composition for A Floresta Mente",
+    "license": "Original game soundtrack; use and distribution with the game project authorized"
+  }
+}
