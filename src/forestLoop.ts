@@ -253,17 +253,23 @@ export class LoopAuthority{
     if(!p||p.seat!==seat||w.completed||w.deadUntil>0||blackoutActive(w,now))return false;
     if(action.kind==='support'&&(seat===0||seat===1)&&w.supporting[seat]===null){
       const base:Seat=seat===0?1:2,other=poses[base];
-      if(!other||p.x<1950||p.x>2230||Math.abs(p.x-other.x)>55
+      if(!other||!(p.x>=7550&&p.x<=8000||p.x>=9100&&p.x<=9440)||Math.abs(p.x-other.x)>55
         ||Math.abs(p.y-other.y)>75||Math.abs(p.vx)>135||Math.abs(other.vx)>135)return false;
       if(seat===0&&w.supporting[1]!==2)return false;
       w.supporting[seat]=base;
-      if(w.supporting[0]===1&&w.supporting[1]===2)w.stackMilestone=true;
+      if(w.supporting[0]===1&&w.supporting[1]===2){
+        if(p.x>=7550&&p.x<=8000)w.suspensionStacked=true;
+        if(p.x>=9100&&p.x<=9440)w.stackMilestone=true;
+      }
       return true;
     }
     if(action.kind==='detach'&&w.supporting[seat]!==null){
       // Detached Téo must actually leave a valid human tower beside the tree.
-      if(seat===0 && w.supporting[0]===1&&w.supporting[1]===2
-        &&Math.abs(p.x-UPPER_BRANCH.x)<115 &&p.y<=535)w.climbReady=true;
+      if(seat===0&&w.supporting[0]===1&&w.supporting[1]===2){
+        if(Math.abs(p.x-UPPER_BRANCH.x)<115&&p.y<=535)w.climbReady=true;
+        if(Math.abs(p.x-SUSPENSION.lever.x)<118&&p.y<=540)
+          w.suspensionClimbReady=true;
+      }
       w.supporting[seat]=null;
       if(seat===1)w.supporting[0]=null;
       return true;
@@ -276,12 +282,22 @@ export class LoopAuthority{
       if(now-this.lastShot[1]<490||action.facing!==1)return false;
       this.lastShot[1]=now;
       const shoot=(target:{x:number;y:number})=>target.x>p.x&&target.x-p.x<=365&&Math.abs(p.y-18-target.y)<=65;
+      if(w.lastRoute==='right'&&w.suspended[0]&&!w.suspended[1]&&
+        w.suspendedTo===w.suspendedX&&shoot(SUSPENSION.lia)){
+        w.suspended[1]=true;this.slideSuspension(SUSPENSION.liaX,now);return true;
+      }
       if(w.observed&&w.marks[0]&&!w.marks[1]&&shoot(LOOP_MARKS[1])){w.marks[1]=true;return true;}
       if(allDone(w.marks)&&!w.tree[1]&&shoot(LOOP_TREE[1])){w.tree[1]=true;this.checkTree(now);return true;}
       if(w.bridge&&!w.final[1]&&shoot(LOOP_FINAL[1])){w.final[1]=true;this.checkExit();return true;}
       return false;
     }
     if(action.kind==='lever'&&seat===0){
+      if(w.lastRoute==='right'&&!w.suspended[0]&&w.suspensionStacked&&
+        w.suspensionClimbReady&&w.supporting[0]===null&&
+        near(p,SUSPENSION.lever.x,SUSPENSION.lever.y,42,12)&&
+        Math.abs(p.vx)<155&&Math.abs(p.vy)<65){
+        w.suspended[0]=true;this.slideSuspension(SUSPENSION.teoX,now);return true;
+      }
       if(w.observed&&!w.marks[0]&&near(p,LOOP_MARKS[0].x,LOOP_MARKS[0].y,68,87)){
         w.marks[0]=true;return true;
       }
@@ -298,6 +314,11 @@ export class LoopAuthority{
     }
     if(action.kind==='switch'&&seat===2 && this.lastDash[2]>0
       &&now-this.lastDash[2] <= 3000 &&p.x-this.dashOrigin[2]>=105){
+      if(w.lastRoute==='right'&&w.suspended[0]&&w.suspended[1]&&!w.suspended[2]&&
+        w.suspendedTo===w.suspendedX&&near(p,SUSPENSION.nino.x,SUSPENSION.nino.y,55,73)){
+        w.suspended[2]=true;this.slideSuspension(SUSPENSION.finalX,now);
+        this.lastSwitch[2]=now;return true;
+      }
       if(w.observed&&w.marks[0]&&w.marks[1]&&!w.marks[2]&&near(p,LOOP_MARKS[2].x,LOOP_MARKS[2].y,67,85)){
         w.marks[2]=true;this.lastSwitch[2]=now;return true;
       }
@@ -309,6 +330,10 @@ export class LoopAuthority{
       }
     }
     return false;
+  }
+  private slideSuspension(target:number,now:number):void{
+    const w=this.world;
+    w.suspendedFrom=w.suspendedX;w.suspendedTo=target;w.suspendedAt=now;
   }
   private checkTree(now:number):void{
     if(allDone(this.world.tree)&&this.world.treeFallAt===0)this.world.treeFallAt=now;
@@ -362,11 +387,19 @@ export class LoopAuthority{
     if(now-w.cycleStart>=LOOP_CYCLE_MS){
       w.blackoutUntil=now+LOOP_BLACKOUT_MS;return{changed:true};
     }
+    if(w.suspendedX!==w.suspendedTo){
+      const fraction=Math.max(0,Math.min(1,(now-w.suspendedAt)/SUSPENSION.moveMs));
+      const smooth=fraction*fraction*(3-2*fraction);
+      const position=+(w.suspendedFrom+(w.suspendedTo-w.suspendedFrom)*smooth).toFixed(2);
+      if(position!==w.suspendedX){w.suspendedX=position;
+        if(fraction===1&&allDone(w.suspended))w.suspendedOpen=true;
+        return {changed:true};}
+    }
     if(w.treeFallAt>0&&!w.bridge&&now-w.treeFallAt>=1900){
       w.bridge=true;return{changed:true};
     }
     if(w.bridge&&allDone(w.final)&&w.layout===2&&!w.exit){w.exit=true;return{changed:true};}
-    if(w.exit&&poses.every(p=>p.x>=3680&&p.x<=3798&&p.y>=540&&p.y<=660)){
+    if(w.exit&&w.suspendedOpen&&poses.every(p=>p.x>=11130&&p.x<=11360&&p.y>=540&&p.y<=660)){
       w.completed=true;return{changed:true,won:true};
     }
     if(now-w.routeAt>=3200&&allDone(w.marks)){
@@ -381,7 +414,7 @@ export class LoopAuthority{
       }
     }
     // The false exit at the fourth sector is never a fatal trap.
-    if(now-w.routeAt>=3200&&w.bridge&&poses.every(p=>near(p,3070,605,115,53)&&safeForRoute(p))
+    if(now-w.routeAt>=3200&&w.bridge&&poses.every(p=>near(p,10270,605,115,53)&&safeForRoute(p))
       &&w.layout!==2){
       w.lastRoute='wrong';w.routeAt=now;w.routeCount++;
       w.supporting=[null,null,null];w.climbReady=false;
