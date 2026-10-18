@@ -101,7 +101,7 @@ const validPose = (v: unknown): v is Pose => {
   if (!v || typeof v !== 'object') return false;
   const p = v as Record<string, unknown>;
   return seatValid(p.seat) && finite(p.x) && finite(p.y) && finite(p.vx) && finite(p.vy)
-    && p.x >= 0 && p.x <= Math.max(FOREST_WIDTH,TREE_WIDTH,FIRE_WIDTH) && p.y >= 0 && p.y <= TREE_HEIGHT
+    && p.x >= 0 && p.x <= Math.max(FOREST_WIDTH,TREE_WIDTH,FIRE_WIDTH,LOOP_WIDTH) && p.y >= 0 && p.y <= TREE_HEIGHT
     && Math.abs(p.vx) <= 1200 && Math.abs(p.vy) <= 1500;
 };
 const validSlot = (v: unknown): v is Slot => {
@@ -116,7 +116,7 @@ function parseWire(value: unknown): Wire | null {
     case 'hello': return typeof p.token === 'string' && /^[a-f0-9-]{20,50}$/.test(p.token) ? value as Wire : null;
     case 'ready': return typeof p.value === 'boolean' ? value as Wire : null;
     case 'pose': return finite(p.x) && finite(p.y) && finite(p.vx) && finite(p.vy)
-      && p.x >= 0 && p.x <= Math.max(FOREST_WIDTH,TREE_WIDTH,FIRE_WIDTH) && p.y >= 0 && p.y <= TREE_HEIGHT
+      && p.x >= 0 && p.x <= Math.max(FOREST_WIDTH,TREE_WIDTH,FIRE_WIDTH,LOOP_WIDTH) && p.y >= 0 && p.y <= TREE_HEIGHT
       && Math.abs(p.vx) <= 1200 && Math.abs(p.vy) <= 1500 ? value as Wire : null;
     case 'welcome': return seatValid(p.seat) && typeof p.code === 'string' && /^[A-Z0-9]{6}$/.test(p.code)
       && (p.mode === undefined || p.mode === 'classic' || p.mode === 'loop') ? value as Wire : null;
