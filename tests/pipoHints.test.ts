@@ -1,0 +1,28 @@
+import {strict as assert} from 'node:assert';
+import {initLoop} from '../src/forestLoop';
+import {initTemporal} from '../src/temporalForest';
+import {initTree} from '../src/treetopForest';
+import {pipoHint,pipoLine} from '../src/pipoHints';
+const loop=initLoop(1000),temporal=initTemporal(1000),tree=initTree(1000);
+assert.equal(pipoHint({phase:1,world:loop}).objective,'explorar');
+loop.observed=true;assert.equal(pipoHint({phase:1,world:loop}).objective,'árvore oca');
+loop.marks[0]=true;assert.equal(pipoHint({phase:1,world:loop}).objective,'pedra rachada');
+loop.marks[1]=true;assert.equal(pipoHint({phase:1,world:loop}).objective,'tronco em arco');
+loop.marks[2]=true;assert.equal(pipoHint({phase:1,world:loop}).objective,'rota verdadeira');
+loop.lastRoute='right';assert.equal(pipoHint({phase:1,world:loop}).objective,'escada humana');
+assert.equal(pipoHint({phase:2,world:temporal}).objective,'marco da chuva');
+temporal.echo=[true,true,true];
+assert.equal(pipoHint({phase:2,world:temporal}).objective,'subida na chuva');
+temporal.stacked=true;temporal.teoSummitReached=true;
+assert.equal(pipoHint({phase:2,world:temporal}).objective,'árvore sobre a correnteza');
+assert.equal(pipoHint({phase:3,world:tree}).objective,'ponte dos três');
+tree.bridgeOpen=true;assert.equal(pipoHint({phase:3,world:tree}).objective,'escada humana das copas');
+tree.ropeOpen=true;assert.equal(pipoHint({phase:3,world:tree}).objective,'galhos do tempo');
+tree.finalOpen=true;assert.equal(pipoHint({phase:3,world:tree}).objective,'última copa');
+for(const source of [{phase:1,world:loop},{phase:2,world:temporal},{phase:3,world:tree}] as const){
+ const lines=pipoHint(source).lines;
+ assert.equal(lines.length,3);
+ for(const line of lines)assert.ok(line.length>10);
+ assert.notEqual(pipoLine(source,0),pipoLine(source,2));
+}
+console.log('Pipo context and progressive guidance passed');
