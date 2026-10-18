@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {strict as assert} from 'node:assert';
-import {LoopAuthority,LOOP_WIDTH,LOOP_START,LOOP_MARKS,LOOP_TREE,LOOP_FINAL,
+import {LoopAuthority,LOOP_WIDTH,LOOP_START,LOOP_MARKS,markPosition,LOOP_TREE,LOOP_FINAL,
  LOOP_GEOMETRY,SUSPENSION,SUSPENSION_LANDING_Y,UPPER_BRANCH,SUMMIT_BRANCH,
  upperLandingY,summitLandingY,LOOP_CYCLE_MS,LOOP_BLACKOUT_MS,barriers,
  layoutReachable,validLoop,windGuide,correctRoute,safeReposition,
@@ -13,7 +13,7 @@ const action=(seat:Seat,kind:'lever'|'shoot'|'dash'|'switch'|'support'|'detach',
  a.act(seat,{kind,facing:1},p,now);
 assert.equal(LOOP_WIDTH,11400,'Etapa 22 triples the real forest world');
 assert.ok(LOOP_START.every(q=>q.x>LOOP_WIDTH*.45&&q.x<LOOP_WIDTH*.56&&q.y===606));
-assert.ok(LOOP_MARKS[1].x-LOOP_MARKS[0].x>1800);
+assert.ok(markPosition(a.world,1).x-LOOP_MARKS[0].x>1800);
 assert.ok(LOOP_MARKS[2].x-LOOP_MARKS[1].x>1100);
 assert.ok(SUSPENSION.gapEnd-SUSPENSION.gapStart>600);
 assert.ok(SUSPENSION.width>=SUSPENSION.gapEnd-SUSPENSION.gapStart+40);
@@ -38,15 +38,15 @@ for(const layout of [0,1,2] as const){
  assert.equal(blocks.filter((b,i)=>i>0&&i<4&&b.enabled).length,1);
  assert.ok(LOOP_START.every(q=>blocks.every(b=>!b.enabled||Math.abs(q.x-b.x)>50)));
 }
-go(1,LOOP_MARKS[1].x-210);
+go(1,markPosition(a.world,1).x-210);
 assert.equal(action(1,'shoot',62400),false,'Lia blocked until Téo');
-go(2,LOOP_MARKS[2].x-180);
+go(2,markPosition(a.world,2).x-180);
 action(2,'dash',62600);
 go(2,LOOP_MARKS[2].x,LOOP_MARKS[2].y);
 assert.equal(action(2,'switch',62800),false,'Nino blocked until Lia');
-go(0,LOOP_MARKS[0].x,LOOP_MARKS[0].y);
+go(0,markPosition(a.world,0).x,LOOP_MARKS[0].y);
 assert.equal(action(0,'lever',63000),true);
-go(1,LOOP_MARKS[1].x-240,606);
+go(1,markPosition(a.world,1).x-240,606);
 assert.equal(action(1,'shoot',63500),true);
 go(2,LOOP_MARKS[2].x-180,606);
 action(2,'dash',65000);
