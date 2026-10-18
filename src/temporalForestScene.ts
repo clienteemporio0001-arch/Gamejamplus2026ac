@@ -315,7 +315,7 @@ export class TemporalForestScene extends Phaser.Scene {
   this.stormShade.setFillStyle([0x1b3b46,0x254d64,0x112639][w.layout])
    .setAlpha([.12,.20,.27][w.layout]);
   this.pools.forEach((p,i)=>{
-    p.x=TEMP_LAYOUTS[w.layout].puddles[i];
+    this.tweens.add({targets:p,x:TEMP_LAYOUTS[w.layout].puddles[i],duration:1800,ease:'Sine.easeInOut'});
     p.setScale(w.layout===2?1.2:w.layout===1?1.1:1,1);
   });
   this.echoVisuals.forEach((visual,i)=>{
@@ -368,8 +368,8 @@ export class TemporalForestScene extends Phaser.Scene {
    if(pause){this.physics.pause();this.pending.clear();gameKeys.clear();clearTouch(this.touch);}
    else this.physics.resume();
   }
-  this.dark.setAlpha(pause?(w.deadUntil>0?.91:.93):0);
-  this.darkText.setVisible(pause);
+  this.dark.setAlpha(w.deadUntil>0?.91:0);
+  this.darkText.setVisible(pause&&w.deadUntil>0);
   if(pause){
    this.darkText.setText(w.deadUntil>0?
      'UM AMIGO CAIU NA TEMPESTADE\nNINGUÉM FICA PARA TRÁS':
