@@ -108,7 +108,7 @@ export class TreetopArt {
     duration:2400+i%7*380,yoyo:true,repeat:-1});
   }
  }
- branch(platform:TreePlatform):void{
+ branch(platform:TreePlatform):Phaser.GameObjects.Graphics{
   const g=this.scene.add.graphics().setDepth(platform.puzzle?17:16);
   const {x,y,width,height}=platform;
   const l=x-width/2,r=x+width/2,top=y-height/2;
@@ -161,6 +161,7 @@ export class TreetopArt {
     g.lineBetween(xx,top-5,xx+4,top-12);
    }
   }
+  return g;
  }
  shelter(zone:TreeShelter):void{
   const {x,y,radius}=zone;
