@@ -1,4 +1,5 @@
 import Peer, { type DataConnection } from 'peerjs';
+import {multiplayerPoseBounds} from './multiplayerPoseBounds';
 import { PuzzleAuthority, initialWorld, validWorld, validAction, CHECKPOINTS, type WorldState, type PuzzleAction } from './puzzles';
 import { RiverAuthority, initialRiver, validRiver, RIVER_CHECKPOINTS, RIVER_SPAWNS, type RiverWorld } from './river';
 import { SkillFxGate, validSkillFx, type SkillFx } from './effects';
@@ -521,8 +522,11 @@ export class Network {
         const now = performance.now();
         if (now - this.lastReceived[seat] < 35) return; // ~28 Hz no máximo por convidado.
         this.lastReceived[seat] = now;
-        if (msg.x > (this.experience==='loop'&&this.level===4?FIRE_WIDTH:
-          this.experience==='loop'&&this.level===3?TREE_WIDTH:this.experience==='loop'&&this.level===2?TEMP_WIDTH:this.level <= 2 ? FOREST_WIDTH : 1200)) return;
+        // The host must use the SAME world limits as the guest. Previously
+        // level 1 of the new adventure fell back to FOREST_WIDTH (4300),
+        // silently rejecting/clamping guests spawned around x=5600.
+        const bounds=multiplayerPoseBounds(this.experience,this.level);
+        if(msg.x<0||msg.x>bounds.width||msg.y<0||msg.y>bounds.height)return;
         if (this.experience!=='loop' && this.level === 1 && this.forest.restartAt > 0) return;
         if(this.experience==='loop'&&(this.level===4?this.fire.supporting[seat]:this.level===3?this.treetop.supporting[seat]:this.level===2?this.temporal.supporting[seat]:this.loop.supporting[seat])!==null)return;
         if (this.experience!=='loop' && this.level === 1 && this.forest.supporting[seat] !== null) return;
@@ -836,11 +840,12 @@ export class Network {
     const now = performance.now();
     if (now - this.lastInput < 50) return;
     this.lastInput = now;
-    const msg = { t: 'pose' as const, x: Math.max(0, Math.min(this.experience==='loop'&&this.level===4?FIRE_WIDTH:
-      this.experience==='loop'&&this.level===3?TREE_WIDTH:
-      this.experience==='loop'&&this.level===2?TEMP_WIDTH:this.level <= 2 ? FOREST_WIDTH : 1200, x)),
-      y: Math.max(0, Math.min(this.experience==='loop'&&this.level===4?FIRE_HEIGHT:
-        this.experience==='loop'&&this.level===3?TREE_HEIGHT:700, y)), vx, vy };
+    // Report the real coordinates in each biome; never clamp the new
+    // 11,400px forest to the old 4,300px map.
+    const bounds=multiplayerPoseBounds(this.experience,this.level);
+    const msg = { t: 'pose' as const,
+      x: Math.max(0,Math.min(bounds.width,x)),
+      y: Math.max(0,Math.min(bounds.height,y)),vx,vy };
     if (!finite(x) || !finite(y) || !finite(vx) || !finite(vy)) return;
     if(this.experience==='loop'&&(this.level===4?this.fire.supporting[this.localSeat]:this.level===3?this.treetop.supporting[this.localSeat]:this.level===2?this.temporal.supporting[this.localSeat]:this.loop.supporting[this.localSeat])!==null)return;
     if (this.experience!=='loop' && this.level === 1 && (this.forest.restartAt > 0 || this.forest.supporting[this.localSeat] !== null)) return;
