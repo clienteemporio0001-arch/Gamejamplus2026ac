@@ -790,7 +790,8 @@ export class Network {
     const now = performance.now();
     if (now - this.lastInput < 50) return;
     this.lastInput = now;
-    const msg = { t: 'pose' as const, x: Math.max(0, Math.min(this.experience==='loop'&&this.level===2?TEMP_WIDTH:this.level <= 2 ? FOREST_WIDTH : 1200, x)),
+    const msg = { t: 'pose' as const, x: Math.max(0, Math.min(this.experience==='loop'&&this.level===3?TREE_WIDTH:
+      this.experience==='loop'&&this.level===2?TEMP_WIDTH:this.level <= 2 ? FOREST_WIDTH : 1200, x)),
       y: Math.max(0, Math.min(this.experience==='loop'&&this.level===3?TREE_HEIGHT:700, y)), vx, vy };
     if (!finite(x) || !finite(y) || !finite(vx) || !finite(vy)) return;
     if(this.experience==='loop'&&(this.level===3?this.treetop.supporting[this.localSeat]:this.level===2?this.temporal.supporting[this.localSeat]:this.loop.supporting[this.localSeat])!==null)return;
@@ -952,14 +953,10 @@ export class Network {
     }
     if (!this.playing || this.completed) return;
     if(this.experience==='loop'&&this.level===3){
-      const now=Date.now(),w=this.treetopAuthority.world;
+      const now=Date.now();
       if(this.treetopAuthority.tickResources(this.poses,now))this.shareTreetop();
-      // Death, blackout and collective resets belong to the host, never to a guest.
-      const falling=this.poses.some(p=>p.y>=TREE_HEIGHT-80&&p.vy>0);
-      if(falling&&now>=this.treetopSafeUntil&&w.deadUntil===0&&w.blackoutUntil<=now){
-        w.deadUntil=now+1500;w.health=[0,0,0];this.shareTreetop();
-      }
-      const result=this.treetopAuthority.tick(this.poses,now);
+      // Fatal drops and gusts are resolved by the same host authority.
+      const result=this.treetopAuthority.tick(this.poses,now,this.treetopSafeUntil);
       if(result.poses){
         this.treetopSafeUntil=now+1700;
         this.poses=result.poses.map(p=>({...p}));
