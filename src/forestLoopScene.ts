@@ -759,10 +759,10 @@ export class ForestLoopScene extends Phaser.Scene {
         leaf.setPosition(field.x,field.y).setRotation(field.angle);
         leaf.alpha=field.direction===0?.28:.44+(i%3)*.08;
       });
-      this.windVines.forEach(vine=>{
+      this.windVines.forEach((vine,i)=>{
         const visible=vine.x>=left-65&&vine.x<=right+65;
         if(vine.visible!==visible)vine.setVisible(visible);
-        if(visible)vine.rotation=swayAt(w,vine.x,time,0);
+        if(visible)vine.rotation=swayAt(w,vine.x,time,i);
       });
       this.windFog.forEach((mist,i)=>{
         const anchorX=210+i*(LOOP_WIDTH-420)/6;
