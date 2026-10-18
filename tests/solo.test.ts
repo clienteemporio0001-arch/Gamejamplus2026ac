@@ -34,7 +34,7 @@ for(const path of ['src/forestScene.ts','src/journeyScene.ts','src/lateScene.ts'
    ok(s.includes(token),path+' integra '+token);
 }
 for(const label of ['JOGAR SOZINHO','MULTIPLAYER ONLINE','FERRAMENTAS DE DESENVOLVIMENTO',
-  'TESTAR FLORESTA MUTÁVEL','REINICIAR TENTATIVA','VOLTAR AO MENU'])
+  'TESTAR FASE 01 · BOCA DA NOITE','REINICIAR TENTATIVA','VOLTAR AO MENU'])
  ok(ui.includes(label),'interface '+label);
 ok(ui.includes("button('dev-classic-'+level"),'seletor clássico dentro do desenvolvimento');
 ok(ui.includes('net.startSolo(level)'),'fases antigas continuam testáveis');
