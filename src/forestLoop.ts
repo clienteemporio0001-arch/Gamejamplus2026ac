@@ -143,7 +143,7 @@ export const near=(pose:Pose,x:number,y:number,dx=64,dy=88)=>
   Math.abs(pose.x-x)<=dx&&Math.abs(pose.y-y)<=dy;
 /** Shared visible assembly zone. World visuals, HUD and authority use these dimensions. */
 export const TRAIL_MEET_RADIUS_X=142;
-export const TRAIL_MEET_MIN_Y=555,TRAIL_MEET_MAX_Y=652;
+export const TRAIL_MEET_MIN_Y=527,TRAIL_MEET_MAX_Y=652;
 export const safeForRoute=(p:Pose)=>p.y>=TRAIL_MEET_MIN_Y&&p.y<=TRAIL_MEET_MAX_Y
   &&Math.abs(p.vy)<180&&Math.abs(p.vx)<305;
 export function trailOccupants(poses:readonly Pose[],route:Route):Seat[]{
