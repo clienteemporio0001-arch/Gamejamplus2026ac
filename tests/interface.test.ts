@@ -29,8 +29,8 @@ ok(main.includes("net.isSolo?'<nav class=\"loop-seat-switch\""),'seletor solo de
 ok(main.includes('ensureMobileControls();')&&
    main.includes("net.on('solo-seat',seat=>updateMobileCharacter(seat))"),
    'touch permanece montado e é atualizado na troca de personagem');
-ok(main.includes("net.on('change',()=>{if(net.role==='idle')info=''"),
-  'notices eliminados quando retorna ao menu');
+ok(main.includes("if(net.role==='idle'){info='';devSession=false;closeOverlay();}"),
+  'notices e painel de teste eliminados quando retorna ao menu');
 ok(main.includes("if(net.role==='idle')return;info=text;render()"),
   'aviso novo só aparece na sessão atual');
 ok(!main.includes('soloSetup'),'não mantém dois menus solo conflitantes');
