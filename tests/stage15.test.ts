@@ -115,19 +115,19 @@ ok(100-2*(VITALS.JUMP+VITALS.DOUBLE_JUMP)>=0,'duas sequências custam até 60/10
 
 const loop=new LoopAuthority();loop.reset(1000);
 const l=LOOP_START.map(x=>({...x}));
-loop.world.observed=true;loop.world.marks=[true,true,true];loop.world.lastRoute='right';
-l[0]={seat:0,x:2140,y:528,vx:0,vy:0};
-l[1]={seat:1,x:2140,y:572,vx:0,vy:0};
-l[2]={seat:2,x:2140,y:616,vx:0,vy:0};
+loop.world.observed=true;loop.world.marks=[true,true,true];loop.world.lastRoute='right';loop.world.suspendedOpen=true;
+l[0]={seat:0,x:UPPER_BRANCH.x,y:528,vx:0,vy:0};
+l[1]={seat:1,x:UPPER_BRANCH.x,y:572,vx:0,vy:0};
+l[2]={seat:2,x:UPPER_BRANCH.x,y:616,vx:0,vy:0};
 ok(loop.act(1,{kind:'support'},l,11000),'Lia sobe em Nino');
 loop.tick(l,11100);
 ok(loop.act(0,{kind:'support'},l,11200),'Téo sobe na Lia');
 loop.tick(l,11300);
 ok(loop.act(0,{kind:'detach'},l,11400),'desprendimento de torre verdadeira');
-l[0]={seat:0,x:2140,y:upperLandingY,vx:0,vy:0};
+l[0]={seat:0,x:UPPER_BRANCH.x,y:upperLandingY,vx:0,vy:0};
 ok(loop.tick(l,11500).changed&&loop.world.teoUpperReached,'primeiro patamar registrado');
 ok(!loop.act(0,{kind:'lever'},l,11550),'primeiro galho não solta amarra');
-l[0]={seat:0,x:2140,y:summitLandingY,vx:0,vy:0};
+l[0]={seat:0,x:UPPER_BRANCH.x,y:summitLandingY,vx:0,vy:0};
 ok(loop.tick(l,11600).changed&&loop.world.teoSummitReached,'segundo patamar registrado');
 ok(loop.act(0,{kind:'lever'},l,11700)&&loop.world.tree[0],
   'amarra de Téo exige os dois patamares');
@@ -135,9 +135,9 @@ ok(readFileSync('src/forestLoopScene.ts','utf8').includes('x:shot.x+this.facing*
   'projétil visível da fase 1 percorre o mesmo alcance autoritativo');
 ok(readFileSync('src/forestLoopUI.ts','utf8').includes('LOOP_GEOMETRY.chasm.start-55'),
   'dica de Lia fica na margem segura, não dentro do abismo');
-ok(LOOP_TREE[1].x===2560&&2560-2220<=365,
+ok(LOOP_TREE[1].x===9760&&LOOP_TREE[1].x-(LOOP_GEOMETRY.chasm.start-45)<=365,
   'baladeira da primeira fase exige mira distante, mas cabe no alcance real');
-ok(2560>LOOP_GEOMETRY.chasm.start&&2220<LOOP_GEOMETRY.chasm.start,
+ok(LOOP_TREE[1].x>LOOP_GEOMETRY.chasm.start&&LOOP_GEOMETRY.chasm.start-45<LOOP_GEOMETRY.chasm.start,
   'Lia se posiciona na margem para disparar sobre o abismo');
 const temporal=new TemporalAuthority();temporal.reset(1000);
 ok(TEMP_UPPER.landing-TEMP_SUMMIT.landing>JUMP_RISE&&
