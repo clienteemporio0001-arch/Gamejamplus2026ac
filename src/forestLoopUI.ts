@@ -1,14 +1,18 @@
-import type { Seat } from './network';
+import type { Seat,Pose } from './network';
 import { LOOP_MARKS, LOOP_TREE, LOOP_FINAL, LOOP_GEOMETRY, UPPER_BRANCH, upperLandingY, summitLandingY, allDone, windGuide,
-  SUSPENSION,SUSPENSION_LANDING_Y,markPosition,type LoopWorld } from './forestLoop';
+  SUSPENSION,SUSPENSION_LANDING_Y,markPosition,trailOccupants,correctRoute,TRAIL_MEET_RADIUS_X,type LoopWorld } from './forestLoop';
 
 /** UI copy is pure data: no world coordinates are used for the fixed-screen HUD. */
 export type LoopObjective={title:string;progress:string};
-export function loopObjective(w:LoopWorld):LoopObjective{
+export function loopObjective(w:LoopWorld,poses:readonly Pose[]=[]):LoopObjective{
   if(w.completed)return {title:'A equipe encontrou a saída.',progress:'3 / 3'};
   if(!w.observed)return {title:'Observe os marcos da floresta.',progress:'Memorize os três'};
   if(!allDone(w.marks))return {title:'Algo mudou. Sigam o vento.',progress:'Marcos '+w.marks.filter(Boolean).length+'/3'};
-  if(w.lastRoute!=='right')return {title:'Encontrem a passagem verdadeira.',progress:'Três amigos juntos'};
+  if(w.lastRoute!=='right'){
+    const route=correctRoute(w.layout),count=trailOccupants(poses,route).length;
+    return {title:'TRILHAS LIBERADAS! SIGAM O VENTO.',
+      progress:(route==='oca'?'ÁRVORE OCA':'PEDRA RACHADA')+' · '+count+'/3 AMIGOS'};
+  }
   if(!w.suspendedOpen)return {title:'Movam juntos a plataforma suspensa.',
     progress:'Mecanismos '+w.suspended.filter(Boolean).length+'/3'};
   if(!w.bridge)return {title:'Trabalhem juntos para derrubar a árvore.',progress:'Amarras '+w.tree.filter(Boolean).length+'/3'};
@@ -27,7 +31,7 @@ export const regionTitle=(x:number):string=>
   'TRILHA DA SAÍDA';
 
 /** Only one interaction prompt, within reach, for the currently selected character. */
-export function loopContext(w:LoopWorld,seat:Seat,x:number,y:number,now=Date.now()):string{
+export function loopContext(w:LoopWorld,seat:Seat,x:number,y:number,now=Date.now(),poses:readonly Pose[]=[]):string{
   if(w.completed||w.deadUntil>0||w.blackoutUntil>now)return '';
   const near=(tx:number,ty:number,radius=100,dy=100)=>
     Math.abs(x-tx)<=radius&&Math.abs(y-ty)<=dy;
@@ -38,8 +42,13 @@ export function loopContext(w:LoopWorld,seat:Seat,x:number,y:number,now=Date.now
     if(seat===2&&near(point.x-155,604,115,85))return 'SHIFT → E · Tronco em arco';
   }
   if(allDone(w.marks)&&w.lastRoute!=='right'){
-    if(near(LOOP_GEOMETRY.portal.oca,606,135,85))return 'Passagem da árvore oca · Reúnam os três';
-    if(near(LOOP_GEOMETRY.portal.pedra,606,135,85))return 'Passagem da pedra rachada · Reúnam os três';
+    for(const route of ['oca','pedra'] as const){
+      const center=LOOP_GEOMETRY.portal[route];
+      if(!near(center,606,TRAIL_MEET_RADIUS_X,86))continue;
+      const count=trailOccupants(poses,route).length;
+      const name=route==='oca'?'ÁRVORE OCA':'PEDRA RACHADA';
+      return 'REÚNAM OS TRÊS AQUI · '+name+' · '+count+'/3 AMIGOS';
+    }
   }
   if(w.lastRoute==='right'&&!w.suspendedOpen){
     if(seat===0&&!w.suspended[0]&&near(SUSPENSION.lever.x,
