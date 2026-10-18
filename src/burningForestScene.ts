@@ -128,7 +128,7 @@ export class BurningForestScene extends Phaser.Scene {
    this.solo.select(this.net.localSeat??0);
    this.off.push(this.net.on('solo-seat',seat=>{
     this.solo?.select(seat);const active=this.solo!.active(seat);
-    this.local=active.actor;this.body=active.body;this.pending.clear();
+    this.local=active.actor;this.body=active.body;this.cameras.main.startFollow(this.local,false,.085,.10,0,-24);this.pending.clear();
     this.jumps=0;this.pendingJump=false;this.dashUntil=0;this.hud?.();
    }));
   }
@@ -136,7 +136,8 @@ export class BurningForestScene extends Phaser.Scene {
   this.cameras.main.setZoom(Math.max(.84,Math.min(1.3,
    cameraZoomFor({width:this.scale.gameSize.width,height:this.scale.gameSize.height},
     isCoarseDevice())*1.07)));
-  this.cameras.main.startFollow(this.local,false,.09,.09,0,-60);
+  this.cameras.main.startFollow(this.local,false,.085,.10,0,-24);
+  this.cameras.main.setDeadzone(Math.min(155,this.scale.gameSize.width*.17),Math.min(100,this.scale.gameSize.height*.18));
   this.cursors=this.input.keyboard?.createCursorKeys();
   this.keys=this.input.keyboard?.addKeys('A,D,E') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
   this.pipo=new PipoGuide(this,this.net);
@@ -190,6 +191,7 @@ export class BurningForestScene extends Phaser.Scene {
    this.cameras.main.setZoom(Math.max(.84,Math.min(1.3,
     cameraZoomFor({width:size.width,height:size.height},isCoarseDevice())*1.07)));
    this.cameras.main.setBounds(0,0,FIRE_WIDTH,FIRE_HEIGHT);
+   this.cameras.main.setDeadzone(Math.min(155,size.width*.17),Math.min(100,size.height*.18));
    this.dark.setPosition(size.width/2,size.height/2).setSize(size.width+150,size.height+150);
    this.darkText.setPosition(size.width/2,size.height/2);
    this.dangerText.setPosition(size.width/2,Math.min(116,size.height*.22));
@@ -342,10 +344,14 @@ export class BurningForestScene extends Phaser.Scene {
   this.missions.update(time,pause);
    this.pipo.update(time,this.local.x,this.local.y,pause);
    this.exitArt?.update(w.logOpen&&w.smokeOpen&&w.treeOpen,this.net.poses,w.health,time);
-  this.cameras.main.followOffset.x=Phaser.Math.Linear(
-   this.cameras.main.followOffset.x,this.facing*42,.035);
-  this.cameras.main.followOffset.y=Phaser.Math.Linear(
-   this.cameras.main.followOffset.y,this.body.velocity.y>100?63:-65,.035);
+  // Favor the direction of escape without shifting the physics body.
+  const camera=this.cameras.main;
+  const viewW=this.scale.gameSize.width/Math.max(.6,camera.zoom);
+  const lookAhead=Math.min(155,viewW*.23);
+  camera.followOffset.x=Phaser.Math.Linear(camera.followOffset.x,
+    -this.facing*lookAhead,.055);
+  camera.followOffset.y=Phaser.Math.Linear(camera.followOffset.y,
+    this.body.velocity.y>170?36:-24,.04);
   this.hud?.();void dt;
  }
  getCooldown():string{return this.net.localSeat===0?'SALTO DUPLO':
