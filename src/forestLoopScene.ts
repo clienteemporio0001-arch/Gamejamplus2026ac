@@ -620,7 +620,8 @@ export class ForestLoopScene extends Phaser.Scene {
         Math.abs(x-SUSPENSION.lever.x)<65&&Math.abs(y-SUSPENSION_LANDING_Y)<22){
         this.net.act({kind:'lever'});return;
       }
-      if(w.observed&&!w.marks[0]&&Math.abs(x-markPosition(w,0).x)<90){
+      if(w.observed&&!w.marks[0]&&Math.abs(x-markPosition(w,0).x)<=68&&
+        Math.abs(y-markPosition(w,0).y)<=87){
         this.net.act({kind:'lever'});return;
       }
       if(allDone(w.marks)&&w.teoSummitReached&&!w.tree[0]&&
@@ -628,7 +629,8 @@ export class ForestLoopScene extends Phaser.Scene {
         Math.abs(x-LOOP_TREE[0].x)<=37){
         this.net.act({kind:'lever'});return;
       }
-      if(w.bridge&&!w.final[0]&&Math.abs(x-LOOP_FINAL[0].x)<95){
+      if(w.bridge&&!w.final[0]&&Math.abs(x-LOOP_FINAL[0].x)<=95&&
+        Math.abs(y-LOOP_FINAL[0].y)<=95){
         this.net.act({kind:'lever'});return;
       }
     }
