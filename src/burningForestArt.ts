@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {paintHero} from './sharedCharacterArt';
 import type {Seat,Pose} from './network';
 import {FIRE_WIDTH,FIRE_HEIGHT,FIRE_SMOKE_ZONE,FIRE_TREE_DANGER,FIRE_TARGETS,
  FIRE_PLATFORMS,fireFlareActive,fireVisualTreePhase,type FirePlatform,type FireWorld} from './burningForest';
@@ -160,33 +161,7 @@ export class BurningForestArt {
   this.figures.push({target,ink:this.scene.add.graphics().setDepth(42),seat});
  }
  private drawFigure(ink:Phaser.GameObjects.Graphics,seat:Seat,pose:Pose,ms:number):void{
-  ink.clear();
-  const move=Math.abs(pose.vx)>25;
-  const sway=Math.sin(ms*(move?.014:.003)+seat)*4;
-  const col=[0x349d69,0xd48446,0x4f91d1][seat];
-  ink.fillStyle(0x0b151b,.95);ink.fillRoundedRect(-17,-24,34,47,7);
-  ink.fillStyle(0x203035);ink.fillRoundedRect(-15,12,12,13,2);
-  ink.fillRoundedRect(4,12,12,13,2);
-  ink.lineStyle(5,0x1c292d);ink.lineBetween(-8,12,-9+sway,24);
-  ink.lineBetween(9,12,8-sway,24);
-  ink.fillStyle(col);ink.fillRoundedRect(-13,-13,26,29,5);
-  ink.lineStyle(5,col);
-  ink.lineBetween(-12,-8,-18-sway,5);
-  ink.lineBetween(12,-8,17+sway,5);
-  ink.fillStyle(0xd5a17d);ink.fillEllipse(0,-26,25,22);
-  ink.fillStyle([0x28452f,0x4b2a29,0x18354c][seat]);ink.fillEllipse(0,-35,30,15);
-  if(seat===0){
-   ink.fillStyle(0x315c34);ink.fillRoundedRect(-19,-38,38,9,3);
-   ink.fillRoundedRect(-11,-49,22,15,3);
-  }else if(seat===1){
-   ink.fillStyle(0x643630);ink.fillEllipse(12,-27,14,27);
-   ink.lineStyle(2,0x342224);ink.lineBetween(15,-24,17,-9);
-  }else{
-   ink.fillStyle(0x295e88);ink.fillRoundedRect(-18,-41,36,14,6);
-   ink.lineStyle(3,0xb3d8ef);ink.strokeRoundedRect(-18,-43,36,24,6);
-  }
-  ink.fillStyle(0xeafff2);ink.fillCircle(5,-26,3);
-  ink.fillStyle(0x12232c);ink.fillCircle(6,-26,1.4);
+  paintHero(ink,seat,ms,pose.vx,pose.vy);
  }
  update(w:FireWorld,poses:readonly Pose[],ms:number,now:number):void{
   this.fire.clear();this.sparks.clear();this.smokeInk.clear();this.embers.clear();
