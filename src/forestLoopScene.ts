@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import {PipoGuide} from './pipoGuide';
+import {CooperativeExitArt} from './cooperativeExitArt';
 import {SUSPENSION,SUSPENSION_LANDING_Y,LOOP_TERRAIN,LOOP_NATURAL_LEDGES,LOOP_LAYOUT_BRANCHES} from './forestLoop';
 import {MissionDirector} from './missionDirector';
 import {FrameProfiler,SCENARIOS} from './performanceDiagnostics';
@@ -29,6 +30,9 @@ export class ForestLoopScene extends Phaser.Scene {
   private bridge!:Phaser.GameObjects.Rectangle;
   private tree!:Phaser.GameObjects.Container;private ropes:Phaser.GameObjects.Graphics[]=[];
   private finalBarrier!:Phaser.GameObjects.Rectangle;
+  private finalBarrierVisual!:Phaser.GameObjects.Graphics;
+  private exitArt?:CooperativeExitArt;
+  private exitOpenedAt=0;
   private marks:Phaser.GameObjects.Container[]=[];
   private routeCurtains:Phaser.GameObjects.Container[]=[];
   private routeLabels:Phaser.GameObjects.Text[]=[];
@@ -338,6 +342,19 @@ export class ForestLoopScene extends Phaser.Scene {
         this.ground(x,LOOP_GEOMETRY.clearing.groundY-48,45,96,i===1?'wood':'stone'))
     ];
     this.finalBarrier=this.ground(LOOP_GEOMETRY.finalGate,363,40,550,'wood');
+    // Artwork and host-aligned collider are independent; no fake wall after unlock.
+    this.finalBarrier.setAlpha(.001);
+    this.finalBarrierVisual=this.add.graphics().setDepth(21)
+      .setPosition(LOOP_GEOMETRY.finalGate,363);
+    this.finalBarrierVisual.fillStyle(0x3d3328,.99);
+    this.finalBarrierVisual.fillRoundedRect(-20,-275,40,550,15);
+    this.finalBarrierVisual.lineStyle(5,0x786348,.95);
+    this.finalBarrierVisual.lineBetween(-8,-265,-8,250);
+    this.finalBarrierVisual.lineBetween(10,-270,12,235);
+    this.finalBarrierVisual.lineStyle(3,0x567b4e,.83);
+    this.finalBarrierVisual.lineBetween(-18,-195,12,-90);
+    this.finalBarrierVisual.lineBetween(10,-45,-17,90);
+    this.exitArt=new CooperativeExitArt(this,1,line=>this.pipo?.warnDanger(line));
     this.createTree();
     for(const seat of [0,1,2] as Seat[]){
       const p=this.net.poses[seat]||LOOP_START[seat];
@@ -510,6 +527,7 @@ export class ForestLoopScene extends Phaser.Scene {
     const transformationStarted=w.blackoutUntil>0&&this.w.blackoutUntil!==w.blackoutUntil;
     const wasUnlocked=allDone(this.w.marks),previousRouteCount=this.w.routeCount;
     const leverWasReleased=this.w.suspended[0];
+    const finalWasOpen=this.w.exit;
     const oldSupporting=[...this.w.supporting];
     this.w={...w,marks:[...w.marks],tree:[...w.tree],final:[...w.final],
       suspended:[...w.suspended],supporting:[...w.supporting]};
@@ -571,7 +589,26 @@ export class ForestLoopScene extends Phaser.Scene {
     const walls=barriers(w);
     this.blockers.forEach((b,i)=>this.active(b,walls[i].enabled));
     this.layoutLedges.forEach((ledge,i)=>this.active(ledge,LOOP_LAYOUT_BRANCHES[i].layout===w.layout));
+    if(!finalWasOpen&&w.exit&&this.finalBarrierVisual){
+      this.exitOpenedAt=this.time.now;
+      const trunk=this.finalBarrierVisual;
+      this.tweens.add({targets:trunk,x:LOOP_GEOMETRY.finalGate+8,
+        angle:3,duration:240,yoyo:true,repeat:2,
+        onComplete:()=>{
+          this.tweens.add({targets:trunk,y:-360,alpha:0,duration:980,
+            ease:'Sine.easeInOut'});
+        }});
+    }
+    // The 1–2 second visual lift is cosmetic. Once the host opens the exit
+    // the corresponding STATIC collider is disabled in the same snapshot.
     this.active(this.finalBarrier,!w.exit);
+    if(w.exit&&this.finalBarrierVisual.visible){
+      if(this.exitOpenedAt===0){
+        // Reconnected guests see no historical obstacle.
+        this.finalBarrierVisual.setVisible(false);
+      }else if(this.time.now-this.exitOpenedAt>1800)
+        this.finalBarrierVisual.setVisible(false);
+    }
     this.active(this.bridge,w.bridge);
     this.ropes.forEach((rope,i)=>rope.setVisible(!w.tree[i]));
     const tint=[0x0c3f46,0x082d3c,0x2c3f60][w.layout];
@@ -843,6 +880,7 @@ export class ForestLoopScene extends Phaser.Scene {
         });
       });
     }
+    this.exitArt?.update(w.exit,this.net.poses,w.health,time);
     this.art.update(time);
     if(this.frameMetricsOn){
       const end=performance.now();
