@@ -15,12 +15,14 @@ import {gameKeys} from './keyboard';
 import type {VitalAction} from './loopVitals';
 import {TREE_WIDTH,TREE_HEIGHT,TREE_START,TREE_PLATFORMS,TREE_SHELTERS,TREE_TARGETS,
  TREE_GRAVITY,TREE_JUMP,TREE_SPEED,treePlatforms,treeWindVelocity,treeExposure,treeCameraZoom,
+ treeTowerNearBase,treeTowerNearTop,
  type TreeWindPhase,type TreeWorld} from './treetopForest';
 
 /** Fase 3 da aventura principal. Nenhum chão é criado abaixo dos galhos. */
 export class TreetopForestScene extends Phaser.Scene {
  private net:Network;private touch:TouchInput;private hud?:()=>void;
  private w:TreeWorld;
+ private markers:Array<{ring:Phaser.GameObjects.Arc;stage:'bridge'|'tower'|'time';seat:Seat}>=[];
  private platforms:Phaser.GameObjects.Rectangle[]=[];
  private skins:Phaser.GameObjects.Graphics[]=[];
  private art!:TreetopArt;
@@ -63,12 +65,16 @@ export class TreetopForestScene extends Phaser.Scene {
     TREE_TARGETS.time.lia.y,.67);
   officialLandmark(this,'arch','canopy',TREE_TARGETS.time.nino.x,239,
     TREE_TARGETS.time.nino.y,.57);
-  for(const target of [TREE_TARGETS.bridge.teo,TREE_TARGETS.bridge.lia,TREE_TARGETS.bridge.nino,
-    TREE_TARGETS.tower.top,TREE_TARGETS.time.lia,TREE_TARGETS.time.teo,TREE_TARGETS.time.nino]){
+  for(const [target,stage,owner] of [
+   [TREE_TARGETS.bridge.teo,'bridge',0],[TREE_TARGETS.bridge.lia,'bridge',1],
+   [TREE_TARGETS.bridge.nino,'bridge',2],[TREE_TARGETS.tower.base,'tower',1],
+   [TREE_TARGETS.tower.top,'tower',0],[TREE_TARGETS.time.lia,'time',1],
+   [TREE_TARGETS.time.teo,'time',0],[TREE_TARGETS.time.nino,'time',2]
+  ] as const){
    const ring=this.add.circle(target.x,target.y-12,11,0xf2d899,.2)
-     .setStrokeStyle(2,0xe1d59e,.82).setDepth(24);
-   this.tweens.add({targets:ring,alpha:.32,scale:1.16,duration:1450,
-    yoyo:true,repeat:-1});
+    .setStrokeStyle(2,0xe1d59e,.82).setDepth(24);
+   this.markers.push({ring,stage,seat:owner});
+   this.tweens.add({targets:ring,alpha:.32,scale:1.16,duration:1450,yoyo:true,repeat:-1});
   }
  }
  create():void{
@@ -210,9 +216,7 @@ export class TreetopForestScene extends Phaser.Scene {
  }
  private interact(seat:Seat):void{
   const p=this.local,w=this.w;
-  const base=TREE_TARGETS.tower.base,top=TREE_TARGETS.tower.top;
-  const nearBase=Math.abs(p.x-base.x)<=105&&Math.abs(p.y-base.y)<=105;
-  const nearTop=Math.abs(p.x-top.x)<=64&&Math.abs(p.y-top.y)<=35;
+  const nearBase=treeTowerNearBase(p),nearTop=treeTowerNearTop(p);
   if(seat===0){
    // The actual upper mechanism takes priority when Téo has reached it.
    if(w.bridgeOpen&&!w.ropeOpen&&nearTop&&w.supporting[0]===null){
@@ -329,6 +333,14 @@ export class TreetopForestScene extends Phaser.Scene {
       (w.windDirection===1?'🌪 RAJADA FORTE ▶':'◀ RAJADA FORTE 🌪'):'');
   this.windStatus.setVisible(w.windPhase!=='calm'&&!pause);
   this.windStatus.setColor(w.windPhase==='gust'?'#ffe4a0':'#dff5bd');
+  this.markers.forEach(({ring,stage,seat:owner})=>{
+   const active=stage==='bridge'?!w.bridgeOpen&&!w.bridge[owner]:
+    stage==='tower'?w.bridgeOpen&&!w.ropeOpen&&
+     (owner===1?!w.tower[1]:w.tower[0]&&w.tower[1]&&!w.tower[2]):
+     w.ropeOpen&&!w.finalOpen&&!w.time[owner]&&
+     (owner===1?w.layout===0:owner===0?w.layout===1:w.layout===2);
+   ring.setVisible(active);
+  });
   this.hint.setVisible(false);
   this.missions.update(time,pause);
    this.pipo.update(time,this.local.x,this.local.y,pause);
