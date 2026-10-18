@@ -75,6 +75,12 @@ export const LOOP_MARKS=[
   {x:3450,y:598,seat:1,name:'PEDRA RACHADA'},
   {x:4750,y:589,seat:2,name:'TRONCO EM ARCO'},
 ] as const;
+/** Stable landmark identity; layout chooses a reachable location inside its own sector. */
+export const MARK_OFFSETS=[[0,82,-72],[0,-80,76],[0,98,-88]] as const;
+export function markPosition(w:Pick<LoopWorld,'layout'>,index:number):{x:number;y:number}{
+ const source=LOOP_MARKS[index];
+ return {x:source.x+MARK_OFFSETS[index][w.layout],y:source.y};
+}
 export const LOOP_TREE=[
   {x:SUMMIT_BRANCH.anchorX,y:summitLandingY,seat:0},{x:9760,y:574,seat:1},{x:9442,y:592,seat:2}
 ] as const;
@@ -139,12 +145,12 @@ export function correctRoute(layout:Layout):Route{return ROUTES[layout].correct;
 export function windGuide(w:LoopWorld,seat:Seat,x:number):{direction:-1|0|1;target:number;hint:string}{
   let target=0,hint='';
   if(!w.observed){
-    target=LOOP_MARKS[0].x;
+    target=markPosition(w,0).x;
     hint='EXPLOREM À ESQUERDA E MEMORIZEM A ÁRVORE OCA, A PEDRA E O ARCO.';
   }else if(!allDone(w.marks)){
     const next=w.marks.findIndex(value=>!value);
-    target=LOOP_MARKS[next].x-(next===1?210:0);
-    hint='MARCOS CONHECIDOS: OBSERVEM O QUE MUDOU DEPOIS DO APAGÃO.';
+    target=markPosition(w,next).x-(next===1?210:0);
+    hint='MARCOS CONHECIDOS: ENCONTREM A NOVA POSIÇÃO DE CADA UM.';
   }else if(w.lastRoute!=='right'&&x<LOOP_GEOMETRY.gate+15){
     target=LOOP_GEOMETRY.portal[ROUTES[w.layout].correct];
     hint='PASSAGEM VERDADEIRA: '+(ROUTES[w.layout].correct==='oca'?'ÁRVORE OCA':'PEDRA RACHADA')+
@@ -312,7 +318,7 @@ export class LoopAuthority{
         w.suspendedTo===w.suspendedX&&shoot(SUSPENSION.lia)){
         w.suspended[1]=true;this.slideSuspension(SUSPENSION.liaX,now);return true;
       }
-      if(w.observed&&w.marks[0]&&!w.marks[1]&&shoot(LOOP_MARKS[1])){w.marks[1]=true;return true;}
+      if(w.observed&&w.marks[0]&&!w.marks[1]&&shoot(markPosition(w,1))){w.marks[1]=true;return true;}
       if(w.suspendedOpen&&allDone(w.marks)&&!w.tree[1]&&shoot(LOOP_TREE[1])){w.tree[1]=true;this.checkTree(now);return true;}
       if(w.bridge&&!w.final[1]&&shoot(LOOP_FINAL[1])){w.final[1]=true;this.checkExit();return true;}
       return false;
@@ -324,7 +330,7 @@ export class LoopAuthority{
         Math.abs(p.vx)<155&&Math.abs(p.vy)<65){
         w.suspended[0]=true;this.slideSuspension(SUSPENSION.teoX,now);return true;
       }
-      if(w.observed&&!w.marks[0]&&near(p,LOOP_MARKS[0].x,LOOP_MARKS[0].y,68,87)){
+      if(w.observed&&!w.marks[0]&&near(p,markPosition(w,0).x,markPosition(w,0).y,68,87)){
         w.marks[0]=true;return true;
       }
       if(w.suspendedOpen&&w.stackMilestone&&w.teoUpperReached&&w.teoSummitReached&&w.climbReady
@@ -345,7 +351,7 @@ export class LoopAuthority{
         w.suspended[2]=true;this.slideSuspension(SUSPENSION.finalX,now);
         this.lastSwitch[2]=now;return true;
       }
-      if(w.observed&&w.marks[0]&&w.marks[1]&&!w.marks[2]&&near(p,LOOP_MARKS[2].x,LOOP_MARKS[2].y,67,85)){
+      if(w.observed&&w.marks[0]&&w.marks[1]&&!w.marks[2]&&near(p,markPosition(w,2).x,markPosition(w,2).y,67,85)){
         w.marks[2]=true;this.lastSwitch[2]=now;return true;
       }
       if(w.suspendedOpen&&allDone(w.marks)&&!w.tree[2]&&near(p,LOOP_TREE[2].x,LOOP_TREE[2].y,65,85)){
