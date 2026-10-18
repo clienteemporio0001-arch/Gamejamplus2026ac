@@ -62,6 +62,16 @@ export class IntroScene extends Phaser.Scene {
       fontFamily: 'Arial', fontSize: '18px', color: '#edffce', fontStyle: 'bold'
     }).setOrigin(.5).setDepth(10);
     this.tweens.add({ targets: label, alpha: .5, yoyo: true, repeat: -1, duration: 1300 });
+    const resize=(size:Phaser.Structs.Size)=>{
+      // A 1200 × 700 cinematic is letterboxed, NEVER stretched or cropped.
+      const zoom=Math.max(.25,Math.min(1.25,size.width/1200,size.height/700));
+      this.cameras.main.setZoom(zoom);
+      this.cameras.main.centerOn(600,350);
+    };
+    this.scale.on(Phaser.Scale.Events.RESIZE,resize);
+    resize(this.scale.gameSize);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>
+      this.scale.off(Phaser.Scale.Events.RESIZE,resize));
     this.setPanel(0);
     // A duração é decorativa; quem libera a próxima fase é o host via estado de rede.
   }
