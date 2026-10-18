@@ -84,10 +84,16 @@ expect('Algo mudou. Sigam o vento.','Marcos 0/3');
 ok(loopContext(w,0,LOOP_MARKS[0].x,480,1001).includes('E'),
   'Téo vê comando próximo da árvore');
 ok(loopContext(w,0,1900,606,1001)==='','sem comandos de puzzle fora de alcance');
+ok(loopContext(w,1,LOOP_MARKS[1].x-160,606,1001)==='',
+  'Lia não vê comando de ação bloqueada antes de Téo');
+w.marks[0]=true;
 ok(loopContext(w,1,LOOP_MARKS[1].x-160,606,1001).includes('J'),
-  'Lia vê comando somente perto da pedra');
+  'Lia vê comando após Téo concluir a árvore');
+ok(loopContext(w,2,LOOP_MARKS[2].x-150,606,1001)==='',
+  'Nino não recebe comando antes de Lia');
+w.marks[1]=true;
 ok(loopContext(w,2,LOOP_MARKS[2].x-150,606,1001).includes('SHIFT'),
-  'Nino vê comando somente perto da raiz');
+  'Nino recebe comando depois dos dois marcos anteriores');
 w.marks=[true,true,true];
 expect('Encontrem a passagem verdadeira.','Três amigos juntos');
 w.lastRoute='right';
