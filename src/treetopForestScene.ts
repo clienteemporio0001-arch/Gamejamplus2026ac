@@ -203,8 +203,8 @@ export class TreetopForestScene extends Phaser.Scene {
    if(pause){this.physics.pause();this.pending.clear();gameKeys.clear();clearTouch(this.touch);}
    else this.physics.resume();
   }
-  this.dark.setAlpha(pause?.91:0);
-  this.darkText.setVisible(pause);
+  this.dark.setAlpha(w.deadUntil>0?.91:0);
+  this.darkText.setVisible(pause&&w.deadUntil>0);
   if(pause){
    this.darkText.setText(w.deadUntil>0?(w.deathByGust?'A RAJADA DERRUBOU UM AMIGO\nNINGUÉM FICA PARA TRÁS':
     'UM AMIGO CAIU NO VAZIO\nNINGUÉM FICA PARA TRÁS'):
