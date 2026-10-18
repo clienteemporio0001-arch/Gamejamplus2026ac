@@ -37,7 +37,7 @@ export class BurningForestAudio {
  private mix(phase:'calm'|'warning'|'impact'):void{
   if(!this.ctx||!this.filter||!this.master)return;
   const now=this.ctx.currentTime;
-  const amp=(phase==='impact'?.13:phase==='warning'?.072:.028)*audioLevel('sfx');
+  const amp=(phase==='impact'?.13:phase==='warning'?.072:.028)*audioLevel('ambient');
   this.master.gain.setTargetAtTime(amp,now,.36);
   this.filter.frequency.setTargetAtTime(phase==='impact'?1250:
    phase==='warning'?960:600,now,.4);
