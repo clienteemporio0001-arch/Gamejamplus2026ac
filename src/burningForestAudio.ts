@@ -1,5 +1,6 @@
 import type {FireWorld} from './burningForest';
 import {AUDIO_CHANGE_EVENT,audioLevel} from './audioSettings';
+import {getSharedAudioContext} from './sharedAudio';
 import {fireVisualTreePhase} from './burningForest';
 /** Lightweight, opt-in-by-interaction procedural soundscape for the final act. */
 export class BurningForestAudio {
@@ -22,7 +23,7 @@ export class BurningForestAudio {
    return;
   }
   try{
-   const ctx=new AudioContext();
+   const ctx=getSharedAudioContext();
    const len=Math.floor(ctx.sampleRate*.42),buffer=ctx.createBuffer(1,len,ctx.sampleRate);
    const data=buffer.getChannelData(0);
    for(let i=0;i<len;i++)data[i]=(Math.random()*2-1)*.25;
@@ -72,7 +73,8 @@ export class BurningForestAudio {
   document.removeEventListener('pointerdown',this.unlockHandler);
   document.removeEventListener('keydown',this.unlockHandler);
   window.removeEventListener(AUDIO_CHANGE_EVENT,this.settingsChange);
-  try{this.hiss?.stop();}catch{/* already stopped */}
-  void this.ctx?.close();this.ctx=undefined;
+  try{this.hiss?.stop();this.hiss?.disconnect();this.filter?.disconnect();this.master?.disconnect();}catch{/* already stopped */}
+  // Never close the context shared with music, SFX, and other biomes.
+  this.ctx=undefined;
  }
 }
