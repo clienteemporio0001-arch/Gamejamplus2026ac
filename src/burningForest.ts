@@ -32,6 +32,48 @@ export const FIRE_TARGETS={
 } as const;
 export const FIRE_BRIDGE_GAPS=[{start:1250,end:1550},{start:3890,end:4220}] as const;
 export const FIRE_SMOKE_ZONE={start:2260,end:3090,yMin:490};
+/** Shelters protect from falling embers and nearby ground flames, not smoke or falls. */
+export const FIRE_SHELTERS= [470,1810,2660,3390,4590].map(x=>({x,halfWidth:72,yMin:560})) as ReadonlyArray<{x:number;halfWidth:number;yMin:number}>;
+export function fireSheltered(p:Pick<Pose,'x'|'y'>):boolean{
+ return FIRE_SHELTERS.some(s=>Math.abs(p.x-s.x)<=s.halfWidth&&p.y>=s.yMin);
+}
+/** Lightweight deterministic fireballs; host uses this same schedule for damage. */
+export const FIREBALL_INTERVAL=5700,FIREBALL_WARNING=950,FIREBALL_FALL=1450,FIREBALL_IMPACT=520;
+export type Fireball={lane:number;x:number;y:number;impactY:number;phase:'warning'|'fall'|'impact'};
+const fireballSeed=(n:number)=>{const t=Math.sin(n*127.17+31.7)*43758.5453;return t-Math.floor(t);};
+export function fireballHazards(w:FireWorld,now:number):Fireball[]{
+ if(w.deadUntil>0||w.completed||w.blackoutUntil>now)return [];
+ const elapsed=Math.max(0,now-w.cycleStart),balls:Fireball[]=[];
+ for(let lane=0;lane<14;lane++){
+  const delay=1200+(lane*977)%4300;
+  if(elapsed<delay)continue;
+  const local=elapsed-delay,cycle=Math.floor(local/FIREBALL_INTERVAL);
+  const phaseMs=local%FIREBALL_INTERVAL;
+  if(phaseMs>=FIREBALL_WARNING+FIREBALL_FALL+FIREBALL_IMPACT)continue;
+  const impactX=225+lane*360+(fireballSeed(lane*31+cycle*17)-.5)*114;
+  const top=firePlatforms(w).filter(p=>Math.abs(impactX-p.x)<=p.width/2-8)
+   .reduce((best,p)=>Math.min(best,p.y-p.height/2),675);
+  const impactY=top-9;
+  let phase:Fireball['phase']='warning',x=impactX,y=-75;
+  if(phaseMs>=FIREBALL_WARNING){
+   if(phaseMs<FIREBALL_WARNING+FIREBALL_FALL){
+    phase='fall';
+    const progress=(phaseMs-FIREBALL_WARNING)/FIREBALL_FALL;
+    x=impactX+w.windDirection*(1-progress)*32;
+    y=-75+(impactY+75)*progress;
+   }else{phase='impact';y=impactY;}
+  }
+  balls.push({lane,x,y,impactY,phase});
+ }
+ return balls;
+}
+export function fireballHit(w:FireWorld,p:Pick<Pose,'x'|'y'>,now:number):boolean{
+ if(fireSheltered(p))return false;
+ return fireballHazards(w,now).some(b=>
+  b.phase==='fall'&&Math.abs(p.x-b.x)<=27&&Math.abs(p.y-b.y)<=35||
+  b.phase==='impact'&&Math.abs(p.x-b.x)<=45&&Math.abs(p.y-b.impactY)<=65);
+}
+
 export const FIRE_TREE_DANGER={x:3655,radius:124,yMin:515};
 export const FIRE_WIND_PERIOD=14000,FIRE_COLLAPSE_PERIOD=21000;
 export const FIRE_SHIFT_PERIOD=60000,FIRE_SHIFT_DURATION=2000;
@@ -55,7 +97,7 @@ export type FireWorld=Vitals&{
  dashAt:[number,number,number];dashX:[number,number,number];
  flare:number;windDirection:FireWind;treeStatus:'calm'|'warning'|'impact';
  treeWarningUntil:number;treeImpactUntil:number;
- collapseCycle:number;completed:boolean;damageCause:'fire'|'smoke'|'tree'|'fall'|'none';
+ collapseCycle:number;completed:boolean;damageCause:'fire'|'smoke'|'tree'|'fall'|'fireball'|'none';
 };
 export function initFire(now=Date.now()):FireWorld{return {
  cycleStart:now,phaseStart:now,resetId:0,deadUntil:0,
@@ -81,7 +123,7 @@ export function validFire(value:unknown):value is FireWorld{
   &&['logOpen','smokeOpen','treeOpen','completed'].every(k=>bool(w[k]))
   &&(w.windDirection===1||w.windDirection===-1)
   &&['calm','warning','impact'].includes(String(w.treeStatus))
-  &&['none','fire','smoke','tree','fall'].includes(String(w.damageCause))
+  &&['none','fire','smoke','tree','fall','fireball'].includes(String(w.damageCause))
   &&['log','smoke','tree'].every(k=>Array.isArray(w[k])&&(w[k] as unknown[]).length===3
     &&(w[k] as unknown[]).every(bool))
   &&['smokeSeconds','dashAt','dashX'].every(k=>
@@ -116,7 +158,7 @@ export function fireFlareActive(w:FireWorld,now:number,x:number):boolean{
  return x<4520?frame!==1:x<4770?frame!==2:x<4930?frame===2:false;
 }
 export function fireDamageZone(w:FireWorld,p:Pick<Pose,'x'|'y'>,now:number):boolean{
- if(p.y<582)return false;
+ if(p.y<582||fireSheltered(p))return false;
  if(p.x>=1225&&p.x<=1560&&p.y>(w.logOpen?658:625))return true;
  if(p.x>=3875&&p.x<=4240&&p.y>(w.treeOpen?661:632))return true;
  return (p.x>4260&&p.x<4520||p.x>4570&&p.x<4770||
@@ -297,6 +339,7 @@ export class FireAuthority {
    for(const p of poses){
     let cause:FireWorld['damageCause']='none';
     if(p.y>=FIRE_DEATH_Y)cause='fall';
+    else if(fireballHit(w,p,now))cause='fireball';
     else if(fireDamageZone(w,p,now))cause='fire';
     else if(treePhase==='impact'&&Math.abs(p.x-FIRE_TREE_DANGER.x)<FIRE_TREE_DANGER.radius
       &&p.y>FIRE_TREE_DANGER.yMin)cause='tree';

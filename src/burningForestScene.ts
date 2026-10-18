@@ -15,6 +15,7 @@ import {BurningForestAudio} from './burningForestAudio';
 import {
  FIRE_WIDTH,FIRE_HEIGHT,FIRE_START,FIRE_PLATFORMS,FIRE_TARGETS,FIRE_SHIFT_ROOTS,
  firePlatforms,fireVisualTreePhase,fireHeavySmoke,fireDamageZone,fireFlareActive,
+ fireSheltered,fireballHazards,
  type FireWorld
 } from './burningForest';
 
@@ -328,15 +329,22 @@ export class BurningForestScene extends Phaser.Scene {
   }
   const inSmoke=fireHeavySmoke(w,this.local,now);
   const inFire=fireDamageZone(w,this.local,now);
-  const current=inFire?'fire':inSmoke?'smoke':'';
+  const balls=fireballHazards(w,now);
+  const nearFireball=balls.some(b=>b.phase==='warning'&&
+   Math.abs(this.local.x-b.x)<150&&Math.abs(this.local.y-b.impactY)<105);
+  const protectedFromFire=fireSheltered(this.local);
+  const current=nearFireball&&!protectedFromFire?'fireball':inFire?'fire':inSmoke?'smoke':'';
   if(current!==this.lastDanger&&current&&now-this.lastWarningAt>2300){
    this.lastWarningAt=now;
-   this.pipo.warnDanger(current==='fire'?'Rápido! Saiam das chamas!':
+   this.pipo.warnDanger(current==='fireball'?'Bolas de fogo! Corram para os abrigos de pedra!':
+    current==='fire'?'Rápido! Saiam das chamas!':
     'A fumaça está fechando o caminho! Usem o vento!');
   }
   this.lastDanger=current;
   const warning=treePhase!=='calm'&&!w.treeOpen?
    '⚠ ÁRVORE INSTÁVEL':inSmoke?'⚠ FUMAÇA PESADA':
+   nearFireball&&!protectedFromFire?'⚠ BOLAS DE FOGO — ABRIGUEM-SE':
+   protectedFromFire?'✦ ABRIGADO DO FOGO':
    inFire?'⚠ CHAMAS ATIVAS':'';
   this.dangerText.setText(warning).setVisible(Boolean(warning)&&!pause);
   this.art.update(w,poses,time,now);

@@ -5,7 +5,9 @@ import {
  FIRE_WIDTH,FIRE_HEIGHT,FIRE_FLOOR_Y,FIRE_DEATH_Y,FIRE_START,FIRE_PLATFORMS,FIRE_TARGETS,
  FIRE_SMOKE_ZONE,FIRE_WIND_PERIOD,FIRE_COLLAPSE_PERIOD,
  FireAuthority,initFire,validFire,firePlatforms,fireGrounded,fireObjective,
- fireWind,fireFlareActive,fireDamageZone,fireHeavySmoke,fireTreePhase,fireCheckpoint
+ fireWind,fireFlareActive,fireDamageZone,fireHeavySmoke,fireTreePhase,fireCheckpoint,
+ FIRE_SHELTERS,FIREBALL_INTERVAL,FIREBALL_WARNING,FIREBALL_FALL,
+ fireSheltered,fireballHazards,fireballHit
 } from '../src/burningForest';
 import {pipoHint} from '../src/pipoHints';
 const start=3000000;
@@ -150,3 +152,39 @@ assert.ok(scene.includes("this.net.on('fire'"));
 assert.ok(pipo.includes("phase:4,world:this.net.fire"));
 assert.ok(validFire(initFire(start)));
 console.log('ETAPA 19: host authority, fire, smoke, timed tree collapse, all 3 puzzles, final victory and regressions PASSED');
+
+// Meteor shower regression: visual schedule, server collision and safety all
+// use the same exported functions, without any random client-side damage.
+{
+ const meteor=new FireAuthority();meteor.reset(start);
+ const w=meteor.world;
+ assert.equal(FIRE_SHELTERS.length,5);
+ assert.ok(fireSheltered({x:FIRE_SHELTERS[0].x,y:653}));
+ assert.ok(!fireSheltered({x:FIRE_SHELTERS[0].x+120,y:653}));
+ assert.ok(fireDamageZone(w,{x:4590,y:653},start)===false,
+  'fire shelters also protect from nearby ground flames');
+ const first=1200, lane=0, offset=(lane*977)%4300;
+ const warnAt=start+first+offset+200;
+ const pending=fireballHazards(w,warnAt).find(b=>b.lane===lane);
+ assert.equal(pending?.phase,'warning');
+ assert.equal(fireballHit(w,{x:pending!.x,y:pending!.impactY},warnAt),false,
+  'the warning never damages a player');
+ const landingTime=start+first+offset+FIREBALL_WARNING+FIREBALL_FALL+120;
+ const impact=fireballHazards(w,landingTime).find(b=>b.lane===lane);
+ assert.equal(impact?.phase,'impact');
+ assert.equal(fireballHit(w,{x:impact!.x,y:impact!.impactY},landingTime),true);
+ const group=FIRE_START.map(p=>({...p}));
+ group[0]={seat:0,x:impact!.x,y:impact!.impactY,vx:0,vy:0};
+ meteor.tick(group,landingTime);
+ assert.equal(w.health[0],2,'falling fireball removes one heart');
+ assert.equal(w.damageCause,'fireball');
+ meteor.tick(group,landingTime+100);
+ assert.equal(w.health[0],2,'damage i-frames prevent multiple instant hits');
+ assert.ok(validFire(w));
+ const protect=new FireAuthority();protect.reset(start);
+ const shelteredGroup=FIRE_START.map(p=>({...p}));
+ shelteredGroup[0]={seat:0,x:FIRE_SHELTERS[0].x,y:653,vx:0,vy:0};
+ for(let t=0;t<FIREBALL_INTERVAL*2;t+=100)
+  protect.tick(shelteredGroup,start+t);
+ assert.equal(protect.world.health[0],3,'fire shelter protects in repeated volleys');
+}

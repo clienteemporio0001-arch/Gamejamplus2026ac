@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import {paintHero} from './sharedCharacterArt';
 import type {Seat,Pose} from './network';
 import {FIRE_WIDTH,FIRE_HEIGHT,FIRE_SMOKE_ZONE,FIRE_TREE_DANGER,FIRE_TARGETS,
- FIRE_PLATFORMS,fireFlareActive,fireVisualTreePhase,type FirePlatform,type FireWorld} from './burningForest';
+ FIRE_PLATFORMS,FIRE_SHELTERS,fireballHazards,fireFlareActive,fireVisualTreePhase,
+ type FirePlatform,type FireWorld} from './burningForest';
 
 const hash=(a:number)=>{const n=Math.sin(a*127.1+14.58)*43758.5453;return n-Math.floor(n)};
 type Figure={target:Phaser.GameObjects.Rectangle;ink:Phaser.GameObjects.Graphics;seat:Seat};
@@ -11,6 +12,7 @@ export class BurningForestArt {
  private sparks!:Phaser.GameObjects.Graphics;
  private smokeInk!:Phaser.GameObjects.Graphics;
  private embers!:Phaser.GameObjects.Graphics;
+ private fireballs!:Phaser.GameObjects.Graphics;
  private figures:Figure[]=[];
  private tree!:Phaser.GameObjects.Container;
  private shadows:Phaser.GameObjects.Ellipse[]=[];
@@ -99,6 +101,22 @@ export class BurningForestArt {
   this.sparks=this.scene.add.graphics().setDepth(46);
   this.smokeInk=this.scene.add.graphics().setDepth(35);
   this.embers=this.scene.add.graphics().setDepth(47);
+  this.fireballs=this.scene.add.graphics().setDepth(48);
+  // Charred-stone shelters: visible roof, warm protected interior, open sides.
+  // Art and authority share FIRE_SHELTERS, so protection matches the image.
+  for(const spot of FIRE_SHELTERS){
+   const g=this.scene.add.graphics().setDepth(32);
+   const x=spot.x;
+   g.fillStyle(0x141d1e,.68);g.fillRoundedRect(x-68,575,136,99,17);
+   g.lineStyle(12,0x514d4c,.95);
+   g.lineBetween(x-72,667,x-72,560);g.lineBetween(x+72,667,x+72,560);
+   g.fillStyle(0x2a2a29,.98);g.fillRoundedRect(x-89,547,178,25,9);
+   g.lineStyle(3,0xd6a36c,.9);g.lineBetween(x-73,551,x+73,551);
+   g.fillStyle(0xffb04d,.12);g.fillEllipse(x,608,118,95);
+   this.scene.add.text(x,523,'✦ ABRIGO DO FOGO',{fontFamily:'Arial',
+    fontSize:'14px',fontStyle:'bold',color:'#ffe4b0',
+    stroke:'#201713',strokeThickness:4}).setOrigin(.5).setDepth(36);
+  }
   for(let i=0;i<6;i++){
    const x=2350+i*135;
    this.shadows.push(this.scene.add.ellipse(x,545,170,230,0x333038,.11)
@@ -165,6 +183,32 @@ export class BurningForestArt {
  }
  update(w:FireWorld,poses:readonly Pose[],ms:number,now:number):void{
   this.fire.clear();this.sparks.clear();this.smokeInk.clear();this.embers.clear();
+  this.fireballs.clear();
+  // A soft ground warning precedes every fall, then a glowing projectile
+  // and a brief impact burst. One batched Graphics object for performance.
+  for(const b of fireballHazards(w,now)){
+   if(b.phase==='warning'){
+    const pulse=.7+.18*Math.sin(ms*.011+b.lane);
+    this.fireballs.lineStyle(3,0xffbb59,pulse);
+    this.fireballs.strokeEllipse(b.x,b.impactY+2,68,15);
+    this.fireballs.fillStyle(0xff6c30,.12);
+    this.fireballs.fillEllipse(b.x,b.impactY+1,59,11);
+   }else if(b.phase==='fall'){
+    this.fireballs.lineStyle(7,0xf2702d,.53);
+    this.fireballs.lineBetween(b.x-w.windDirection*4,b.y-4,b.x-w.windDirection*17,b.y-32);
+    this.fireballs.fillStyle(0xee4d21,.47);this.fireballs.fillCircle(b.x,b.y,21);
+    this.fireballs.fillStyle(0xffb347,.88);this.fireballs.fillCircle(b.x,b.y,14);
+    this.fireballs.fillStyle(0xffeead,1);this.fireballs.fillCircle(b.x-3,b.y-4,7);
+   }else{
+    this.fireballs.fillStyle(0xff7e25,.30);this.fireballs.fillEllipse(b.x,b.y,96,32);
+    this.fireballs.lineStyle(4,0xffc36b,.8);this.fireballs.strokeEllipse(b.x,b.y,86,22);
+    for(let k=0;k<5;k++){
+     const a=k*Math.PI*2/5+ms*.003;
+     this.fireballs.lineStyle(3,0xffa34e,.65);
+     this.fireballs.lineBetween(b.x,b.y,b.x+Math.cos(a)*34,b.y+Math.sin(a)*22);
+    }
+   }
+  }
   const fireZones=[
    {x:1390,spread:160,y:680,intensity:!w.logOpen?1:.35},
    {x:4050,spread:174,y:678,intensity:!w.treeOpen?1:.35},
