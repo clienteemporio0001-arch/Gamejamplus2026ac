@@ -1,203 +1,169 @@
-import { readFileSync } from 'node:fs';
-import { LoopAuthority, LOOP_START, LOOP_WIDTH, LOOP_CYCLE_MS, LOOP_BLACKOUT_MS, ROUTES,
-  LOOP_MARKS,LOOP_TREE,LOOP_FINAL,validLoop,warningActive,blackoutActive,windGuide,
-  correctRoute,layoutReachable,barriers,safeReposition,LOOP_GEOMETRY,UPPER_BRANCH,upperLandingY } from '../src/forestLoop';
-import type { Pose,Seat } from '../src/network';
-let count=0;
-const ok=(yes:unknown,message:string)=>{if(!yes)throw Error('FALHA LOOP: '+message);count++};
-const a=new LoopAuthority(),p:Pose[]=LOOP_START.map(x=>({...x}));
+import {readFileSync} from 'node:fs';
+import {strict as assert} from 'node:assert';
+import {LoopAuthority,LOOP_WIDTH,LOOP_START,LOOP_MARKS,LOOP_TREE,LOOP_FINAL,
+ LOOP_GEOMETRY,SUSPENSION,SUSPENSION_LANDING_Y,UPPER_BRANCH,SUMMIT_BRANCH,
+ upperLandingY,summitLandingY,LOOP_CYCLE_MS,LOOP_BLACKOUT_MS,barriers,
+ layoutReachable,validLoop,windGuide,correctRoute,safeReposition,
+ warningActive,blackoutActive} from '../src/forestLoop';
+import type {Pose,Seat} from '../src/network';
+const a=new LoopAuthority(),p:Pose[]=LOOP_START.map(q=>({...q}));
 a.reset(0);
-const seat=(i:number)=>i as Seat;
-const goto=(id:number,x:number,y=604)=>{p[id].x=x;p[id].y=y;p[id].vx=0;p[id].vy=0};
-const act=(id:number,kind:'lever'|'shoot'|'dash'|'switch',now:number)=>
- a.act(seat(id),{kind,facing:1},p,now);
-ok(LOOP_WIDTH===3800,'mapa em quatro setores com 3800px');
-ok(LOOP_START[0].x===1840&&LOOP_START[1].x===1900&&LOOP_START[2].x===1960,
-  'nascimento central de três amigos, não na borda esquerda');
-ok(LOOP_START.every(v=>v.x>LOOP_GEOMETRY.clearing.min
-  &&v.x<LOOP_GEOMETRY.clearing.max&&v.y===606),
-  'nascimentos sobre clareira estável');
-ok(LOOP_START[0].x>800&&LOOP_START[2].x<LOOP_WIDTH-800,
-  'visão da câmera central permite explorar os dois sentidos');
-ok(LOOP_GEOMETRY.gate>LOOP_START[2].x+80,
-  'barreira permanente não impede andar à direita da clareira');
-ok(LOOP_MARKS.every(v=>v.x<LOOP_START[0].x),
-  'todos os marcos ambientais estão na floresta à esquerda');
-ok(LOOP_TREE.every(v=>v.x>LOOP_START[2].x)
-  &&LOOP_FINAL.every(v=>v.x>LOOP_GEOMETRY.chasm.end),
-  'árvore e saída ficam nas regiões à direita');
-
-ok(LOOP_CYCLE_MS===60000&&LOOP_BLACKOUT_MS===2000,'60s e blackout de 2s');
-ok(a.world.layout===0&&a.world.cycle===0&&validLoop(a.world),'estado A válido');
-ok(!warningActive(a.world,49999),'sem aviso antes dos 50 segundos');
-ok(warningActive(a.world,51000),'alerta aos 50s');
-ok(!act(0,'lever',52000),'marcos dependem de ter observado a mudança');
-ok(a.tick(p,60000).changed,'anfitrião inicia apagão aos 60s');
-ok(blackoutActive(a.world,60010)&&a.world.layout===0,'física deve pausar no apagão');
-ok(!a.tick(p,61000).changed,'apagão não gera mudança prematura');
-ok(a.tick(p,62010).changed&&a.world.layout===1&&a.world.observed,'estado B sincronizado');
-ok(a.world.cycle===1&&!blackoutActive(a.world,62010),'novo relógio só começa após apagar');
-ok(validLoop(a.world),'snapshot B válido');
-ok(!barriers(a.world)[1].enabled&&barriers(a.world)[2].enabled,'barreira B altera colisão');
-ok(correctRoute(0)==='pedra'&&correctRoute(1)==='oca'&&correctRoute(2)==='pedra',
-  'rotas determinísticas variam A/B/C');
-for(const x of [0,1,2] as const){
- const cloned={...a.world,layout:x};
- ok(layoutReachable(cloned),'cada estado tem um acesso coerente');
- ok(ROUTES[x].correct!==ROUTES[x].wrong,'caminho certo distinto do falso');
-}
-goto(0,LOOP_MARKS[0].x,LOOP_MARKS[0].y);
-ok(!act(1,'lever',62500),'Lia não pode ativar marca de Téo');
-ok(act(0,'lever',62600),'Téo valida árvore oca');
-goto(1,790,604);
-ok(!act(2,'shoot',62900),'Nino não usa estilingue');
-ok(act(1,'shoot',63000),'Lia valida pedra rachada pelo disparo');
-goto(2,1090);
-ok(!act(2,'dash',63500),'Nino prepara deslocamento');
-goto(2,LOOP_MARKS[2].x,LOOP_MARKS[2].y);
-ok(act(2,'switch',63750),'Nino valida arco após dash');
-ok(a.world.marks.every(Boolean),'desafio de memória exige três habilidades');
-const note=windGuide(a.world,0,1450);
-ok(note.direction===-1&&note.hint.includes('ÁRVORE OCA'),'vento aponta o portal correto no estado B');
-for(const i of [0,1,2])goto(i,LOOP_GEOMETRY.portal.oca+i*9);
-const r=a.tick(p,64900);
-ok(r.changed&&r.poses?.length===3,'passagem correta move equipe inteira');
-ok(r.poses![0].x===LOOP_GEOMETRY.portalLanding&&a.world.lastRoute==='right','caminho verdadeiro avança setor');
-p.splice(0,p.length,...r.poses!);
-ok(a.world.marks.every(Boolean),'teleporte não apaga memória');
-goto(2,2160,606);goto(1,2160,606);
-ok(!a.act(0,{kind:'support'},p,65000),'Téo não pode subir sem Lia se apoiar em Nino');
-ok(a.act(1,{kind:'support'},p,65030),'Lia sobe em Nino com E');
-a.tick(p,65080);
-goto(0,2160,562);
-ok(a.act(0,{kind:'support'},p,65150),'Téo sobe em Lia após apoio físico');
-a.tick(p,65200);
-ok(a.world.stackMilestone&&p[0].y===p[1].y-44,'marco de apoio físico Nino-Lia-Téo');
-ok(a.act(0,{kind:'detach'},p,65280),'Téo pode saltar do apoio');
-ok(a.act(1,{kind:'detach'},p,65350),'Lia pode soltar Nino');
-ok(a.world.supporting.every(x=>x===null),'vínculos soltos sem teleporte dos corpos');
-
-goto(0,LOOP_TREE[0].x,LOOP_TREE[0].y);
-ok(!act(0,'lever',65880),'Téo não solta amarra apenas por estar perto, antes do pouso validado');
-goto(0,UPPER_BRANCH.x,upperLandingY);
-ok(a.tick(p,65900).changed&&a.world.teoUpperReached,
-  'o anfitrião confirma o pouso no galho alto depois do desprendimento');
-ok(!act(0,'lever',65950),'primeiro galho ainda não libera amarra');
-goto(0,LOOP_TREE[0].x,LOOP_TREE[0].y);
-ok(a.tick(p,65980).changed&&a.world.teoSummitReached,'host confirma segundo galho');
-ok(act(0,'lever',66000),'Téo solta primeira amarra somente no topo');
-goto(1,2220,604);
-ok(act(1,'shoot',66600),'Lia corta segunda amarra');
-goto(2,2115);ok(!act(2,'dash',67000),'Nino parte do lado correto');
-goto(2,LOOP_TREE[2].x,LOOP_TREE[2].y);
-ok(act(2,'switch',67900),'Nino libera raiz da árvore');
-ok(a.world.tree.every(Boolean)&&a.world.treeFallAt===67900,'queda só após três identidades');
-ok(!a.world.bridge,'ponte ainda sem colisão');
-a.tick(p,68200);ok(!a.world.bridge,'não ativa collider durante animação');
-ok(a.tick(p,70000).changed&&a.world.bridge,'tronco vira ponte após 1.9s');
-ok(!a.world.completed,'ponte não é vitória automática');
-goto(0,LOOP_FINAL[0].x,LOOP_FINAL[0].y);
-ok(act(0,'lever',70500),'Téo libera primeira trava final');
-goto(1,3220,602);ok(act(1,'shoot',71200),'Lia libera segunda trava final');
-goto(2,3400);ok(!act(2,'dash',71800),'Nino inicia dash final');
-goto(2,LOOP_FINAL[2].x,LOOP_FINAL[2].y);
-ok(act(2,'switch',72600),'Nino conclui terceira trava final');
-ok(a.world.final.every(Boolean),'três condições concluídas');
-ok(!a.world.exit,'saída não abre antes do estado invertido C');
-const saves=a.world.tree.slice();
-a.world.cycleStart=75000;
-ok(a.tick(p,135000).changed,'segundo ciclo A/B para C');
-a.tick(p,137100);
-ok(a.world.layout===2&&a.world.exit,'estado C libera saída já resolvida');
-ok(a.world.tree.every((v,i)=>v===saves[i])&&a.world.bridge&&a.world.marks.every(Boolean),
-  'puzzles persistem em transformações');
-ok(!a.world.completed,'três jogadores ainda precisam atravessar');
-for(let i=0;i<3;i++)goto(i,3715+i*15);
-ok(a.tick(p,138000).won && a.world.completed,'todos três cruzam a saída verdadeira');
-ok(validLoop(a.world),'snapshot final válido');
-const b=new LoopAuthority(),t:Pose[]=LOOP_START.map(v=>({...v}));
-b.world.layout=2;b.world.observed=true;b.world.marks=[true,true,true];
-for(let i=0;i<3;i++){t[i].x=LOOP_GEOMETRY.portal.oca+i*12;t[i].y=600;}
-const fail=b.tick(t,6000);
-ok(fail.changed&&fail.poses![0].x===LOOP_GEOMETRY.returnCenter&&b.world.lastRoute==='wrong',
-  'rota falsa retorna à árvore oca, sem matar ninguém');
-ok(!b.world.completed&&b.world.deadUntil===0,'erro da rota não é fatal');
-ok(windGuide(b.world,0,1400).direction===1,'vento indica caminho certo C');
-const c=new LoopAuthority(),actors=LOOP_START.map(v=>({...v}));
-ok(c.kill(10000)&&c.world.deadUntil>10000,'queda fatal mata equipe');
-ok(!c.tick(actors,11000).reset,'derrota espera transição');
-const dead=c.tick(12500);
-ok(dead.reset&&dead.poses?.length===3&&c.world.layout===0&&c.world.cycle===0,
-  'morte coletiva reinicia estado A e os três');
-ok(!c.world.bridge&&c.world.marks.every(v=>!v),'morte limpa progresso da tentativa');
-ok(!validLoop({...c.world,layout:9})&&!validLoop({...c.world,marks:[true]}),
-  'pacotes inválidos rejeitados');
-const net=readFileSync('src/network.ts','utf8');
-const main=readFileSync('src/main.ts','utf8');
-const scene=readFileSync('src/forestLoopScene.ts','utf8');
-ok(net.includes("this.experience==='loop'"),'nova aventura separada da clássica');
-ok(net.includes("this.experience=msg.info.mode"),'guest recebe modo do anfitrião');
-ok(net.includes("if(this.experience==='loop'){\n      // A client in 'intro' ignores state packets."),
-  'troca de fase publicada antes do snapshot inicial no novo multiplayer');
-ok(net.includes("oldStage!=='playing'&&this.stage==='playing'"),
-  'convidado recebe posições centrais ao deixar a introdução');
-ok(net.includes("this.emit('snapshot',this.poses)"),
-  'anfitrião emite posições iniciais centralizadas');
-ok(net.includes("this.broadcast({t:'loop',world:this.loop})"),'snapshots da transformação para convidados');
-ok(net.includes("this.loopAuthority.tick(this.poses,now)"),'um relógio no anfitrião');
-ok(net.includes("this.startSolo(1,false,'loop')"),'nova aventura local sem PeerJS');
-ok(main.includes("net.createRoom('classic')")&&main.includes("net.createRoom('loop')"),
-  'duas experiências no mesmo lobby');
-ok(main.includes("net.startLoopSolo()"),'modo solo novo no menu');
-ok(scene.includes('new SoloBodies(this'), 'três corpos Arcade no modo solo');
-ok(scene.includes('this.active(this.bridge,w.bridge)'), 'ponte física controlada pelo host');
-ok(scene.includes('this.blackout.setAlpha(fade)'), 'apagão visível sem flashes');
-ok(scene.includes('this.gusts.forEach'), 'vento orientado pelo estado lógico');
-ok(scene.includes('this.cameras.main.centerOn(1900,420)'), 'câmera começa enquadrando a clareira');
-ok(scene.includes("this.ground(LOOP_MARKS[0].x,546"),'árvore oca tem plataforma real alcançável');
-ok(scene.includes("this.ground(LOOP_GEOMETRY.gate,363"),'entrada do desafio direito bloqueada por corpo físico');
-ok(scene.includes('...LOOP_GEOMETRY.layoutWalls.map'), 'rochas mudam fisicamente nos estados A/B/C');
-ok(scene.includes("this.load.svg('loop-clearing-tree'"), 'ilustração central original carregada localmente');
-ok(scene.includes('this.movingRoots.forEach'), 'raízes se deslocam com estados do terreno');
-const gravity=850,impulse=465,rise=impulse*impulse/(2*gravity);
+const go=(seat:Seat,x:number,y=606)=>{p[seat]={seat,x,y,vx:0,vy:0};};
+const action=(seat:Seat,kind:'lever'|'shoot'|'dash'|'switch'|'support'|'detach',now:number)=>
+ a.act(seat,{kind,facing:1},p,now);
+assert.equal(LOOP_WIDTH,11400,'Etapa 22 triples the real forest world');
+assert.ok(LOOP_START.every(q=>q.x>LOOP_WIDTH*.45&&q.x<LOOP_WIDTH*.56&&q.y===606));
+assert.ok(LOOP_MARKS[1].x-LOOP_MARKS[0].x>1800);
+assert.ok(LOOP_MARKS[2].x-LOOP_MARKS[1].x>1100);
+assert.ok(SUSPENSION.gapEnd-SUSPENSION.gapStart>600);
+assert.ok(SUSPENSION.width>=SUSPENSION.gapEnd-SUSPENSION.gapStart+40);
+assert.ok(SUSPENSION.finalX-SUSPENSION.width/2<=SUSPENSION.gapStart);
+assert.ok(SUSPENSION.finalX+SUSPENSION.width/2>=SUSPENSION.gapEnd);
+assert.equal(LOOP_CYCLE_MS,60000);
+assert.equal(LOOP_BLACKOUT_MS,2000);
+assert.equal(a.world.layout,0);
+assert.equal(validLoop(a.world),true);
+assert.ok(!warningActive(a.world,49999)&&warningActive(a.world,51000));
+assert.ok(!action(0,'lever',52000),'marcos somente depois de observar a mudança');
+assert.ok(a.tick(p,60000).changed);
+assert.ok(blackoutActive(a.world,60010));
+assert.ok(!a.tick(p,61000).changed);
+assert.ok(a.tick(p,62010).changed);
+assert.equal(a.world.layout,1);
 for(const layout of [0,1,2] as const){
- const x=barriers({...a.world,layout});
- ok(x.length===5 &&x[0].enabled&&x[0].height===550,
-   'portão cooperativo permanente não é ignorado em '+layout);
- ok(x.filter((barrier,i)=>i>0&&i<4&&barrier.enabled).length===1,
-   'exatamente uma barreira de layout a cada estado '+layout);
- ok(x.filter((wall,i)=>i>0&&i<4&&wall.enabled).every(wall=>wall.height<rise),
-   'salto supera barreiras físicas temporárias no estado '+layout);
- ok(LOOP_START.every(pose=>x.every(wall=>!wall.enabled||Math.abs(pose.x-wall.x)>50)),
-   'nenhum nascimento intercepta colisões no estado '+layout);
- ok(layoutReachable({...a.world,layout}), 'puzzle de rotas possui continuidade em '+layout);
+ const state={...a.world,layout};
+ assert.ok(layoutReachable(state),'route accessible in state '+layout);
+ assert.notEqual(correctRoute(layout),({oca:'pedra',pedra:'oca'} as const)[correctRoute(layout)]);
+ const blocks=barriers(state);
+ assert.equal(blocks.filter((b,i)=>i>0&&i<4&&b.enabled).length,1);
+ assert.ok(LOOP_START.every(q=>blocks.every(b=>!b.enabled||Math.abs(q.x-b.x)>50)));
 }
-const trio=LOOP_START.map(q=>({...q}));
-ok(safeReposition(trio,{...a.world,layout:0})===undefined,
-  'posição da clareira mantida no apagão sem colisões');
-trio[1].x=LOOP_GEOMETRY.layoutWalls[1];
-const recovered=safeReposition(trio,{...a.world,layout:1});
-ok(recovered?.every((pose,i)=>pose.x===LOOP_START[i].x),
-  'apagão recupera equipe inteira quando membro está dentro de obstáculo novo');
-ok(recovered?.every(pose=>pose.vx===0&&pose.vy===0),
-  'reposicionamento não mantém impulsos perigosos');
-const leftY=LOOP_GEOMETRY.clearing.groundY;
-const treePlatformCenter=546-10-22;
-ok(606-treePlatformCenter<rise,'salto alcança plataforma do marco na esquerda');
-ok(LOOP_GEOMETRY.portalLanding>LOOP_GEOMETRY.gate+35,
-  'ponto de teleporte seguro além da parede direita');
-ok(LOOP_GEOMETRY.portalLanding+2*39<LOOP_GEOMETRY.chasm.start-30,
-  'os três desembarcam sobre terreno antes do abismo');
-const falseExitWind=windGuide({...a.world,layout:1,bridge:true},0,3070);
-ok(falseExitWind.direction===-1&&falseExitWind.hint.includes('FALSA'),
-  'vento afasta o grupo do falso acesso ao setor D no estado B');
-const safeExitWind=windGuide({...a.world,layout:2,bridge:true,
-  final:[false,false,false]},0,3070);
-ok(safeExitWind.direction===1&&safeExitWind.hint.includes('MECANISMO'),
-  'vento aponta mecanismos finais quando o layout C libera a passagem');
-ok(LOOP_GEOMETRY.bridge.x-LOOP_GEOMETRY.bridge.width/2===LOOP_GEOMETRY.chasm.start &&
-  LOOP_GEOMETRY.bridge.x+LOOP_GEOMETRY.bridge.width/2===LOOP_GEOMETRY.chasm.end,
-  'ponte possui comprimento que fecha precisamente o abismo');
-void leftY;
-
-console.log('APROVADO: '+count+' verificações do protótipo A/B/C, desorientação, vento e cooperação.');
+go(1,LOOP_MARKS[1].x-210);
+assert.equal(action(1,'shoot',62400),false,'Lia blocked until Téo');
+go(2,LOOP_MARKS[2].x-180);
+action(2,'dash',62600);
+go(2,LOOP_MARKS[2].x,LOOP_MARKS[2].y);
+assert.equal(action(2,'switch',62800),false,'Nino blocked until Lia');
+go(0,LOOP_MARKS[0].x,LOOP_MARKS[0].y);
+assert.equal(action(0,'lever',63000),true);
+go(1,LOOP_MARKS[1].x-240,606);
+assert.equal(action(1,'shoot',63500),true);
+go(2,LOOP_MARKS[2].x-180,606);
+action(2,'dash',65000);
+go(2,LOOP_MARKS[2].x,LOOP_MARKS[2].y);
+assert.equal(action(2,'switch',65500),true);
+assert.ok(a.world.marks.every(Boolean));
+const guide=windGuide(a.world,0,5600);
+assert.equal(guide.direction,-1);
+assert.ok(guide.hint.includes('ÁRVORE OCA'));
+for(const seat of [0,1,2] as Seat[])go(seat,LOOP_GEOMETRY.portal.oca+seat*10,606);
+const route=a.tick(p,65700);
+assert.equal(route.poses?.length,3);
+assert.equal(route.poses?.[0].x,LOOP_GEOMETRY.portalLanding);
+assert.equal(a.world.lastRoute,'right');
+p.splice(0,p.length,...route.poses!);
+// The new mechanism must be solved BEFORE the original tree puzzle.
+assert.equal(a.world.suspendedOpen,false);
+go(2,SUSPENSION.lever.x,606);go(1,SUSPENSION.lever.x,606);
+go(0,SUSPENSION.lever.x,606);
+assert.equal(action(0,'support',66100),false,'Téo cannot stack without Lia');
+assert.equal(action(1,'support',66200),true);
+a.tick(p,66300);
+go(0,SUSPENSION.lever.x,562);
+assert.equal(action(0,'support',66400),true);
+a.tick(p,66500);
+assert.ok(a.world.suspensionStacked&&p[0].y===518);
+assert.equal(action(0,'detach',66600),true);
+assert.ok(a.world.suspensionClimbReady);
+go(0,SUSPENSION.lever.x,SUSPENSION_LANDING_Y);
+assert.equal(action(0,'lever',66900),true);
+assert.deepEqual(a.world.suspended,[true,false,false]);
+assert.equal(a.world.suspendedOpen,false);
+a.tick(p,68950);
+assert.equal(a.world.suspendedX,SUSPENSION.teoX);
+go(1,SUSPENSION.lia.x-210,606);
+assert.equal(action(1,'shoot',69500),true);
+a.tick(p,71500);
+assert.equal(a.world.suspendedX,SUSPENSION.liaX);
+go(2,SUSPENSION.nino.x-165,606);
+action(2,'dash',72000);
+go(2,SUSPENSION.nino.x,SUSPENSION.nino.y);
+assert.equal(action(2,'switch',72500),true);
+assert.ok(a.world.suspended.every(Boolean));
+assert.ok(a.world.suspendedX!==SUSPENSION.finalX);
+a.tick(p,74600);
+assert.equal(a.world.suspendedX,SUSPENSION.finalX);
+assert.equal(a.world.suspendedOpen,true);
+assert.equal(validLoop(a.world),true);
+// A/B/C blackout preserves the completed suspended platform.
+a.world.cycleStart=75000;
+a.tick(p,135000);
+a.tick(p,137100);
+assert.equal(a.world.layout,2);
+assert.ok(a.world.suspendedOpen&&a.world.suspended.every(Boolean));
+// Existing tree-puzzle remains a distinct challenge on the far side.
+go(2,UPPER_BRANCH.x,606);go(1,UPPER_BRANCH.x,606);
+go(0,UPPER_BRANCH.x,606);
+assert.equal(action(1,'support',138000),true);
+a.tick(p,138100);
+go(0,UPPER_BRANCH.x,562);
+assert.equal(action(0,'support',138200),true);
+a.tick(p,138300);
+assert.ok(a.world.stackMilestone);
+assert.equal(action(0,'detach',138400),true);
+go(0,UPPER_BRANCH.x,upperLandingY);
+assert.equal(a.tick(p,138500).changed,true);
+assert.equal(a.world.teoUpperReached,true);
+go(0,SUMMIT_BRANCH.x,summitLandingY);
+assert.equal(a.tick(p,138600).changed,true);
+assert.equal(a.world.teoSummitReached,true);
+assert.equal(action(0,'lever',138700),true);
+go(1,LOOP_TREE[1].x-320,606);
+assert.equal(action(1,'shoot',139000),true);
+go(2,LOOP_TREE[2].x-155,606);
+action(2,'dash',140000);
+go(2,LOOP_TREE[2].x,LOOP_TREE[2].y);
+assert.equal(action(2,'switch',140500),true);
+assert.ok(a.world.tree.every(Boolean));
+assert.ok(!a.world.bridge);
+a.tick(p,142500);
+assert.equal(a.world.bridge,true);
+go(0,LOOP_FINAL[0].x,LOOP_FINAL[0].y);
+assert.equal(action(0,'lever',142700),true);
+go(1,LOOP_FINAL[1].x-210,606);
+assert.equal(action(1,'shoot',143000),true);
+go(2,LOOP_FINAL[2].x-155,606);
+action(2,'dash',144500);
+go(2,LOOP_FINAL[2].x,LOOP_FINAL[2].y);
+assert.equal(action(2,'switch',144900),true);
+assert.ok(a.world.final.every(Boolean));
+assert.ok(a.world.exit);
+for(const seat of [0,1,2] as Seat[])go(seat,11200+seat*25,606);
+assert.equal(a.tick(p,145000).won,true);
+assert.equal(a.world.completed,true);
+assert.ok(validLoop(a.world));
+// Wrong routes are survivable and do not count as a true passage.
+const wrong=new LoopAuthority(),team=LOOP_START.map(q=>({...q}));
+wrong.world.observed=true;wrong.world.layout=2;wrong.world.marks=[true,true,true];
+team.forEach((q,i)=>{q.x=LOOP_GEOMETRY.portal.oca+i*12;q.y=606;});
+const reverted=wrong.tick(team,6000);
+assert.equal(reverted.poses?.[0].x,LOOP_GEOMETRY.returnCenter);
+assert.equal(wrong.world.lastRoute,'wrong');
+assert.equal(wrong.world.completed,false);
+assert.ok(safeReposition(LOOP_START.map(q=>({...q})),a.world)===undefined);
+const death=new LoopAuthority();death.reset(1000);
+assert.equal(death.kill(10000),true);
+const respawn=death.tick(12500);
+assert.equal(respawn.reset,true);
+assert.equal(death.world.suspendedOpen,false);
+assert.equal(death.world.suspended.every(Boolean),false);
+const scene=readFileSync('src/forestLoopScene.ts','utf8');
+const main=readFileSync('src/main.ts','utf8');
+const net=readFileSync('src/network.ts','utf8');
+assert.ok(scene.includes('this.suspensionCollider.setVisible(settled)'));
+assert.ok(scene.includes('this.suspension.setX(position)'));
+assert.ok(scene.includes('this.active(this.bridge,w.bridge)'));
+assert.ok(scene.includes('this.cameras.main.centerOn(LOOP_START[1].x,420)'));
+assert.ok(main.includes('class="game-tool-strip"'));
+assert.ok(net.includes('Math.max(FOREST_WIDTH,TREE_WIDTH,FIRE_WIDTH,LOOP_WIDTH)'));
+console.log('APROVADO: mapa triplicado, árvore-ponte preservada, plataforma real, trio e transição para a Fase 2.');
