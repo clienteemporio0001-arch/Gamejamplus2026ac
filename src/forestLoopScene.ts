@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import {PipoGuide} from './pipoGuide';
 import {SUSPENSION,SUSPENSION_LANDING_Y,LOOP_TERRAIN,LOOP_NATURAL_LEDGES,LOOP_LAYOUT_BRANCHES} from './forestLoop';
 import {MissionDirector} from './missionDirector';
+import {animateForestProps} from './forestTransformFX';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import { LOOP_WIDTH, LOOP_GEOMETRY, LOOP_MARKS, markPosition, LOOP_TREE, LOOP_FINAL, ROUTES, barriers,
   allDone, windGuide, blackoutActive, warningActive, type LoopWorld, LOOP_START,
@@ -16,7 +17,7 @@ import { gameKeys } from './keyboard';
 import type { TouchInput } from './game';
 import type { VitalAction } from './loopVitals';
 
-/** One 3800px landscape. All puzzle decisions are made by LoopAuthority in Network. */
+/** 11,400px forest. Puzzle and transformation positions are host authoritative. */
 export class ForestLoopScene extends Phaser.Scene {
   private net:Network;private touch:TouchInput;private hud?:()=>void;
   private art!:NightArt;private w:LoopWorld;
@@ -416,6 +417,14 @@ export class ForestLoopScene extends Phaser.Scene {
       suspended:[...w.suspended],supporting:[...w.supporting]};
     if(transformationStarted){
       const upcoming=((w.layout+1)%3) as 0|1|2;
+      const previous=LOOP_LAYOUT_BRANCHES.filter(p=>p.layout===w.layout);
+      const targets=LOOP_LAYOUT_BRANCHES.filter(p=>p.layout===upcoming);
+      animateForestProps(this,previous.map(p=>{
+       const next=[...targets].sort((a,b)=>Math.abs(a.x-p.x)-Math.abs(b.x-p.x))[0]??p;
+       return {from:{x:p.x,y:p.y,width:p.width,height:18},
+        to:{x:next.x,y:next.y,width:next.width,height:18},
+        kind:'branch' as const};
+      }));
       this.marks.forEach((mark,i)=>this.tweens.add({targets:mark,
         x:markPosition({layout:upcoming},i).x,duration:1850,ease:'Sine.easeInOut'}));
       this.movingRoots.forEach((root,i)=>this.tweens.add({targets:root,
