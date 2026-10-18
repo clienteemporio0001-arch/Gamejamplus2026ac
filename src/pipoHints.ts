@@ -36,6 +36,28 @@ export function pipoHint(source:HintSource):PipoHint{
    'Observem o vento: ele aponta a rota verdadeira deste estado.',
    'Sigam o vento até '+(w.layout===1?'a árvore oca':'a pedra rachada')+'. A outra rota devolve vocês à clareira!'
   ]);
+  if(!w.suspendedOpen){
+   if(!w.suspended[0])return guidance('plataforma suspensa',[
+    'Ei! Aquela plataforma está fora do lugar. Talvez a gente consiga puxá-la!',
+    'Precisamos empilhar os três: Nino parado, Lia sobe com E e Téo sobre Lia.',
+    'No setor suspenso, levem os três perto da alavanca. Téo usa o salto duplo, aterrissa no galho e pressiona E.'
+   ]);
+   if(!w.suspended[1])return guidance('trava de Lia',[
+    'Boa, Téo! Você moveu a plataforma! Agora precisamos deixá-la no lugar certo!',
+    'Lia precisa acertar a trava suspensa com a baladeira.',
+    'Posicione Lia à esquerda da trava e pressione J mirando na altura do alvo.'
+   ]);
+   if(!w.suspended[2])return guidance('fixação de Nino',[
+    'Mais uma parte solta! Nino, procure o mecanismo de fixação!',
+    'A fixação está na margem inicial: não atravesse o abismo ainda.',
+    'Use dash com Nino e pressione E na raiz iluminada antes de parar.'
+   ]);
+   return guidance('plataforma em movimento',[
+    'Aí sim! A plataforma está chegando à posição correta!',
+    'Esperem os cipós terminarem o movimento antes de pisar na madeira.',
+    'Quando estabilizar, atravessem com os três e encontrem a árvore-ponte original.'
+   ]);
+  }
   if(!w.stackMilestone)return guidance('escada humana',[
    'Três amigos e ninguém pensou em subir um no outro?',
    'Nino é a base, Lia sobe sobre ele e Téo sobe em Lia.',
