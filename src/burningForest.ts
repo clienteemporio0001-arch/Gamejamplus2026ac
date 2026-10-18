@@ -1,3 +1,4 @@
+import {exitPresence} from './sharedExit';
 import type {Pose,Seat} from './network';
 import {initVitals,validVitals,spendVital,regenVitals,damageVitals,VITALS,
  type VitalAction,type Vitals} from './loopVitals';
@@ -307,8 +308,7 @@ export class FireAuthority {
   if(w.health.some(h=>h<=0)){
    w.deadUntil=now+1450;changed=true;
   }
-  if(!w.deadUntil&&w.treeOpen&&w.smokeOpen&&w.logOpen&&poses.length===3&&
-    poses.every(p=>w.health[p.seat]>0&&close(p,FIRE_TARGETS.exit,100,58))){
+  if(!w.deadUntil&&w.treeOpen&&w.smokeOpen&&w.logOpen&&exitPresence(4,poses,w.health).ready){
    w.completed=true;return {changed:true,won:true};
   }
   return {changed};
