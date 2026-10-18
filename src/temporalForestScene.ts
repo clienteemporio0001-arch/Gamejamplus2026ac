@@ -305,7 +305,8 @@ export class TemporalForestScene extends Phaser.Scene {
     if(w.health[seat]<this.w.health[seat])this.fallImpact(seat,true);
   }
 
-  this.w={...w,echo:[...w.echo],tree:[...w.tree],roots:[...w.roots],
+  const layoutChanged=this.w.layout!==w.layout;
+    this.w={...w,echo:[...w.echo],tree:[...w.tree],roots:[...w.roots],
    supporting:[...w.supporting],health:[...w.health],stamina:[...w.stamina],
    safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],skillAt:[...w.skillAt]};
   tempBlocks(w).forEach((b,i)=>this.setActive(this.layoutBlocks[i],b.active));
@@ -315,7 +316,7 @@ export class TemporalForestScene extends Phaser.Scene {
   this.stormShade.setFillStyle([0x1b3b46,0x254d64,0x112639][w.layout])
    .setAlpha([.12,.20,.27][w.layout]);
   this.pools.forEach((p,i)=>{
-    this.tweens.add({targets:p,x:TEMP_LAYOUTS[w.layout].puddles[i],duration:1800,ease:'Sine.easeInOut'});
+    if(layoutChanged)this.tweens.add({targets:p,x:TEMP_LAYOUTS[w.layout].puddles[i],duration:1800,ease:'Sine.easeInOut'});
     p.setScale(w.layout===2?1.2:w.layout===1?1.1:1,1);
   });
   this.echoVisuals.forEach((visual,i)=>{
