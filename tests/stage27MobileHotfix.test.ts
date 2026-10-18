@@ -27,7 +27,8 @@ for(const view of [{width:360,height:760},{width:280,height:590},
  assert.ok(layout.y+layout.height/2<=view.height-90);
  assert.ok(layout.width<=view.width-20,'speech word wrap fits mobile');
  assert.ok(layout.tailX<=layout.width/2-18&&layout.tailX>=-layout.width/2+18);
- assert.ok(layout.tailY>=layout.height/2+8);
+ assert.ok(layout.tailSide==='top'
+  ?layout.tailY<=-layout.height/2-8:layout.tailY>=layout.height/2+8);
  const fixed=pipoHudCoords(layout.x,layout.y,view,camera.zoom);
  const renderedX=(fixed.x-view.width/2)*camera.zoom+view.width/2;
  const renderedY=(fixed.y-view.height/2)*camera.zoom+view.height/2;
@@ -51,6 +52,17 @@ assert.ok(pipo.includes('setScrollFactor(0)'));
 assert.ok(pipo.includes('this.nameLabel=add.text('));
 assert.ok(pipo.includes(",'PIPO'"));
 assert.ok(pipo.includes('this.panel.fillTriangle(layout.tailX-10'));
+assert.ok(pipo.includes("layout.tailSide==='top'"));
+const nearTop=pipoSpeechLayout({width:360,height:740},
+ {x:900,y:106,worldX:770,worldY:20,zoom:1},65);
+assert.equal(nearTop.offscreen,false);
+assert.equal(nearTop.tailSide,'top','Pipo near the top needs an upward speech pointer');
+assert.ok(nearTop.tailY<-nearTop.height/2);
+assert.ok(nearTop.y-nearTop.height/2>=40);
+const nearBottom=pipoSpeechLayout({width:360,height:740},
+ {x:960,y:420,worldX:770,worldY:20,zoom:1},65);
+assert.equal(nearBottom.tailSide,'bottom');
+assert.ok(nearBottom.tailY>nearBottom.height/2);
 assert.ok(pipo.includes('this.label.setWordWrapWidth(width-28)'));
 assert.ok(pipo.includes('this.bubble.setPosition(fixed.x,fixed.y).setScale(fixed.scale)'));
 assert.ok(pipo.includes('this.offscreenMarker.setPosition(fixed.x,fixed.y).setScale(fixed.scale)'));
