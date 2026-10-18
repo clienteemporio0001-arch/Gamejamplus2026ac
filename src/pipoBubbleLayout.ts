@@ -9,6 +9,15 @@ export type PipoSpeechLayout={
  tailX:number;tailY:number;birdX:number;birdY:number;offscreen:boolean;
  indicatorX:number;indicatorY:number;
 };
+/** Phaser scrollFactor(0) prevents scrolling, NOT zooming. Invert the
+ * camera's center-zoom transform for fixed-width HUD balloons so Pipo's
+ * bubble never drifts or stretches on mobile at camera zoom != 1.
+ */
+export function pipoHudCoords(x:number,y:number,view:PipoViewport,zoom:number){
+ const z=Math.max(.2,zoom);
+ return {x:view.width/2+(x-view.width/2)/z,
+   y:view.height/2+(y-view.height/2)/z,scale:1/z};
+}
 export function pipoSpeechLayout(view:PipoViewport,camera:PipoCameraView,
  textHeight:number):PipoSpeechLayout{
  const width=Math.min(296,Math.max(168,view.width-32));
