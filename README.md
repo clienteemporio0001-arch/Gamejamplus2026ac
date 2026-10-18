@@ -1,5 +1,53 @@
 # A FLORESTA MENTE — MAS O VENTO NÃO
 
+## Etapa 22 — Fase 1 expandida e plataforma suspensa
+
+A Fase 01, **A Boca da Noite**, mede agora **11.400 pixels**. O grupo nasce
+na clareira central (x=5600–5720), podendo explorar ambos os sentidos.
+Árvore oca (x=1300), pedra rachada (x=3450) e arco de madeira (x=4750)
+ficaram separados por segmentos de terreno, pequenas fendas com apoios,
+galhos opcionais e obstáculos que alternam nos estados A/B/C.
+A ordem da Etapa 21 (Téo → Lia → Nino) continua exigida pela autoridade.
+Após os marcos, **os três** devem alcançar juntos a trilha verdadeira
+(árvore oca no estado B, pedra rachada nos estados A/C); a rota incorreta
+continua devolvendo a equipe à clareira.
+
+**Novo desafio (x≈7780–8750):** na margem inicial de um abismo de 700 px,
+Lia sobe em Nino com E e Téo sobe em Lia. A partir do apoio, Téo precisa
+saltar duas vezes, aterrissar no galho superior e acionar E na alavanca.
+A plataforma suspensa desliza até uma posição parcial. Lia acerta a trava
+suspensa com J; o tronco desliza novamente. Nino usa dash + E na fixação
+da **mesma margem**, e o tronco chega à posição final, oferecendo colisão
+somente quando estabiliza. Todos atravessam para a **árvore-ponte original**
+(x≈9465–9825), que preserva seu puzzle de amarras. Os últimos mecanismos
+e a saída ficam no setor x≈10520–11360.
+
+As transformações de 60 segundos preservam as etapas resolvidas.
+A posição e os booleanos da plataforma são estados do anfitrião, enviados
+aos convidados/reconexões. O rastreamento de dano por queda foi alinhado
+aos mesmos segmentos e plataformas físicos desenhados na cena.
+
+**Interface compartilhada:** 🦜 DICA e ⚙ OPÇÕES agora fazem parte de uma
+barra única, no canto inferior direito do desktop e em uma linha abaixo
+de tela cheia nos celulares em modo horizontal. Tecla H e configurações
+de áudio/desenvolvimento foram preservadas.
+
+**Arquivos principais:** `src/forestLoop.ts`, `src/forestLoopScene.ts`,
+`src/forestLoopUI.ts`, `src/fallDamage.ts`,
+`src/missionChapters.ts`, `src/pipoHints.ts`, `src/network.ts`,
+`src/main.ts`, `src/style.css`.
+**Testes:** `tests/forestLoop.test.ts`, `tests/loopEnvironment.test.ts`,
+`tests/stage15.test.ts`, `tests/stage21Missions.test.ts`,
+`tests/pipoHints.test.ts`, `tests/interface.test.ts`,
+`tests/stage22Expansion.test.ts`.
+
+**Limitação:** `npm run build` e `npm run test:logic` verificam
+compilação, estados, colisões teóricas e regras do anfitrião. Não substituem
+partidas completas num navegador, teste manual da temporização do salto,
+3 clientes PeerJS simultâneos e desempenho num celular real.
+
+---
+
 ## Etapa 21 — Missões cooperativas encadeadas
 
 **Fase 01:** os marcos de descoberta agora exigem Téo (árvore oca) → Lia (pedra rachada) → Nino (arco, dash + E). A autoridade do anfitrião valida cada ação. Fora de ordem, o mecanismo não conclui nem aparece como o objetivo atual. Após os três, o grupo deve se reunir na trilha correta indicada pelo vento: **árvore oca no estado B e pedra rachada nos estados A/C**. A travessia é simultânea; rotas falsas e mudanças A/B/C permanecem funcionando. Elementos de raízes e folhagens passam a revelar visualmente a passagem física, em vez de um portal mágico.
