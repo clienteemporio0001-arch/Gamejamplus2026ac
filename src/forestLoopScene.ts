@@ -5,7 +5,7 @@ import {MissionDirector} from './missionDirector';
 import {animateForestProps} from './forestTransformFX';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import { LOOP_WIDTH, LOOP_GEOMETRY, LOOP_MARKS, markPosition, LOOP_TREE, LOOP_FINAL, ROUTES, barriers,
-  allDone, windGuide, blackoutActive, warningActive, type LoopWorld, LOOP_START,
+  allDone, windGuide, blackoutActive, warningActive,trailOccupants,correctRoute,TRAIL_MEET_RADIUS_X,type LoopWorld, LOOP_START,
   UPPER_BRANCH,SUMMIT_BRANCH,upperLandingY,summitLandingY,markerBaseY,hasBranchFooting,hasSummitFooting } from './forestLoop';
 import { NightArt } from './visuals';
 import { loopContext, regionTitle } from './forestLoopUI';
@@ -30,6 +30,11 @@ export class ForestLoopScene extends Phaser.Scene {
   private finalBarrier!:Phaser.GameObjects.Rectangle;
   private marks:Phaser.GameObjects.Container[]=[];
   private routeCurtains:Phaser.GameObjects.Container[]=[];
+  private routeLabels:Phaser.GameObjects.Text[]=[];
+  private routeLeaves:Phaser.GameObjects.Ellipse[][]=[];
+  private routeCurtainPlants:Phaser.GameObjects.Graphics[]=[];
+  private trailsUnlockedAt=0;
+  private crossingBannerUntil=0;
   private suspension!:Phaser.GameObjects.Container;
   private suspensionCollider!:Phaser.GameObjects.Rectangle;
   private suspensionCables!:Phaser.GameObjects.Graphics;
@@ -150,25 +155,63 @@ export class ForestLoopScene extends Phaser.Scene {
       pad(point.x,point.y,[0x8eda9e,0xf7b074,0x8ec9f4][index]);
     for(const [index,point] of LOOP_FINAL.entries())
       pad(point.x,point.y,[0x8eda9e,0xf7b074,0x8ec9f4][index]);
-    // Physical-looking woodland passages: roots & dangling foliage, never a magic portal.
-    // Host still decides whether a route is true or false in each A/B/C state.
-    for(const x of [LOOP_GEOMETRY.portal.oca,LOOP_GEOMETRY.portal.pedra]){
+    // ETAPA 23: real forest trail mouths separated from landmark hitboxes.
+    // Each visible 284px oval is the SAME horizontal range used by trailOccupants().
+    for(const [index,route] of (['oca','pedra'] as const).entries()){
+      const x=LOOP_GEOMETRY.portal[route];
+      const entry=this.add.container(x,638).setDepth(14);
+      const deep=this.add.graphics();
+      deep.fillStyle(0x031810,.91);
+      deep.fillEllipse(0,-62,176,153);
+      deep.fillStyle(0x162f24,.83);
+      deep.fillEllipse(0,-17,TRAIL_MEET_RADIUS_X*2,48);
+      deep.lineStyle(3,0x77a27b,.68);
+      deep.strokeEllipse(0,-15,TRAIL_MEET_RADIUS_X*2,48);
+      deep.lineStyle(2,0xc9e5b5,.43);
+      deep.strokeEllipse(0,-15,TRAIL_MEET_RADIUS_X*2-22,39);
       const roots=this.add.graphics();
-      roots.lineStyle(10,0x453c2b,.96);
-      roots.lineBetween(-73,1,-37,-91);roots.lineBetween(74,1,37,-92);
-      roots.lineStyle(6,0x5a5b37,.84);
-      roots.lineBetween(-39,-93,-12,-111);roots.lineBetween(38,-93,12,-111);
-      for(let i=0;i<7;i++){
-        const vx=-52+i*17,leaf=roots;
-        leaf.lineStyle(3,0x466a3e,.7);leaf.lineBetween(vx,-96,vx-4,-55+(i%3)*7);
-        leaf.fillStyle(i%2?0x63834d:0x386548,.78);
-        leaf.fillEllipse(vx-6,-52+(i%3)*7,19,11);
+      roots.lineStyle(19,0x423a29,.96);
+      roots.beginPath();roots.moveTo(-115,0);roots.lineTo(-101,-65);
+      roots.lineTo(-66,-122);roots.lineTo(-18,-142);roots.strokePath();
+      roots.beginPath();roots.moveTo(115,0);roots.lineTo(101,-65);
+      roots.lineTo(66,-122);roots.lineTo(18,-142);roots.strokePath();
+      roots.lineStyle(5,0x7d8052,.75);
+      roots.lineBetween(-115,0,-73,-105);roots.lineBetween(115,0,73,-105);
+      const cap=this.add.graphics();
+      cap.fillStyle(0x355b36,.91);cap.fillEllipse(-72,-138,108,63);
+      cap.fillStyle(0x507244,.9);cap.fillEllipse(61,-140,110,65);
+      cap.fillStyle(0x415c3c,.9);cap.fillEllipse(0,-155,120,55);
+      const seal=this.add.graphics();
+      seal.fillStyle(0x29432e,.91);
+      seal.fillEllipse(0,-64,148,114);
+      seal.fillStyle(0x446943,.95);
+      for(let i=0;i<6;i++)seal.fillEllipse(-64+i*25,-99+(i%3)*12,66,39);
+      this.routeCurtainPlants.push(seal);
+      const light=this.add.graphics();
+      light.fillStyle(0xc8e6a1,.15);light.fillEllipse(0,-44,130,86);
+      light.fillStyle(0xb1d8ae,.20);light.fillEllipse(0,-15,205,31);
+      const sign=this.add.text(0,-193,
+        route==='oca'?'TRILHA DA ÁRVORE OCA':'TRILHA DA PEDRA RACHADA',{
+        fontFamily:'Arial',fontSize:'13px',fontStyle:'bold',
+        color:'#e0ebce',stroke:'#091f19',strokeThickness:4,
+        align:'center'}).setOrigin(.5).setVisible(false);
+      const count=this.add.text(0,-175,'REÚNAM OS TRÊS AQUI · 0/3 AMIGOS',{
+        fontFamily:'Arial',fontSize:'12px',fontStyle:'bold',
+        color:'#f3edd0',stroke:'#061916',strokeThickness:4,
+        align:'center'}).setOrigin(.5).setVisible(false);
+      this.routeLabels.push(count);
+      entry.add([deep,light,roots,cap,seal,sign,count]);
+      this.routeCurtains.push(entry);
+      const leaves:Phaser.GameObjects.Ellipse[]=[];
+      for(let i=0;i<6;i++){
+        const leaf=this.add.ellipse(x-116+i*45,494+i%2*16,
+          10+i%3*3,6,0xb6d6a4,.65).setDepth(15);
+        this.tweens.add({targets:leaf,
+          x:leaf.x+(i%2===0?14:-17),y:leaf.y-8,rotation:.6,
+          duration:1450+i*115,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
+        leaves.push(leaf);
       }
-      const warning=this.add.graphics();
-      warning.lineStyle(3,0xc0e3a0,.43);
-      warning.beginPath();warning.moveTo(-36,-106);
-      warning.lineTo(0,-118);warning.lineTo(36,-106);warning.strokePath();
-      this.routeCurtains.push(this.add.container(x,638,[roots,warning]).setDepth(14));
+      this.routeLeaves.push(leaves);
     }
     for(const x of [1300,7590,10600])
       this.add.rectangle(x,625,72,5,0x7cbed4,.7).setDepth(11);
