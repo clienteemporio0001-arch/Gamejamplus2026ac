@@ -20,6 +20,8 @@ import {viewportSize,isCoarseDevice,isMobilePortrait} from './mobileViewport';
 import { GUIDE_DIALOGUES } from './forestPresentation';
 import { loopObjective, loopWind } from './forestLoopUI';
 import { LOOP_CYCLE_MS } from './forestLoop';
+import {getAudioSettings,setAudioSettings} from './audioSettings';
+import {GameAudio,type SoundBiome} from './sharedAudio';
 
 const net = new Network();
 const ui = document.querySelector<HTMLDivElement>('#ui')!;
@@ -29,6 +31,9 @@ let game: Phaser.Game | null = null;
 let activeMode: 'none' | 'intro' | 'level1' | 'level2' | 'level3' | 'level4' | 'loop' | 'temporal' | 'treetop' | 'fire' = 'none';
 let info = '';
 let devToolsOpen=false;
+let devSession=false;
+const audio=new GameAudio();
+let lastStepAt=0;
 let mobilePad:MobilePadMount|null=null;
 function unmountMobileControls():void{
   mobilePad?.destroy();mobilePad=null;
@@ -100,6 +105,121 @@ function banner(): string {
     '<h1>A FLORESTA<br>MENTE</h1><div class="subtitle">Mas o vento não.</div>' +
     '<p>Quando chega a boca da noite, a floresta muda de lugar.<br>Três amigos. Uma saída. Ninguém pode ficar para trás.</p>';
 }
+/** The menu and the in-game options share one accessible, dismissible overlay. */
+type PanelKind='how'|'settings'|'credits'|'developer';
+function devSnapshot():string{
+ if(!net.isSolo||!net.playing||net.experience!=='loop')return 'Disponível somente em teste solo.';
+ const p=net.poses[net.localSeat??0];
+ const phase=net.level;
+ let status='';
+ let cycle=0,layout=0;
+ if(phase===1){
+  const w=net.loop;cycle=w.cycle;layout=w.layout;
+  status='Marcos '+w.marks.map(v=>v?'✓':'○').join(' ') +
+   ' · Árvore '+w.tree.map(v=>v?'✓':'○').join(' ') +
+   ' · Travas '+w.final.map(v=>v?'✓':'○').join(' ');
+ }else if(phase===2){
+  const w=net.temporal;cycle=w.cycle;layout=w.layout;
+  status='Ecos '+w.echo.map(v=>v?'✓':'○').join(' ') +
+   ' · Raízes '+w.roots.map(v=>v?'✓':'○').join(' ') +
+   ' · Ponte '+(w.bridge?'✓':'○');
+ }else if(phase===3){
+  const w=net.treetop;cycle=w.cycle;layout=w.layout;
+  status='Ponte '+w.bridge.map(v=>v?'✓':'○').join(' ') +
+   ' · Torre '+w.tower.map(v=>v?'✓':'○').join(' ') +
+   ' · Tempo '+w.time.map(v=>v?'✓':'○').join(' ');
+ }else{
+  const w=net.fire;cycle=w.cycle;layout=w.layout;
+  status='Tronco '+w.log.map(v=>v?'✓':'○').join(' ') +
+   ' · Fumaça '+w.smoke.map(v=>v?'✓':'○').join(' ') +
+   ' · Árvore '+w.tree.map(v=>v?'✓':'○').join(' ');
+ }
+ const state=phase===4?'BRASAS '+(layout+1):'ESTADO '+['A','B','C'][layout];
+ return 'FASE 0'+phase+' · '+state+' · CICLO '+cycle+
+  '\\nPERSONAGEM '+CHARACTERS[p.seat].name.toUpperCase()+
+  ' · X '+Math.round(p.x)+' / Y '+Math.round(p.y)+
+  '\\n'+status;
+}
+function closeOverlay():void{
+ document.getElementById('fm-overlay')?.remove();
+ document.removeEventListener('keydown',overlayKey);
+}
+function overlayKey(event:KeyboardEvent):void{
+ if(event.key==='Escape'){event.preventDefault();closeOverlay();}
+}
+function openPanel(kind:PanelKind):void{
+ closeOverlay();
+ if(kind==='developer'&&(!devSession||!net.isSolo||!net.playing))return;
+ const prefs=getAudioSettings();
+ const title=kind==='how'?'COMO JOGAR':kind==='settings'?'CONFIGURAÇÕES':
+   kind==='credits'?'CRÉDITOS':'PAINEL DE TESTES';
+ const body=kind==='how'?
+   '<p>Três amigos, uma saída. <strong>Ninguém fica para trás.</strong></p>'+
+   '<div class="overlay-guide">'+
+   '<p><b>TEO · VERDE:</b> caminhe com A/D ou setas. Espaço/↑ pula; pressione novamente no ar para o salto duplo.</p>'+
+   '<p><b>LIA · LARANJA:</b> use J para disparar a baladeira. A mira depende da posição e direção.</p>'+
+   '<p><b>NINO · AZUL:</b> use SHIFT para o dash e E para interagir com mecanismos.</p>'+
+   '<p><b>SOZINHO:</b> alterne entre os amigos pelas teclas 1, 2 e 3. No celular, use o joystick e os botões da tela.</p>'+
+   '<p><b>PIPO:</b> pressione H ou toque em 🦜 DICA para receber ajuda contextual.</p>'+
+   '<p>Observe vento, estados da floresta, estamina, corações e objetivos. Os três precisam chegar juntos à saída.</p>'+
+   '</div>':
+  kind==='settings'?
+   '<p>Áudio gerado no navegador. Os ajustes são aplicados sem reiniciar a partida.</p>'+
+   '<div class="settings-control"><label for="fm-music">Música ambiente <output id="fm-music-value">'+prefs.music+'%</output></label>'+
+   '<input id="fm-music" type="range" min="0" max="100" step="1" value="'+prefs.music+'"></div>'+
+   '<div class="settings-control"><label for="fm-sfx">Efeitos e ambiente <output id="fm-sfx-value">'+prefs.sfx+'%</output></label>'+
+   '<input id="fm-sfx" type="range" min="0" max="100" step="1" value="'+prefs.sfx+'"></div>'+
+   '<label class="settings-mute"><input id="fm-muted" type="checkbox" '+(prefs.muted?'checked':'')+'>'+
+   ' Silenciar tudo</label>'+
+   '<p class="overlay-footnote">O navegador só ativa o som após interação. Não há faixas de terceiros nem trilha sonora completa.</p>':
+  kind==='credits'?
+   '<p><strong>A FLORESTA MENTE</strong><br>MAS O VENTO NÃO.<br>NINGUÉM FICA PARA TRÁS.</p>'+
+   '<div class="overlay-guide">'+
+   '<p><b>Desenvolvimento:</b> projeto independente A Floresta Mente, com assistência de inteligência artificial na programação e na criação de recursos.</p>'+
+   '<p><b>Tecnologias:</b> Phaser 3 (licença MIT), PeerJS (MIT), TypeScript, Vite e Web Audio API.</p>'+
+   '<p><b>Arte e áudio:</b> formas vetoriais e síntese procedural produzidas para o jogo. Fontes externas: Nunito, disponível pelo Google Fonts sob licença aberta.</p>'+
+   '<p><b>Licenças:</b> consulte as licenças e avisos de copyright de cada dependência distribuída no projeto.</p>'+
+   '<p>Obrigado por jogar. A floresta sobrevive quando cuidamos dela.</p>'+
+   '</div>':
+   '<p>Somente no modo solo de desenvolvimento. Os controles abaixo não afetam salas multiplayer.</p>'+
+   '<pre class="dev-inspector" id="dev-inspector">'+safeText(devSnapshot())+'</pre>'+
+   '<div class="dev-actions">'+
+   '<button type="button" id="dev-restart" class="btn secondary">REINICIAR ESTA FASE</button>'+
+   '<button type="button" id="dev-cycle" class="btn secondary">'+(net.level===4?'ADIANTAR CICLO DE FOGO':'ADIANTAR APAGÃO')+'</button>'+
+   '<button type="button" id="dev-exit" class="btn secondary">VOLTAR AO MENU</button></div>';
+ const wrapper=document.createElement('div');
+ wrapper.id='fm-overlay';wrapper.className='fm-overlay';
+ wrapper.innerHTML='<div class="overlay-scrim" data-close-overlay></div>'+
+  '<section role="dialog" aria-modal="true" aria-labelledby="fm-title" class="overlay-sheet">'+
+  '<header><span class="kicker">A FLORESTA MENTE</span>'+
+  '<button type="button" id="fm-close" aria-label="Fechar">✕</button></header>'+
+  '<h2 id="fm-title">'+title+'</h2>'+body+
+  '<button type="button" id="fm-back" class="btn secondary">VOLTAR</button></section>';
+ document.body.appendChild(wrapper);
+ wrapper.querySelectorAll('[data-close-overlay],#fm-close,#fm-back')
+  .forEach(element=>element.addEventListener('click',closeOverlay));
+ document.addEventListener('keydown',overlayKey);
+ const slider=(id:'music'|'sfx')=>{
+  wrapper.querySelector<HTMLInputElement>('#fm-'+id)?.addEventListener('input',e=>{
+   const n=Number((e.currentTarget as HTMLInputElement).value);
+   setAudioSettings({[id]:n});
+   const output=wrapper.querySelector<HTMLOutputElement>('#fm-'+id+'-value');
+   if(output)output.textContent=n+'%';
+  });
+ };
+ slider('music');slider('sfx');
+ wrapper.querySelector<HTMLInputElement>('#fm-muted')?.addEventListener('change',e=>
+  setAudioSettings({muted:(e.currentTarget as HTMLInputElement).checked}));
+ wrapper.querySelector('#dev-restart')?.addEventListener('click',()=>{
+  closeOverlay();net.restartSolo();
+ });
+ wrapper.querySelector('#dev-cycle')?.addEventListener('click',()=>net.advanceLoopCycle());
+ wrapper.querySelector('#dev-exit')?.addEventListener('click',()=>{
+  closeOverlay();net.shutdown();
+ });
+ (wrapper.querySelector<HTMLElement>('#fm-close')??wrapper).focus();
+}
+
 function enterGame(): void {
   const mode = net.stage === 'intro' ? 'intro' : net.experience==='loop'?(net.level===4?'fire':net.level===3?'treetop':net.level===2?'temporal':'loop'):('level' + net.level) as 'level1' | 'level2' | 'level3' | 'level4';
   if (game && activeMode === mode) return;
