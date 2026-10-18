@@ -1,4 +1,5 @@
 import type { Seat,Pose } from './network';
+import {exitMessage} from './sharedExit';
 import { LOOP_MARKS, LOOP_TREE, LOOP_FINAL, LOOP_GEOMETRY, UPPER_BRANCH, upperLandingY, summitLandingY, allDone, windGuide,
   SUSPENSION,SUSPENSION_LANDING_Y,markPosition,trailOccupants,correctRoute,TRAIL_MEET_RADIUS_X,canStack,suspensionLeverStatus,SUSPENSION_LEVER_FEEDBACK,type LoopWorld } from './forestLoop';
 
@@ -17,8 +18,8 @@ export function loopObjective(w:LoopWorld,poses:readonly Pose[]=[]):LoopObjectiv
     progress:'Mecanismos '+w.suspended.filter(Boolean).length+'/3'};
   if(!w.bridge)return {title:'Trabalhem juntos para derrubar a árvore.',progress:'Amarras '+w.tree.filter(Boolean).length+'/3'};
   if(!allDone(w.final))return {title:'Destravem a saída juntos.',progress:'Travas '+w.final.filter(Boolean).length+'/3'};
-  if(!w.exit)return {title:'Aguardem a floresta C.',progress:'Travas 3/3'};
-  return {title:'Reúnam os três na saída.',progress:'Equipe 0/3'};
+  if(!w.exit)return {title:'As três travas abrirão o caminho.',progress:'Travas 3/3'};
+  return {title:'TRILHA PARA A FLORESTA TEMPORAL',progress:exitMessage(1,poses,w.health,true)};
 }
 export const regionTitle=(x:number):string=>
   x<2050?'BOSQUE DA ÁRVORE OCA':
