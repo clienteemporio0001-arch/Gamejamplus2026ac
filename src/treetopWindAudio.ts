@@ -18,7 +18,7 @@ export class TreetopWindAudio {
   window.addEventListener(AUDIO_CHANGE_EVENT,this.settingsChange);
  }
  private async unlock():Promise<void>{
-  if(this.context){if(this.context.state==='suspended')await this.context.resume();return;}
+  if(this.context){try{if(this.context.state==='suspended')await this.context.resume();}catch{/* blocked gesture */}return;}
   try{
    const context=getSharedAudioContext();
    const length=Math.max(1024,Math.floor(context.sampleRate*.48));
@@ -53,7 +53,7 @@ export class TreetopWindAudio {
   document.removeEventListener('keydown',this.activate);
   window.removeEventListener(AUDIO_CHANGE_EVENT,this.settingsChange);
   try{this.source?.stop();this.source?.disconnect();this.filter?.disconnect();this.gain?.disconnect();}catch{/* already stopped */}
-  void this.context?.close();
+  // AudioContext lifetime is owned by the central GameAudio instance.
   this.source=undefined;this.context=undefined;
  }
 }
