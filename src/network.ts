@@ -678,7 +678,7 @@ export class Network {
         this.emit('temporal',this.temporal);
         break;
       case 'loop':
-        this.loop={...msg.world,marks:[...msg.world.marks] as LoopWorld['marks'],tree:[...msg.world.tree] as LoopWorld['tree'],final:[...msg.world.final] as LoopWorld['final'],supporting:[...msg.world.supporting] as LoopWorld['supporting'],health:[...msg.world.health] as LoopWorld['health'],stamina:[...msg.world.stamina] as LoopWorld['stamina'],safeUntil:[...msg.world.safeUntil] as LoopWorld['safeUntil'],lastSpent:[...msg.world.lastSpent] as LoopWorld['lastSpent']};
+        this.loop={...msg.world,marks:[...msg.world.marks] as LoopWorld['marks'],suspended:[...msg.world.suspended] as LoopWorld['suspended'],tree:[...msg.world.tree] as LoopWorld['tree'],final:[...msg.world.final] as LoopWorld['final'],supporting:[...msg.world.supporting] as LoopWorld['supporting'],health:[...msg.world.health] as LoopWorld['health'],stamina:[...msg.world.stamina] as LoopWorld['stamina'],safeUntil:[...msg.world.safeUntil] as LoopWorld['safeUntil'],lastSpent:[...msg.world.lastSpent] as LoopWorld['lastSpent']};
         this.emit('loop',this.loop);
         break;
       case 'forest':
@@ -920,7 +920,7 @@ export class Network {
   }
   private shareLoop():void{
     const w=this.loopAuthority.world;
-    this.loop={...w,marks:[...w.marks] as LoopWorld['marks'],tree:[...w.tree] as LoopWorld['tree'],final:[...w.final] as LoopWorld['final'],supporting:[...w.supporting] as LoopWorld['supporting'],health:[...w.health] as LoopWorld['health'],stamina:[...w.stamina] as LoopWorld['stamina'],safeUntil:[...w.safeUntil] as LoopWorld['safeUntil'],lastSpent:[...w.lastSpent] as LoopWorld['lastSpent']};
+    this.loop={...w,marks:[...w.marks] as LoopWorld['marks'],suspended:[...w.suspended] as LoopWorld['suspended'],tree:[...w.tree] as LoopWorld['tree'],final:[...w.final] as LoopWorld['final'],supporting:[...w.supporting] as LoopWorld['supporting'],health:[...w.health] as LoopWorld['health'],stamina:[...w.stamina] as LoopWorld['stamina'],safeUntil:[...w.safeUntil] as LoopWorld['safeUntil'],lastSpent:[...w.lastSpent] as LoopWorld['lastSpent']};
     this.broadcast({t:'loop',world:this.loop});
     this.emit('loop',this.loop);
   }
