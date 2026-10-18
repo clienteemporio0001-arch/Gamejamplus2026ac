@@ -1,5 +1,6 @@
 import type {TreeWindPhase} from './treetopForest';
 import {AUDIO_CHANGE_EVENT,audioLevel} from './audioSettings';
+import {getSharedAudioContext} from './sharedAudio';
 
 /** Tiny synthesized wind bed; activated only after the browser's user gesture. */
 export class TreetopWindAudio {
@@ -19,7 +20,7 @@ export class TreetopWindAudio {
  private async unlock():Promise<void>{
   if(this.context){if(this.context.state==='suspended')await this.context.resume();return;}
   try{
-   const context=new AudioContext();
+   const context=getSharedAudioContext();
    const length=Math.max(1024,Math.floor(context.sampleRate*.48));
    const buffer=context.createBuffer(1,length,context.sampleRate);
    const data=buffer.getChannelData(0);
@@ -51,7 +52,7 @@ export class TreetopWindAudio {
   document.removeEventListener('pointerdown',this.activate);
   document.removeEventListener('keydown',this.activate);
   window.removeEventListener(AUDIO_CHANGE_EVENT,this.settingsChange);
-  try{this.source?.stop();}catch{/* already stopped */}
+  try{this.source?.stop();this.source?.disconnect();this.filter?.disconnect();this.gain?.disconnect();}catch{/* already stopped */}
   void this.context?.close();
   this.source=undefined;this.context=undefined;
  }
