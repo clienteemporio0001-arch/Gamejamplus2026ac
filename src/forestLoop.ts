@@ -25,7 +25,7 @@ export const LOOP_START: Pose[] = ([0,1,2] as Seat[]).map(seat=>({
 /** Character 30x44, gravity 850, jump velocity 465; the ledge can only be
  * attained by a real stacked double jump (from body-center height 518). */
 export const LOOP_PHYSICS={characterHeight:44,gravity:850,jumpVelocity:465} as const;
-export const UPPER_BRANCH={x:2140,centerY:313,width:156,height:20,anchorX:2130} as const;
+export const UPPER_BRANCH={x:2140,centerY:325,width:156,height:20,anchorX:2130} as const;
 export const upperLandingY=UPPER_BRANCH.centerY-UPPER_BRANCH.height/2-LOOP_PHYSICS.characterHeight/2;
 export const soloJumpRise=LOOP_PHYSICS.jumpVelocity**2/(2*LOOP_PHYSICS.gravity);
 export const hasBranchFooting=(p:Pose):boolean=>

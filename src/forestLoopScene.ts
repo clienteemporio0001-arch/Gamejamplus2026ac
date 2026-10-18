@@ -110,7 +110,7 @@ export class ForestLoopScene extends Phaser.Scene {
     }
     // Towering chasm tree is attached to its roots, while the narrow branch
     // at UPPER_BRANCH.centerY is the ONLY solid high landing for Téo.
-    this.add.image(2200,341,'loop-elevated-tree')
+    this.add.image(2200,353,'loop-elevated-tree')
       .setDisplaySize(500,590).setDepth(5);
     const root=this.add.graphics().setDepth(6);
     root.lineStyle(16,0x534937,.9);

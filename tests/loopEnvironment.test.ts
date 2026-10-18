@@ -37,7 +37,7 @@ ok(182-2*44>44,'arco com abertura maior que o personagem');
 ok(LOOP_MARKS[0].y>markerBaseY-320&&LOOP_MARKS[0].y<markerBaseY,
   'cavidade da árvore desenhada acima das raízes');
 ok(scene.includes("this.ground(LOOP_MARKS[0].x,546"),'galho inicial com colisão real');
-ok(scene.includes('this.add.image(2200,341'),'árvore gigante tem raízes no terreno');
+ok(scene.includes('this.add.image(2200,353'),'árvore gigante tem raízes no terreno');
 ok(scene.includes('UPPER_BRANCH.centerY')&&scene.includes('UPPER_BRANCH.width'),
   'galho superior desenhado e físico usam a mesma geometria');
 ok(scene.includes('ledgeBody.checkCollision.down=false')&&
@@ -48,12 +48,13 @@ ok(LOOP_TREE[0].y===upperLandingY,'ponto de amarra coincide com posição do cor
 ok(UPPER_BRANCH.x-UPPER_BRANCH.width/2<LOOP_TREE[0].x &&
    LOOP_TREE[0].x<UPPER_BRANCH.x+UPPER_BRANCH.width/2,'alvo Téo fica no galho');
 
-const floor=LOOP_START[2].y;
+const floor=LOOP_GEOMETRY.clearing.groundY-LOOP_PHYSICS.characterHeight/2;
 const onLia=floor-LOOP_PHYSICS.characterHeight*2;
 const fromNino=floor-LOOP_PHYSICS.characterHeight;
 ok(LOOP_PHYSICS.jumpVelocity===465&&LOOP_PHYSICS.gravity===850,
   'cálculo utiliza valores Arcade reais');
 ok(soloJumpRise>126&&soloJumpRise<128,'apex de um salto Phaser');
+ok(floor===616&&upperLandingY===293,'altura de repouso real sobre o solo e centro no galho');
 ok(floor-upperLandingY>soloJumpRise*2,'do chão nem salto duplo alcança a plataforma');
 ok(fromNino-upperLandingY>soloJumpRise*2,
   'um único amigo não serve para alcançar o galho');
