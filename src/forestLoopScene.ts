@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import {PipoGuide} from './pipoGuide';
+import {MissionDirector} from './missionDirector';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import { LOOP_WIDTH, LOOP_GEOMETRY, LOOP_MARKS, LOOP_TREE, LOOP_FINAL, ROUTES, barriers,
   allDone, windGuide, blackoutActive, warningActive, type LoopWorld, LOOP_START,
@@ -27,7 +28,7 @@ export class ForestLoopScene extends Phaser.Scene {
   private finalBarrier!:Phaser.GameObjects.Rectangle;
   private marks:Phaser.GameObjects.Container[]=[];
   private contextText!:Phaser.GameObjects.Text;
-   private pipo!:PipoGuide;
+   private pipo!:PipoGuide;private missions!:MissionDirector;
   private regionToast!:Phaser.GameObjects.Text;
   private regionShown='';private regionUntil=0;
   private gusts:Phaser.GameObjects.Ellipse[]=[];
@@ -235,6 +236,7 @@ export class ForestLoopScene extends Phaser.Scene {
     this.cursors=this.input.keyboard?.createCursorKeys();
     this.keys=this.input.keyboard?.addKeys('A,D,E') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
     this.pipo=new PipoGuide(this,this.net);
+   this.missions=new MissionDirector(this,this.net,1,this.avatars);
     this.contextText=this.label(0,0,'',12,'#e7f4d6')
       .setDepth(70).setVisible(false).setWordWrapWidth(230);
     this.regionToast=this.label(this.scale.gameSize.width/2,111,'',13,'#cbe7c8')
@@ -459,7 +461,8 @@ export class ForestLoopScene extends Phaser.Scene {
       this.regionToast.setText(region);
     }
     this.regionToast.setVisible(time<this.regionUntil&&!pause);
-    this.pipo.update(time,this.local.x,this.local.y,pause);
+    this.missions.update(time,pause);
+   this.pipo.update(time,this.local.x,this.local.y,pause);
     void hint;
     const fallProgress=w.treeFallAt>0?Math.min(1,(now-w.treeFallAt)/1900):0;
     const easing=fallProgress*fallProgress*(3-2*fallProgress);
