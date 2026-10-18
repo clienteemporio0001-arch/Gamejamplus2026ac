@@ -87,7 +87,8 @@ export class TreetopForestScene extends Phaser.Scene {
    [3890,55,'3 · GALHOS DO TEMPO'],[4170,55,'A ÚLTIMA COPA']
   ] as const;
   for(const [x,y,title] of markers){
-   this.caption(x,y,title,14,'#efdea1');
+   // Subtle glow remains; Pipo explains the puzzle instead of a large title.
+   void title;
    const aura=this.add.circle(x,y+27,8,0xffe7a8,.8).setDepth(12);
    this.tweens.add({targets:aura,alpha:.2,scale:1.5,duration:1450,yoyo:true,repeat:-1});
   }
