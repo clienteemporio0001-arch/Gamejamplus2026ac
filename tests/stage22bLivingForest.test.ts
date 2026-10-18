@@ -117,8 +117,8 @@ for(const [scene,indicator] of [
  assert.ok(read(scene).includes(indicator),scene+' must not hide the shift under black');
 }
 assert.ok(read('forestLoopScene').includes("x:markPosition({layout:upcoming},i).x"));
-assert.ok(read('forestLoopScene').includes('this.stoneHitbox.setX(markPosition(w,1).x)'));
-assert.ok(read('forestLoopScene').includes('this.hollowLedge.setX(markPosition(w,0).x)'));
+assert.ok(read('forestLoopScene').includes('this.stoneHitbox.setX(stoneX)')&&read('forestLoopScene').includes('stoneX=markPosition(w,1).x'));
+assert.ok(read('forestLoopScene').includes('this.hollowLedge.setX(hollowX)')&&read('forestLoopScene').includes('hollowX=markPosition(w,0).x'));
 assert.ok(read('forestLoopScene').includes('updateFromGameObject()'));
 assert.ok(read('forestLoopUI').includes('markPosition(w,seat)'));
 assert.ok(read('missionChapters').includes('markPosition(w,0)'));
