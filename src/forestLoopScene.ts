@@ -31,10 +31,12 @@ export class ForestLoopScene extends Phaser.Scene {
   private marks:Phaser.GameObjects.Container[]=[];
   private routeCurtains:Phaser.GameObjects.Container[]=[];
   private routeLabels:Phaser.GameObjects.Text[]=[];
+  private routeNames:Phaser.GameObjects.Text[]=[];
   private routeLeaves:Phaser.GameObjects.Ellipse[][]=[];
   private routeCurtainPlants:Phaser.GameObjects.Graphics[]=[];
   private trailsUnlockedAt=0;
   private crossingBannerUntil=0;
+  private trailToast!:Phaser.GameObjects.Text;
   private suspension!:Phaser.GameObjects.Container;
   private suspensionCollider!:Phaser.GameObjects.Rectangle;
   private suspensionCables!:Phaser.GameObjects.Graphics;
@@ -199,7 +201,7 @@ export class ForestLoopScene extends Phaser.Scene {
         fontFamily:'Arial',fontSize:'12px',fontStyle:'bold',
         color:'#f3edd0',stroke:'#061916',strokeThickness:4,
         align:'center'}).setOrigin(.5).setVisible(false);
-      this.routeLabels.push(count);
+      this.routeLabels.push(count);this.routeNames.push(sign);
       entry.add([deep,light,roots,cap,seal,sign,count]);
       this.routeCurtains.push(entry);
       const leaves:Phaser.GameObjects.Ellipse[]=[];
@@ -360,6 +362,8 @@ export class ForestLoopScene extends Phaser.Scene {
       .setDepth(70).setVisible(false).setWordWrapWidth(230);
     this.regionToast=this.label(this.scale.gameSize.width/2,111,'',13,'#cbe7c8')
       .setScrollFactor(0).setDepth(90).setVisible(false);
+    this.trailToast=this.label(this.scale.gameSize.width/2,148,'',21,'#e4f6ca')
+      .setScrollFactor(0).setDepth(92).setVisible(false);
     this.blackout=this.add.rectangle(this.scale.gameSize.width/2,350,this.scale.gameSize.width+200,800,0x02080e,1)
       .setDepth(190).setScrollFactor(0).setAlpha(0);
     // Wind is readable through moving leaves, and its sign comes exclusively from windGuide().
@@ -420,6 +424,7 @@ export class ForestLoopScene extends Phaser.Scene {
     }));
     this.off.push(this.net.on('respawn',p=>{
       this.remote[p.seat]={...p};
+      this.avatars[p.seat].setPosition(p.x,p.y);
       if(this.net.isSolo)this.solo?.reset(p);
       if(p.seat===this.net.localSeat){
         this.body.reset(p.x,p.y);this.body.setAllowGravity(true);
@@ -430,6 +435,7 @@ export class ForestLoopScene extends Phaser.Scene {
       this.cameras.main.setZoom(cameraZoomFor({width:size.width,height:size.height},isCoarseDevice()));
       this.cameras.main.setBounds(0,0,LOOP_WIDTH,700);
       this.regionToast.setX(size.width/2).setY(Math.min(108,size.height*.22));
+      this.trailToast.setX(size.width/2).setY(Math.min(149,size.height*.28));
       this.blackout.setPosition(size.width/2,size.height/2).setSize(size.width+200,size.height+120);
       this.blackoutText.setPosition(size.width/2,size.height/2);
     };
@@ -456,6 +462,7 @@ export class ForestLoopScene extends Phaser.Scene {
 
     const layoutChanged=this.w.layout!==w.layout;
     const transformationStarted=w.blackoutUntil>0&&this.w.blackoutUntil!==w.blackoutUntil;
+    const wasUnlocked=allDone(this.w.marks),previousRouteCount=this.w.routeCount;
     this.w={...w,marks:[...w.marks],tree:[...w.tree],final:[...w.final],
       suspended:[...w.suspended],supporting:[...w.supporting]};
     if(transformationStarted){
@@ -518,14 +525,35 @@ export class ForestLoopScene extends Phaser.Scene {
       (this.hollowLedge.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
       (this.stoneHitbox.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
     }
+    
+    const unlocked=allDone(w.marks);
+    if(unlocked&&!wasUnlocked){
+      this.crossingBannerUntil=this.time.now+4300;
+      this.trailToast.setText('TRILHAS LIBERADAS!').setVisible(true);
+      this.pipo?.warnDanger('Boa, equipe! Agora encontrem a trilha indicada pelo vento e reúnam os três na entrada!');
+    }
     this.routeCurtains.forEach((curtain,i)=>{
-      const unlocked=allDone(w.marks);
-      const correct=ROUTES[w.layout].correct===(i===0?'oca':'pedra');
-      const target=unlocked&&correct?.40:1;
-      if(Math.abs(curtain.alpha-target)>.08)
-        this.tweens.add({targets:curtain,alpha:target,duration:380,ease:'Sine.easeOut'});
-      else curtain.setAlpha(target);
+      const route=i===0?'oca':'pedra';
+      const right=correctRoute(w.layout)===route;
+      const plant=this.routeCurtainPlants[i];
+      this.routeNames[i].setVisible(unlocked);
+      this.routeLabels[i].setVisible(unlocked);
+      if(unlocked){
+        if(plant.scaleX>.45)this.tweens.add({targets:plant,scaleX:.12,
+          alpha:.28,duration:850,ease:'Sine.easeInOut'});
+        curtain.setAlpha(right?1:.82);
+      }else{plant.setScale(1);plant.setAlpha(1);curtain.setAlpha(.88);}
+      this.routeLeaves[i].forEach(leaf=>leaf.setAlpha(unlocked
+        ?(right?.84:.42):.22));
     });
+    if(w.routeCount>previousRouteCount){
+      this.crossingBannerUntil=this.time.now+3200;
+      this.trailToast.setText(w.lastRoute==='right'
+        ?'TRAVESSIA CONCLUÍDA!':'ESSA TRILHA NOS TROUXE DE VOLTA!').setVisible(true);
+      this.pipo?.warnDanger(w.lastRoute==='right'
+        ?'Conseguimos passar! Agora precisamos encontrar uma maneira de atravessar aquele abismo!'
+        :'Essa trilha nos trouxe de volta! O vento mudou. Vamos procurar outra!');
+    }
   }
   private action(seat:Seat):void{
     const x=this.local.x,y=this.local.y,w=this.w;
@@ -623,11 +651,18 @@ export class ForestLoopScene extends Phaser.Scene {
       this.labels[i].setColor(i===seat?'#ffffff':CHARACTERS[i].hex);
     }
     // Context is the only gameplay instruction rendered in world coordinates.
-    const hint=loopContext(w,seat,this.local.x,this.local.y,now);
+    const hint=loopContext(w,seat,this.local.x,this.local.y,now,this.net.poses);
     const fatigue=time<this.tiredUntil;
-    this.contextText.setText(fatigue?'SEM ESTAMINA':'')
-      .setVisible(fatigue).setColor(fatigue?'#ffd28e':'#e7f4d6')
-      .setPosition(this.local.x,this.local.y-87);
+    this.contextText.setText(fatigue?'SEM ESTAMINA':hint)
+      .setVisible((fatigue||Boolean(hint))&&!pause)
+      .setColor(fatigue?'#ffd28e':'#e7f4d6')
+      .setPosition(this.local.x,this.local.y-101);
+    if(allDone(w.marks)&&w.lastRoute!=='right'){
+      (['oca','pedra'] as const).forEach((route,i)=>{
+        const count=trailOccupants(this.net.poses,route).length;
+        this.routeLabels[i].setText('REÚNAM OS TRÊS AQUI · '+count+'/3 AMIGOS');
+      });
+    }
     this.avatars.forEach((actor,i)=>{
       const blink=w.safeUntil[i]>now&&Math.floor(now/120)%2===0;
       actor.setAlpha(blink?.42:1);
@@ -638,9 +673,10 @@ export class ForestLoopScene extends Phaser.Scene {
       this.regionToast.setText(region);
     }
     this.regionToast.setVisible(time<this.regionUntil&&!pause);
+    this.trailToast.setVisible(time<this.crossingBannerUntil&&!pause);
     this.missions.update(time,pause);
    this.pipo.update(time,this.local.x,this.local.y,pause);
-    void hint;
+    // Trail instructions remain visible whenever the selected character approaches.
     const fallProgress=w.treeFallAt>0?Math.min(1,(now-w.treeFallAt)/1900):0;
     const easing=fallProgress*fallProgress*(3-2*fallProgress);
     this.tree.setRotation(-1.16*(1-easing));
