@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import {PipoGuide} from './pipoGuide';
+import {MissionDirector} from './missionDirector';
 import {CHARACTERS,type Network,type Seat,type Pose} from './network';
 import type {TouchInput} from './game';
 import {SoloBodies} from './soloBodies';
@@ -47,7 +48,7 @@ export class TemporalForestScene extends Phaser.Scene {
  private dark!:Phaser.GameObjects.Rectangle;
  private darkText!:Phaser.GameObjects.Text;
  private hint!:Phaser.GameObjects.Text;
- private pipo!:PipoGuide;
+ private pipo!:PipoGuide;private missions!:MissionDirector;
  private region!:Phaser.GameObjects.Text;
  private regionId=-1;private regionEnds=0;
  private pending=new Map<number,{seat:Seat;kind:VitalAction}>();
@@ -236,6 +237,7 @@ export class TemporalForestScene extends Phaser.Scene {
   this.frontRain=this.add.graphics().setDepth(55);
   this.ripples=this.add.graphics().setDepth(14);
   this.pipo=new PipoGuide(this,this.net);
+   this.missions=new MissionDirector(this,this.net,2,this.avatars);
    this.hint=this.text(0,0,'',12,'#c6e9e0').setVisible(false).setDepth(66);
   this.region=this.text(this.scale.gameSize.width/2,110,'',14,'#d8ebed')
     .setScrollFactor(0).setDepth(100).setVisible(false);
@@ -430,7 +432,8 @@ export class TemporalForestScene extends Phaser.Scene {
   this.hint.setText(time<this.tiredUntil?'SEM ESTAMINA':'')
    .setColor(time<this.tiredUntil?'#f8cb86':'#c6e9e0');
   this.hint.setVisible(Boolean(this.hint.text)).setPosition(this.local.x,this.local.y-81);
-  this.pipo.update(time,this.local.x,this.local.y,pause);
+  this.missions.update(time,pause);
+   this.pipo.update(time,this.local.x,this.local.y,pause);
   void guidance;
   this.echoLabels.forEach((label,i)=>{
     const marker=TEMP_ECHO[i];
