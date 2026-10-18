@@ -65,6 +65,7 @@ export class PipoGuide {
   });
  }
  private source():HintSource{
+  if(this.net.level===4)return {phase:4,world:this.net.fire};
   if(this.net.level===3)return {phase:3,world:this.net.treetop};
   if(this.net.level===2)return {phase:2,world:this.net.temporal};
   return {phase:1,world:this.net.loop};
@@ -77,6 +78,10 @@ export class PipoGuide {
   this.speak(now);
  }
  /** Warnings are high-priority, short and do not change hint progression. */
+ warnDanger(message:string):void{
+  if(this.net.experience!=='loop'||!this.net.playing)return;
+  this.speak(Date.now(),message,3500);
+ }
  warnWind(message:string):void{
   if(this.net.experience!=='loop'||this.net.level!==3||!this.net.playing)return;
   this.speak(Date.now(),message,3400);
