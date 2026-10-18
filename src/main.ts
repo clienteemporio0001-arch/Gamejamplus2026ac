@@ -6,7 +6,7 @@ import { ForestLoopScene } from './forestLoopScene';
 import { TemporalForestScene } from './temporalForestScene';
 import { TreetopForestScene } from './treetopForestScene';
 import { BurningForestScene } from './burningForestScene';
-import { FIRE_COLLAPSE_PERIOD,fireObjective,fireHeavySmoke } from './burningForest';
+import { FIRE_COLLAPSE_PERIOD,FIRE_SHIFT_PERIOD,fireObjective,fireHeavySmoke } from './burningForest';
 import { TREE_CYCLE,treeObjective,treeWind,treeExposure } from './treetopForest';
 import { TEMP_CYCLE,temporalObjective,tempWind } from './temporalForest';
 import { IntroScene } from './intro';
@@ -273,14 +273,15 @@ function refreshHud(): void {
     };
     const objective=net.level===4?fireObjective(net.fire):net.level===3?treeObjective(net.treetop):net.level===2?temporalObjective(net.temporal):loopObjective(net.loop);
     const remaining=net.level===4?
-      Math.max(0,Math.ceil((FIRE_COLLAPSE_PERIOD-
-        (Math.max(0,Date.now()-net.fire.cycleStart)%FIRE_COLLAPSE_PERIOD))/1000)):
+      (net.fire.blackoutUntil>Date.now()?Math.ceil((net.fire.blackoutUntil-Date.now())/1000):
+       Math.max(0,Math.ceil((FIRE_SHIFT_PERIOD-
+        Math.max(0,Date.now()-net.fire.phaseStart))/1000))):
       world.blackoutUntil>Date.now()
         ?Math.max(0,Math.ceil((world.blackoutUntil-Date.now())/1000))
         :Math.max(0,Math.ceil(((net.level===3?TREE_CYCLE:net.level===2?TEMP_CYCLE:LOOP_CYCLE_MS)-
            Math.max(0,Date.now()-world.cycleStart))/1000));
     update('loop-state',['A','B','C'][world.layout]);
-    update('loop-timer',net.level===4?'NOVO COLAPSO EM '+remaining+'s':
+    update('loop-timer',net.level===4?(net.fire.blackoutUntil>Date.now()?'FLORESTA SE TRANSFORMANDO · ':'FLORESTA MUDA EM ')+remaining+'s':
       (world.blackoutUntil>Date.now()?'FLORESTA SE TRANSFORMANDO · ':'FLORESTA MUDA EM ')+remaining+'s');
     update('loop-objective',currentMission().objective);
     update('loop-progress',objective.progress);
