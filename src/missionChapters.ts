@@ -85,7 +85,7 @@ export function missionSnapshot(phase:MissionPhase,world:MissionWorld):MissionSn
         !w.suspended[2]?'NINO: DASH + E NA FIXAÇÃO DA PLATAFORMA.':
         'AGUARDEM A PLATAFORMA PARAR DE DESLIZAR.'):
     !w.bridge?'LIBEREM A ÁRVORE-PONTE COM OS TRÊS AMIGOS.':
-    !w.exit?'ABRAM AS TRAVAS E AGUARDEM O ESTADO C.':
+    !w.exit?'ABRAM AS TRÊS TRAVAS PARA LIBERAR O TRONCO.':
     'REÚNAM OS TRÊS NA SAÍDA.';
   const s=beats(phase,[discovery,suspension,tree,final],next,w.completed);
   if(!w.observed)return {...s,next:null};
