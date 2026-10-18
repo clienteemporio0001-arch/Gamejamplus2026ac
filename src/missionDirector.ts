@@ -96,13 +96,12 @@ export class MissionDirector {
    this.ring.fillCircle(beat.target.x,beat.target.y,10);
   }
   if(this.balloon.visible&&this.active){
-   const target=this.avatars[this.queued[0]?.seat??this.current?.beats.find(b=>b.id===this.lastId)?.seat??0];
-   // Use the completing actor instead of the upcoming actor, even if player switched.
+   // Attach the balloon to the completing character even if players switch.
    const seat=this.current?.beats.find(b=>b.id===this.lastId)?.seat??0;
-   const actor=this.avatars[seat]??target;
+   const actor=this.avatars[seat];
    this.balloon.setPosition(actor.x,actor.y-62);
   }
-  this.balloon.setVisible(this.balloon.visible&&!paused);
+  this.balloon.setVisible(this.active&&!paused&&time-this.lastAt<1350);
  }
  get currentObjective():string{return this.current?.objective??'';}
 }
