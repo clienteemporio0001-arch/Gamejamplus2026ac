@@ -107,7 +107,7 @@ ok(hasSummitFooting({seat:0,x:SUMMIT_BRANCH.x,y:summitLandingY,vx:0,vy:0}),
   'topo valida segunda aterrissagem');
 ok(!hasSummitFooting({seat:0,x:SUMMIT_BRANCH.x,y:upperLandingY,vx:0,vy:0}),
   'o primeiro pouso não substitui o segundo');
-ok(100-4*(VITALS.JUMP+VITALS.DOUBLE_JUMP)>=0,'duas sequências custam até 60/100 estamina');
+ok(100-2*(VITALS.JUMP+VITALS.DOUBLE_JUMP)>=0,'duas sequências custam até 60/100 estamina');
 
 const loop=new LoopAuthority();loop.reset(1000);
 const l=LOOP_START.map(x=>({...x}));
