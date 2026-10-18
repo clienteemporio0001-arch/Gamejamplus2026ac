@@ -496,3 +496,130 @@ body.playing{overflow:hidden;touch-action:none;overscroll-behavior:none}
 @media(prefers-reduced-motion:reduce){
  #ui.in-game .fire-horizon{animation:none}
 }
+
+
+/* ETAPA 20 — unified navigation, ambient identity, safe-area responsive overlays. */
+#ui:not(.in-game)::before{
+ content:"";position:fixed;inset:0;pointer-events:none;
+ background:
+  radial-gradient(ellipse at 52% 15%,#40655032 0%,transparent 56%),
+  repeating-linear-gradient(112deg,transparent 0 75px,#23513911 80px 87px,transparent 95px 169px),
+  linear-gradient(178deg,#0b271f 0%,#071a15 48%,#050e0c 100%);
+ z-index:-1
+}
+#ui:not(.in-game)::after{
+ content:"";position:fixed;inset:-15%;pointer-events:none;z-index:-1;
+ background:radial-gradient(ellipse at 28% 70%,#a2c3a116,transparent 43%),
+  radial-gradient(ellipse at 75% 85%,#9daaaa13,transparent 49%);
+ animation:menu-haze 19s ease-in-out infinite alternate
+}
+.menu-panel{position:relative;isolation:isolate;max-width:650px;
+ border-color:#74b28a80;background:linear-gradient(158deg,#0b251ff2,#071713f6);
+ box-shadow:0 25px 95px #000b,0 0 55px #53805e12;
+ padding:clamp(17px,3.2vw,31px);min-height:min(560px,93dvh)
+}
+.menu-panel>*:not(.menu-atmosphere){position:relative;z-index:1}
+.menu-atmosphere{position:absolute;inset:0;overflow:hidden;pointer-events:none;
+ z-index:0;border-radius:inherit;
+ background:
+  radial-gradient(ellipse at 74% 4%,#98c89012 0,transparent 28%),
+  repeating-linear-gradient(75deg,transparent 0 84px,#b9d89408 85px 90px,transparent 105px 155px)}
+.menu-atmosphere:before,.menu-atmosphere:after{
+ content:"";position:absolute;left:-30%;right:-30%;height:38%;
+ background:radial-gradient(ellipse at center,#a8ccb217,transparent 65%);
+ filter:blur(13px);animation:menu-haze 12s ease-in-out infinite alternate}
+.menu-atmosphere:before{top:5%;}.menu-atmosphere:after{bottom:-13%;animation-delay:-6s}
+.menu-atmosphere i{
+ position:absolute;left:calc(7% + var(--leaf)*8%);top:calc(4% + mod(var(--leaf),6)*12%);
+ display:block;width:12px;height:6px;border-radius:85% 0 90% 0;
+ background:#b9daa057;transform:rotate(-23deg);
+ animation:menu-leaf calc(11s + var(--leaf)*.7s) linear infinite;
+ animation-delay:calc(var(--leaf)*-1.3s);opacity:.34
+}
+.brand-mark{width:70px;height:60px;margin:0 auto 9px;display:flex;justify-content:center;
+ align-items:center;gap:6px;border:1px solid #98d99a52;border-radius:45% 45% 38% 38%;
+ background:radial-gradient(circle,#345d3c74,#0a211d52);
+ box-shadow:0 0 29px #74aa7540}
+.brand-mark b{font-size:31px;filter:drop-shadow(0 3px 6px #04110a)}
+.brand-mark span{font-size:11px;color:#bdd99a}
+.menu-panel h1{font-size:clamp(35px,6vw,62px);letter-spacing:-1.5px;
+ text-shadow:0 0 26px #90d88b36}
+.menu-panel .subtitle{font-size:clamp(13px,2vw,16px);letter-spacing:1px}
+.menu-panel p{max-width:520px;margin-left:auto;margin-right:auto}
+.menu-panel .primary-play{margin-top:18px;gap:10px}
+.menu-panel .primary-play .btn{flex:1 1 190px;min-height:50px}
+.menu-join{margin:10px auto 14px;width:min(100%,472px)}
+.menu-join .btn{width:100%;padding:10px}
+.menu-secondary{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:0 auto 16px}
+.menu-secondary button{padding:8px 10px;border-radius:8px;border:1px solid #7cae8655;
+ color:#d3eada;background:#102d27d9;font-size:11px;letter-spacing:.2px}
+.menu-secondary button:hover,.menu-secondary button:focus-visible{
+ background:#244a3b;outline:2px solid #b7e8a5;outline-offset:1px}
+.menu-panel .dev-tools{position:relative;z-index:2}
+.menu-panel .dev-tools>summary{font-size:11px;letter-spacing:.4px}
+.menu-panel .dev-tools p{font-size:11px;margin:7px auto}
+@keyframes menu-haze{from{transform:translateX(-3%);opacity:.65}
+ to{transform:translateX(5%);opacity:1}}
+@keyframes menu-leaf{0%{transform:translate(-20px,-8px) rotate(20deg);opacity:0}
+ 12%{opacity:.46}88%{opacity:.35}
+ 100%{transform:translate(80px,115px) rotate(225deg);opacity:0}}
+.fm-overlay{position:fixed;inset:0;z-index:140;display:grid;place-items:center;
+ padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right))
+ max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+ overscroll-behavior:contain;touch-action:pan-y}
+.overlay-scrim{position:absolute;inset:0;background:#03110fe9;backdrop-filter:blur(8px)}
+.overlay-sheet{position:relative;width:min(570px,100%);max-height:100%;overflow-y:auto;
+ overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch;
+ background:linear-gradient(155deg,#102d27,#071a18);border:1px solid #8fc999a3;
+ border-radius:19px;padding:clamp(14px,3vw,25px);box-shadow:0 30px 85px #000c;
+ color:#edf8e6;text-align:left}
+.overlay-sheet header{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.overlay-sheet #fm-close{width:36px;height:36px;border-radius:9px;background:#1e3c33;
+ color:#fff;border:1px solid #93bf947c;touch-action:manipulation}
+.overlay-sheet h2{font-size:clamp(21px,4vw,30px);margin:7px 0 12px}
+.overlay-sheet p{font-size:clamp(12px,2.7vh,14px);margin:7px 0 11px}
+.overlay-guide{background:#091d19ac;border:1px solid #83a88a59;
+ border-radius:12px;padding:10px 13px;margin:8px 0 15px}
+.overlay-guide p{line-height:1.48;margin:9px 0}
+.overlay-guide b{color:#bdf0b4}
+.overlay-footnote{font-size:11px!important;color:#b3c7bd}
+.settings-control{margin:13px 0 18px}
+.settings-control label{display:flex;justify-content:space-between;gap:10px;
+ font-weight:800;color:#e0f1dc;font-size:14px;margin-bottom:7px}
+.settings-control output{font-variant-numeric:tabular-nums;color:#c5e5aa}
+.settings-control input[type=range]{accent-color:#88d796;width:100%;height:34px;touch-action:pan-x}
+.settings-mute{display:flex;gap:11px;align-items:center;background:#122d26b8;
+ padding:9px 11px;border-radius:10px;font-weight:800;touch-action:manipulation}
+.settings-mute input{width:19px;height:19px;accent-color:#85d4a3}
+.overlay-sheet>#fm-back{display:block;margin:18px auto 0;min-width:130px}
+.overlay-sheet .dev-inspector{white-space:pre-wrap;overflow-wrap:anywhere;
+ background:#051e1c;padding:13px;border-radius:10px;border:1px solid #689b8b70;
+ font:600 12px/1.75 ui-monospace,monospace;color:#c0e3d2}
+.dev-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+ gap:8px;margin:13px 0}
+.dev-actions .btn{padding:9px 11px;font-size:12px}
+#ui.in-game .loop-top-left,#ui.in-game .loop-top-right{backdrop-filter:blur(5px)}
+#ui.in-game .loop-vital.selected{outline:1px solid #b3e6ab83;
+ box-shadow:0 0 12px #9bd39b2b,inset 0 0 9px #bcf0b310}
+#ui.in-game .loop-menu summary{touch-action:manipulation}
+#ui.in-game #pipo-help{touch-action:manipulation}
+#ui.in-game .fire-victory{max-height:calc(100dvh - 20px);overflow-y:auto;
+ top:50%;transform:translate(-50%,-50%)}
+@media(max-height:480px){
+ .menu-panel{min-height:0;max-height:calc(100dvh - 10px);padding:12px}
+ .menu-panel .brand-mark{width:47px;height:41px;margin-bottom:3px}
+ .brand-mark b{font-size:20px}
+ .menu-panel h1{font-size:clamp(25px,5.4vh,35px)}
+ .menu-panel .primary-play{margin-top:9px}
+ .menu-panel .primary-play .btn{min-height:40px;padding:7px 12px}
+ .menu-secondary{margin-bottom:8px}
+ .overlay-sheet{padding:13px}
+}
+@media(max-width:380px){
+ .menu-secondary button{flex:1 1 90px;padding:8px 4px;font-size:10px}
+ .overlay-guide{padding:8px}
+}
+@media(prefers-reduced-motion:reduce){
+ #ui:not(.in-game)::after,.menu-atmosphere i,.menu-atmosphere:before,
+ .menu-atmosphere:after{animation:none}
+}
