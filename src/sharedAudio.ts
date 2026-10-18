@@ -25,7 +25,7 @@ export class GameAudio {
  private lastStep=0;private lastHit=0;
  private onUnlock=()=>{void this.unlock();};
  private onSettings=()=>this.apply();
- private onVisibility=()=>{if(document.hidden){void this.context?.suspend().catch(()=>{});}else{void this.unlock();}};
+ private onVisibility=()=>{if(document.hidden){void this.context?.suspend().catch(()=>{});}else if(this.context){void this.unlock();}};
  constructor(){
   window.addEventListener('pointerdown',this.onUnlock,{passive:true});
   window.addEventListener('keydown',this.onUnlock);
