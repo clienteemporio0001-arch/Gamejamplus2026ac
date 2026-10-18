@@ -18,7 +18,7 @@ const guide=readFileSync('docs/REVISAO_DAS_FASES.md','utf8');
 for(const text of ['JOGAR SOZINHO','MULTIPLAYER ONLINE','COMO JOGAR',
  'CONFIGURAÇÕES','CRÉDITOS','FERRAMENTAS DE DESENVOLVIMENTO','ENTRAR COM CÓDIGO'])
  assert.ok(main.includes(text),'menu option '+text);
-assert.ok(main.includes('class="menu-panel"'));
+assert.ok(main.includes('class="panel menu-panel"'),'main menu retains standard panel and cinematic modifier');
 assert.ok(main.includes('menu-atmosphere')&&css.includes('@keyframes menu-leaf'));
 assert.ok(main.includes('show-how')&&main.includes('show-settings')&&main.includes('show-credits'));
 assert.ok(main.includes('function openPanel(kind:PanelKind)'));
