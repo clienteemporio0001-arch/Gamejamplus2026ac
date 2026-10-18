@@ -60,7 +60,7 @@ ok(network.includes("this.stopReconnect()")&&network.includes("this.grace.clear(
   'limpeza de intervalos e reserva de seats');
 const solo=network.slice(network.indexOf('  startSolo('),network.indexOf('  selectSoloSeat('));
 ok(!solo.includes('new Peer(')&&!solo.includes('this.peer.connect'),'solo não instancia WebRTC');
-ok(network.includes("this.poses=(mode==='loop'?LOOP_START:"),'spawn solo correto');
+ok(network.includes("this.poses=(mode==='loop'?(level===2?TEMP_START:LOOP_START):"),'spawn solo correto');
 ok(network.includes("this.poses = (this.experience==='loop'?LOOP_START:FOREST_SPAWNS)"),
   'mesmo spawn para host online');
 ok(network.includes("this.broadcast({t:'loop',world:this.loop})"),'A/B/C sincronizados pelo host');
