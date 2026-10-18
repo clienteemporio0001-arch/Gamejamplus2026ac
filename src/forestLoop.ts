@@ -2,33 +2,38 @@ import type { Pose, Seat } from './network';
 import type { PuzzleAction } from './puzzles';
 import {VITALS,initVitals,validVitals,spendVital,regenVitals,damageVitals,type VitalAction,type Vitals} from './loopVitals';
 
-export const LOOP_WIDTH = 3800;
+export const LOOP_WIDTH = 11400;
+export const SUSPENSION={gapStart:8050,gapEnd:8750,lever:{x:7780,y:302},
+ branch:{x:7780,y:334,width:145,height:20},lia:{x:7930,y:592},nino:{x:7990,y:590},
+ initialX:7700,teoX:7890,liaX:8150,finalX:8400,width:790,height:26,
+ moveMs:1900} as const;
+export const SUSPENSION_LANDING_Y=SUSPENSION.branch.y-SUSPENSION.branch.height/2-22;
 export const LOOP_CYCLE_MS = 60000;
 export const LOOP_WARNING_MS = 10000;
 export const LOOP_BLACKOUT_MS = 2000;
 export type Layout = 0|1|2;
 export type Route = 'oca'|'pedra';
 export const LOOP_GEOMETRY = {
-  clearing:{min:1730,max:2000,groundY:638},
-  gate:2070,
-  layoutWalls:[1360,1540,875] as const,
-  portal:{oca:790,pedra:1460} as const,
-  portalLanding:2120,
-  returnCenter:1840,
-  chasm:{start:2265,end:2625},
-  bridge:{x:2445,y:659,width:360,height:36},
-  finalGate:3710,
+  clearing:{min:5500,max:5900,groundY:638},
+  gate:7200,
+  layoutWalls:[5000,3100,1200] as const,
+  portal:{oca:1300,pedra:3450} as const,
+  portalLanding:7590,
+  returnCenter:5680,
+  chasm:{start:9465,end:9825},
+  bridge:{x:9645,y:659,width:360,height:36},
+  finalGate:11010,
 } as const;
 /** Central clearing, clear of every rotating obstacle; all three face both directions. */
 export const LOOP_START: Pose[] = ([0,1,2] as Seat[]).map(seat=>({
-  seat,x:1840+seat*60,y:606,vx:0,vy:0,
+  seat,x:5600+seat*60,y:606,vx:0,vy:0,
 }));
 /** Character 30x44, gravity 850, jump velocity 465; the ledge can only be
  * attained by a real stacked double jump (from body-center height 518). */
 export const LOOP_PHYSICS={characterHeight:44,gravity:850,jumpVelocity:465} as const;
-export const UPPER_BRANCH={x:2140,centerY:325,width:156,height:20,anchorX:2130} as const;
+export const UPPER_BRANCH={x:9340,centerY:325,width:156,height:20,anchorX:9330} as const;
 export const upperLandingY=UPPER_BRANCH.centerY-UPPER_BRANCH.height/2-LOOP_PHYSICS.characterHeight/2;
-export const SUMMIT_BRANCH={x:2140,centerY:120,width:135,height:20,anchorX:2140} as const;
+export const SUMMIT_BRANCH={x:9340,centerY:120,width:135,height:20,anchorX:9340} as const;
 export const summitLandingY=SUMMIT_BRANCH.centerY-SUMMIT_BRANCH.height/2-LOOP_PHYSICS.characterHeight/2;
 export const hasSummitFooting=(p:Pose):boolean=>
   Math.abs(p.y-summitLandingY)<=6&&
@@ -41,15 +46,15 @@ export const hasBranchFooting=(p:Pose):boolean=>
   Math.abs(p.vy)<=65 && Math.abs(p.vx)<=155;
 export const markerBaseY=638;
 export const LOOP_MARKS=[
-  {x:700,y:510,seat:0,name:'ÁRVORE OCA'},
-  {x:1000,y:598,seat:1,name:'PEDRA RACHADA'},
-  {x:1260,y:589,seat:2,name:'TRONCO EM ARCO'},
+  {x:1300,y:510,seat:0,name:'ÁRVORE OCA'},
+  {x:3450,y:598,seat:1,name:'PEDRA RACHADA'},
+  {x:4750,y:589,seat:2,name:'TRONCO EM ARCO'},
 ] as const;
 export const LOOP_TREE=[
-  {x:SUMMIT_BRANCH.anchorX,y:summitLandingY,seat:0},{x:2560,y:574,seat:1},{x:2242,y:592,seat:2}
+  {x:SUMMIT_BRANCH.anchorX,y:summitLandingY,seat:0},{x:9760,y:574,seat:1},{x:9442,y:592,seat:2}
 ] as const;
 export const LOOP_FINAL=[
-  {x:3320,y:510,seat:0},{x:3470,y:573,seat:1},{x:3595,y:590,seat:2}
+  {x:10520,y:510,seat:0},{x:10670,y:573,seat:1},{x:10795,y:590,seat:2}
 ] as const;
 export const ROUTES:Readonly<Record<Layout,{correct:Route;wrong:Route;barrierX:number;returnTo:number;advanceTo:number}>>={
   0:{correct:'pedra',wrong:'oca',barrierX:LOOP_GEOMETRY.layoutWalls[0],
@@ -62,6 +67,9 @@ export const ROUTES:Readonly<Record<Layout,{correct:Route;wrong:Route;barrierX:n
 export type LoopWorld=Vitals & {
   layout:Layout; cycle:number;cycleStart:number;blackoutUntil:number;observed:boolean;
   marks:[boolean,boolean,boolean];tree:[boolean,boolean,boolean];treeFallAt:number;bridge:boolean;
+  suspended:[boolean,boolean,boolean];suspendedOpen:boolean;suspendedX:number;
+  suspendedFrom:number;suspendedTo:number;suspendedAt:number;
+  suspensionStacked:boolean;suspensionClimbReady:boolean;
   supporting:[Seat|null,Seat|null,Seat|null];stackMilestone:boolean;
   climbReady:boolean;teoUpperReached:boolean;teoSummitReached:boolean;
   final:[boolean,boolean,boolean];exit:boolean;
@@ -73,6 +81,9 @@ const nonNegative=(value:unknown):value is number=>typeof value==='number'&&Numb
 export const initLoop=(now=Date.now()):LoopWorld=>({
   layout:0,cycle:0,cycleStart:now,blackoutUntil:0,observed:false,
   marks:[false,false,false],tree:[false,false,false],treeFallAt:0,bridge:false,
+  suspended:[false,false,false],suspendedOpen:false,suspendedX:SUSPENSION.initialX,
+  suspendedFrom:SUSPENSION.initialX,suspendedTo:SUSPENSION.initialX,suspendedAt:0,
+  suspensionStacked:false,suspensionClimbReady:false,
   supporting:[null,null,null],stackMilestone:false,climbReady:false,teoUpperReached:false,teoSummitReached:false,
   final:[false,false,false],exit:false,lastRoute:'none',routeAt:0,routeCount:0,
   deadUntil:0,resetId:0,completed:false,...initVitals()
@@ -82,11 +93,13 @@ export function validLoop(value:unknown):value is LoopWorld{
   const w=value as Record<string,unknown>;
   return (w.layout===0||w.layout===1||w.layout===2)
     &&nonNegative(w.cycle)&&Number.isInteger(w.cycle)
-    &&['cycleStart','blackoutUntil','treeFallAt','routeAt','routeCount','deadUntil','resetId'].every(k=>nonNegative(w[k]))
-    &&['observed','bridge','exit','completed','stackMilestone','climbReady','teoUpperReached','teoSummitReached'].every(k=>typeof w[k]==='boolean')
+    &&['cycleStart','blackoutUntil','treeFallAt','routeAt','routeCount','deadUntil','resetId',
+      'suspendedX','suspendedFrom','suspendedTo','suspendedAt'].every(k=>nonNegative(w[k]))
+    &&['observed','bridge','exit','completed','stackMilestone','climbReady','teoUpperReached','teoSummitReached',
+      'suspendedOpen','suspensionStacked','suspensionClimbReady'].every(k=>typeof w[k]==='boolean')
     &&Array.isArray(w.supporting)&&w.supporting.length===3
     &&w.supporting.every((b:unknown,i:number)=>b===null||(i===0&&b===1)||(i===1&&b===2))
-    &&bool3(w.marks)&&bool3(w.tree)&&bool3(w.final)
+    &&bool3(w.marks)&&bool3(w.tree)&&bool3(w.final)&&bool3(w.suspended)
     &&['none','wrong','right'].includes(String(w.lastRoute))&&validVitals(w);
 }
 export const allDone=(items:readonly boolean[])=>items.every(Boolean);
@@ -110,15 +123,21 @@ export function windGuide(w:LoopWorld,seat:Seat,x:number):{direction:-1|0|1;targ
     target=LOOP_GEOMETRY.portal[ROUTES[w.layout].correct];
     hint='PASSAGEM VERDADEIRA: '+(ROUTES[w.layout].correct==='oca'?'ÁRVORE OCA':'PEDRA RACHADA')+
       '. AS OUTRAS DEVOLVEM À CLAREIRA.';
+  }else if(!w.suspendedOpen){
+    target=!w.suspended[0]?SUSPENSION.lever.x:
+      !w.suspended[1]?SUSPENSION.lia.x-200:SUSPENSION.nino.x-165;
+    hint=!w.suspended[0]?'ESCADA HUMANA: NINO NA BASE, LIA NO MEIO, TÉO NO ALTO PARA A ALAVANCA.':
+      !w.suspended[1]?'LIA: ACERTE COM J A TRAVA DA PLATAFORMA SUSPENSA.':
+      'NINO: USE DASH E E NA FIXAÇÃO DA MARGEM INICIAL.';
   }else if(!w.bridge){
-    target=!w.stackMilestone?2160:!w.teoUpperReached?UPPER_BRANCH.x:LOOP_TREE[w.tree.findIndex(value=>!value)]?.x??2110;
+    target=!w.stackMilestone?9360:!w.teoUpperReached?UPPER_BRANCH.x:LOOP_TREE[w.tree.findIndex(value=>!value)]?.x??9310;
     hint=!w.stackMilestone?'APOIO: NINO PARADO, LIA SOBE COM E, TÉO SOBE EM LIA COM E.':
       !w.teoUpperReached?'TÉO: SOLTE-SE, USE SALTO DUPLO E ATERRISSE NO GALHO ALTO.':
       'SOLTEM AS TRÊS AMARRAS PARA A ÁRVORE FORMAR A PONTE.';
   }else if(x<2990){
-    target=2910;hint='ATRAVESSEM A ÁRVORE DEITADA PARA A OUTRA MARGEM.';
+    target=10110;hint='ATRAVESSEM A ÁRVORE DEITADA PARA A OUTRA MARGEM.';
   }else if(w.layout!==2){
-    target=2910;
+    target=10110;
     hint='CUIDADO: A TRILHA À FRENTE É FALSA. AGUARDEM O ESTADO C NA MARGEM SEGURA.';
   }else if(!allDone(w.final)){
     target=LOOP_FINAL[w.final.findIndex(value=>!value)].x-22;
