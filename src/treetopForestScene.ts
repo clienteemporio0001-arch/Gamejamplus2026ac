@@ -298,4 +298,6 @@ export class TreetopForestScene extends Phaser.Scene {
   this.hud?.();
   void dt;
  }
+ getCooldown():string{return this.net.localSeat===0?'SALTO DUPLO':
+  this.net.localSeat===1?'J · BALADEIRA':'SHIFT · DASH';}
 }
