@@ -310,7 +310,7 @@ export function suspensionLeverStatus(w:LoopWorld,p:Pose):SuspensionLeverReason{
   return w.suspendedX!==w.suspendedTo?'moving':'finished';
  }
  if(Math.abs(p.x-SUSPENSION.lever.x)>125)return 'closer';
- if(!w.suspensionStacked||w.supporting[1]!==2)return 'tower';
+ if(!w.suspensionStacked)return 'tower';
  if(w.supporting[0]!==null)return 'detach';
  if(!w.suspensionClimbReady)return 'climb';
  if(Math.abs(p.x-SUSPENSION.lever.x)>42||
