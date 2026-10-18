@@ -1,5 +1,5 @@
 import type {LoopWorld} from './forestLoop';
-import {markPosition,LOOP_MARKS,LOOP_GEOMETRY,ROUTES,LOOP_TREE,LOOP_FINAL,SUSPENSION} from './forestLoop';
+import {markPosition,LOOP_MARKS,LOOP_GEOMETRY,LOOP_TREE,LOOP_FINAL,SUSPENSION} from './forestLoop';
 import type {TemporalWorld} from './temporalForest';
 import {TEMP_ECHO,TEMP_TREE,TEMP_ROOTS} from './temporalForest';
 import type {TreeWorld} from './treetopForest';
@@ -31,7 +31,7 @@ export function missionSnapshot(phase:3,world:TreeWorld):MissionSnapshot;
 export function missionSnapshot(phase:4,world:FireWorld):MissionSnapshot;
 export function missionSnapshot(phase:MissionPhase,world:MissionWorld):MissionSnapshot{
  if(phase===1){
-  const w=world as LoopWorld,route=ROUTES[w.layout].correct;
+  const w=world as LoopWorld;
   const discovery:PartialBeat[]=[
    part('mark-tree','DESCOBERTA',0,w.marks[0],markPosition(w,0),'E',
     'Encontrei uma marca escondida aqui dentro!',
