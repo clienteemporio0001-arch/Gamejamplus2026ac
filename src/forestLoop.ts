@@ -100,7 +100,7 @@ export function validLoop(value:unknown):value is LoopWorld{
     &&Array.isArray(w.supporting)&&w.supporting.length===3
     &&w.supporting.every((b:unknown,i:number)=>b===null||(i===0&&b===1)||(i===1&&b===2))
     &&bool3(w.marks)&&bool3(w.tree)&&bool3(w.final)&&bool3(w.suspended)
-    &&[w.suspendedX,w.suspendedFrom,w.suspendedTo].every(x=>x>=SUSPENSION.initialX-500&&x<=SUSPENSION.finalX+200)
+    &&[w.suspendedX,w.suspendedFrom,w.suspendedTo].every(x=>typeof x==='number'&&x>=SUSPENSION.initialX-500&&x<=SUSPENSION.finalX+200)
     &&['none','wrong','right'].includes(String(w.lastRoute))&&validVitals(w);
 }
 export const allDone=(items:readonly boolean[])=>items.every(Boolean);
