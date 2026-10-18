@@ -109,14 +109,15 @@ export class TreetopForestScene extends Phaser.Scene {
    this.solo.select(this.net.localSeat??0);
    this.off.push(this.net.on('solo-seat',seat=>{
     this.solo?.select(seat);const active=this.solo!.active(seat);this.local=active.actor;this.body=active.body;
-    this.cameras.main.startFollow(this.local,false,.10,.095,0,-75);
+    this.cameras.main.startFollow(this.local,false,.085,.10,0,-35);
     this.pending.clear();this.jumps=0;this.pendingJump=false;this.dashUntil=0;this.hud?.();
    }));
   }
   this.cameras.main.setBounds(0,0,TREE_WIDTH,TREE_HEIGHT);
   this.cameras.main.setZoom(treeCameraZoom({width:this.scale.gameSize.width,
     height:this.scale.gameSize.height},isCoarseDevice()));
-  this.cameras.main.startFollow(this.local,false,.09,.085,0,-76);
+  this.cameras.main.startFollow(this.local,false,.085,.10,0,-35);
+  this.cameras.main.setDeadzone(Math.min(160,this.scale.gameSize.width*.18),Math.min(105,this.scale.gameSize.height*.18));
   this.cursors=this.input.keyboard?.createCursorKeys();
   this.keys=this.input.keyboard?.addKeys('A,D,E') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
   this.pipo=new PipoGuide(this,this.net);
@@ -173,6 +174,7 @@ export class TreetopForestScene extends Phaser.Scene {
   const resize=(size:Phaser.Structs.Size)=>{
    this.cameras.main.setZoom(treeCameraZoom({width:size.width,height:size.height},isCoarseDevice()));
    this.cameras.main.setBounds(0,0,TREE_WIDTH,TREE_HEIGHT);
+   this.cameras.main.setDeadzone(Math.min(155,size.width*.17),Math.min(100,size.height*.18));
    this.guide.setPosition(size.width/2,Math.min(92,size.height*.18));
    this.windStatus.setPosition(size.width/2,Math.min(124,size.height*.31));
    this.dark.setPosition(size.width/2,size.height/2).setSize(size.width+150,size.height+150);
@@ -350,11 +352,15 @@ export class TreetopForestScene extends Phaser.Scene {
     vx:this.solo?.body(p.seat).velocity.x??p.vx,
     vy:this.solo?.body(p.seat).velocity.y??p.vy}:p);
   this.art.update(time,localPose,w.windPhase,w.windDirection,w.gustCount);
-  // Look ahead to the landing platform while falling, and toward the next jump.
+  // Physical velocity drives vertical look-ahead; no character/world movement.
   const camera=this.cameras.main;
-  camera.followOffset.x=Phaser.Math.Linear(camera.followOffset.x,this.facing*35,.05);
-  camera.followOffset.y=Phaser.Math.Linear(camera.followOffset.y,
-   this.body.velocity.y>100?82:-80,.035);
+  const viewH=this.scale.gameSize.height/Math.max(.6,camera.zoom);
+  const vy=this.body.velocity.y;
+  const targetY=vy< -110?-Math.min(viewH*.24,125):
+    vy>130?Math.min(viewH*.20,105):-Math.min(viewH*.10,48);
+  camera.followOffset.y=Phaser.Math.Linear(camera.followOffset.y,targetY,.045);
+  camera.followOffset.x=Phaser.Math.Linear(camera.followOffset.x,
+    this.facing*Math.min(65,this.scale.gameSize.width/Math.max(.6,camera.zoom)*.10),.035);
   this.hud?.();
   void dt;
  }
