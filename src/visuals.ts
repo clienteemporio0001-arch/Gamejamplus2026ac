@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {paintHero} from './sharedCharacterArt';
 
 export type Biome = 'forest' | 'river' | 'eyes' | 'trail';
 export type Material = 'earth' | 'wood' | 'stone' | 'root' | 'gate' | 'bridge' | 'log';
@@ -17,7 +18,7 @@ const isLowPower = (): boolean => typeof window !== 'undefined' &&
 export class NightArt {
   private skins: { target: Phaser.GameObjects.Rectangle; ink: Phaser.GameObjects.Graphics }[] = [];
   private actors: { target: Phaser.GameObjects.Rectangle; ink: Phaser.GameObjects.Graphics;
-    shadow: Phaser.GameObjects.Ellipse }[] = [];
+    shadow: Phaser.GameObjects.Ellipse; seat:0|1|2; lastX:number; lastY:number }[] = [];
   private lights: { dot: Phaser.GameObjects.Arc; originX: number; originY: number; seed: number }[] = [];
   private fog: { shape: Phaser.GameObjects.Ellipse; x: number; seed: number }[] = [];
   private leaves: { shape: Phaser.GameObjects.Ellipse; originX: number; seed: number }[] = [];
@@ -241,43 +242,13 @@ export class NightArt {
   }
 
   character(target: Phaser.GameObjects.Rectangle, seat: 0 | 1 | 2): void {
-    // The original 30x44 rectangle remains the ONLY collision body.
-    const ink = this.scene.add.graphics().setDepth(target.depth + .25);
-    const shadow = this.scene.add.ellipse(target.x, target.y + 26, 39, 11,
-      0x020c0d, .38).setDepth(target.depth - .5);
-    const coat = [0x2e9061, 0xc17a42, 0x4589c4][seat];
-    const accent = [0x9be5a4, 0xf8b676, 0x95d9f0][seat];
-    ink.fillStyle(0x101c20, 1);
-    ink.fillRoundedRect(-16, -21, 32, 43, 6);
-    ink.fillStyle(coat, 1);
-    ink.fillRoundedRect(-12, -12, 24, 28, 5);
-    ink.fillStyle(0x18282d, 1);
-    ink.fillRoundedRect(-15, 10, 12, 11, 2);
-    ink.fillRoundedRect(3, 10, 12, 11, 2);
-    ink.fillStyle(0xd0a77c, 1);
-    ink.fillEllipse(0, -20, 24, 21);
-    ink.fillStyle(0x18252b, 1);
-    ink.fillEllipse(0, -28, 29, 13);
-    if (seat === 0) {
-      ink.fillStyle(0x24462c, 1);
-      ink.fillRoundedRect(-18, -31, 36, 7, 2);
-      ink.fillRoundedRect(-11, -39, 22, 12, 3);
-    } else if (seat === 1) {
-      ink.fillStyle(0x4d2d2a, 1);
-      ink.fillEllipse(12, -20, 13, 22);
-      ink.fillEllipse(-5, -30, 20, 13);
-      ink.lineStyle(3, 0x422722, 1); ink.lineBetween(16, -20, 18, -6);
-    } else {
-      ink.fillStyle(0x19334b, 1);
-      ink.lineStyle(4, 0x183348, 1);
-      ink.strokeRoundedRect(-15, -35, 30, 26, 8);
-      ink.fillStyle(0x8ac7f2, 1);
-      ink.fillRect(-12, 0, 24, 4);
-    }
-    ink.fillStyle(0xeef4e3, 1); ink.fillRect(3, -22, 4, 3);
-    ink.lineStyle(2, accent, .95);
-    ink.lineBetween(-9, 1, 8, 1);
-    this.actors.push({ target, ink, shadow });
+    // The original Rectangle remains the ONLY collision body.
+    target.setFillStyle(0xffffff,.001).setStrokeStyle(1,0xffffff,.001);
+    const ink=this.scene.add.graphics().setDepth(target.depth+.25);
+    const shadow=this.scene.add.ellipse(target.x,target.y+26,39,11,0x020c0d,.38)
+      .setDepth(target.depth-.5);
+    paintHero(ink,seat);
+    this.actors.push({target,ink,shadow,seat,lastX:target.x,lastY:target.y});
   }
 
   /** Call from each existing scene update. No allocations in the hot path. */
@@ -289,6 +260,10 @@ export class NightArt {
       skin.ink.setAngle(skin.target.angle);
     }
     for (const actor of this.actors) {
+      const dx=(actor.target.x-actor.lastX)*16,dy=(actor.target.y-actor.lastY)*16;
+      const body=actor.target.body as Phaser.Physics.Arcade.Body|undefined;
+      paintHero(actor.ink,actor.seat,time,body?.velocity.x??dx,body?.velocity.y??dy);
+      actor.lastX=actor.target.x;actor.lastY=actor.target.y;
       actor.ink.setPosition(actor.target.x, actor.target.y);
       actor.ink.setVisible(actor.target.visible && actor.target.active);
       actor.ink.setAlpha(actor.target.alpha);
