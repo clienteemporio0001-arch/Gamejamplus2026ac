@@ -42,7 +42,9 @@ export const LOOP_GEOMETRY = {
   clearing:{min:5500,max:5900,groundY:638},
   gate:7200,
   layoutWalls:[5000,3100,1200] as const,
-  portal:{oca:1300,pedra:3450} as const,
+  // Natural trail entrances are SEPARATE from solid landmark hitboxes.
+  // Each entrance is on uninterrupted ground, not inside the hollow-tree ledge or stone.
+  portal:{oca:1630,pedra:3740} as const,
   portalLanding:7590,
   returnCenter:5680,
   chasm:{start:9465,end:9825},
@@ -139,7 +141,22 @@ export const blackoutActive=(w:LoopWorld,now:number)=>w.blackoutUntil>0&&now<w.b
 export const warningActive=(w:LoopWorld,now:number)=>w.blackoutUntil===0 && now-w.cycleStart>=LOOP_CYCLE_MS-LOOP_WARNING_MS;
 export const near=(pose:Pose,x:number,y:number,dx=64,dy=88)=>
   Math.abs(pose.x-x)<=dx&&Math.abs(pose.y-y)<=dy;
-export const safeForRoute=(p:Pose)=>p.y>=555&&p.y<=640&&Math.abs(p.vy)<145&&Math.abs(p.vx)<270;
+/** Shared visible assembly zone. World visuals, HUD and authority use these dimensions. */
+export const TRAIL_MEET_RADIUS_X=142;
+export const TRAIL_MEET_MIN_Y=555,TRAIL_MEET_MAX_Y=652;
+export const safeForRoute=(p:Pose)=>p.y>=TRAIL_MEET_MIN_Y&&p.y<=TRAIL_MEET_MAX_Y
+  &&Math.abs(p.vy)<180&&Math.abs(p.vx)<305;
+export function trailOccupants(poses:readonly Pose[],route:Route):Seat[]{
+ const x=LOOP_GEOMETRY.portal[route];
+ return poses.filter(p=>Math.abs(p.x-x)<=TRAIL_MEET_RADIUS_X&&safeForRoute(p))
+   .map(p=>p.seat);
+}
+export function trailAssembly(w:Pick<LoopWorld,'marks'|'lastRoute'|'layout'>,
+ poses:readonly Pose[],route:Route){
+ const count=trailOccupants(poses,route).length;
+ return {count,total:3,ready:allDone(w.marks)&&w.lastRoute!=='right'&&count===3,
+  correct:correctRoute(w.layout)===route};
+}
 export function correctRoute(layout:Layout):Route{return ROUTES[layout].correct;}
 /** The trustworthy wind points to the NEXT reachable interaction, not the final exit's X. */
 export function windGuide(w:LoopWorld,seat:Seat,x:number):{direction:-1|0|1;target:number;hint:string}{
@@ -453,8 +470,8 @@ export class LoopAuthority{
       w.completed=true;return{changed:true,won:true};
     }
     if(now-w.routeAt>=3200&&allDone(w.marks)){
-      for(const [route,x] of [['oca',LOOP_GEOMETRY.portal.oca],['pedra',LOOP_GEOMETRY.portal.pedra]] as const){
-        if(!poses.every(p=>Math.abs(p.x-x)<135&&safeForRoute(p)))continue;
+      for(const route of ['oca','pedra'] as const){
+        if(trailOccupants(poses,route).length!==3)continue;
         const correct=ROUTES[w.layout].correct===route;
         w.lastRoute=correct?'right':'wrong';w.routeAt=now;w.routeCount++;
         const to=correct?ROUTES[w.layout].advanceTo:ROUTES[w.layout].returnTo;
