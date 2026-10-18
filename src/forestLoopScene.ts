@@ -372,12 +372,12 @@ export class ForestLoopScene extends Phaser.Scene {
       this.gusts.push(leaf);
     }
     for(let i=0;i<10;i++){
-      const x=200+i*355;
+      const x=200+i*(LOOP_WIDTH-400)/9;
       this.windVines.push(this.add.rectangle(x,157+(i%3)*40,4,96+(i%3)*18,0x668b6d,.55)
         .setDepth(9).setOrigin(.5,0));
     }
     for(let i=0;i<7;i++){
-      this.windFog.push(this.add.ellipse(210+i*535,400+(i%3)*50,340,73,0x93c5bc,.07)
+      this.windFog.push(this.add.ellipse(210+i*(LOOP_WIDTH-420)/6,400+(i%3)*50,340,73,0x93c5bc,.07)
         .setDepth(4));
     }
     this.blackoutText=this.label(this.scale.gameSize.width/2,330,'A FLORESTA ESTÁ MUDANDO...',24,'#eef2db')
@@ -689,7 +689,7 @@ export class ForestLoopScene extends Phaser.Scene {
     });
     this.windVines.forEach((vine,i)=>{vine.rotation=swayAt(w,vine.x,time,i);});
     this.windFog.forEach((mist,i)=>{
-      const anchorX=210+i*535;
+      const anchorX=210+i*(LOOP_WIDTH-420)/6;
       mist.x=anchorX+swayAt(w,anchorX,time,i)*65;
     });
     this.art.update(time);
