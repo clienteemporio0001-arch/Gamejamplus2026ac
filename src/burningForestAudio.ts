@@ -1,5 +1,5 @@
 import type {FireWorld} from './burningForest';
-import {fireTreePhase} from './burningForest';
+import {fireVisualTreePhase} from './burningForest';
 /** Lightweight, opt-in-by-interaction procedural soundscape for the final act. */
 export class BurningForestAudio {
  private ctx?:AudioContext;
@@ -54,7 +54,7 @@ export class BurningForestAudio {
   oscillator.start();oscillator.stop(ctx.currentTime+.27);
  }
  update(w:FireWorld,now:number):void{
-  const phase=fireTreePhase(w,now);
+  const phase=fireVisualTreePhase(w);void now;
   if(phase!==this.phase){
    this.phase=phase;this.mix(phase);
    if(phase==='warning'||phase==='impact')this.crack();
