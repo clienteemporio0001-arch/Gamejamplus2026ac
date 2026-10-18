@@ -1,3 +1,4 @@
+import {exitPresence} from './sharedExit';
 import type { Pose, Seat } from './network';
 import type { PuzzleAction } from './puzzles';
 import {VITALS,initVitals,validVitals,spendVital,regenVitals,damageVitals,type VitalAction,type Vitals} from './loopVitals';
@@ -559,7 +560,7 @@ export class LoopAuthority{
       w.bridge=true;return{changed:true};
     }
     if(w.bridge&&allDone(w.final)&&!w.exit){w.exit=true;return{changed:true};}
-    if(w.exit&&w.bridge&&w.suspendedOpen&&poses.length===3&&w.health.every(h=>h>0)&&poses.every(p=>w.health[p.seat]>0&&p.x>=11130&&p.x<=11360&&p.y>=540&&p.y<=660)){
+    if(w.exit&&w.bridge&&w.suspendedOpen&&exitPresence(1,poses,w.health).ready){
       w.completed=true;return{changed:true,won:true};
     }
     if(w.lastRoute!=='right'&&now-w.routeAt>=3200&&allDone(w.marks)){
