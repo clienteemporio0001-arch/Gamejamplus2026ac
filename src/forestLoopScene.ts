@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import {PipoGuide} from './pipoGuide';
 import {SUSPENSION,SUSPENSION_LANDING_Y,LOOP_TERRAIN,LOOP_NATURAL_LEDGES,LOOP_LAYOUT_BRANCHES} from './forestLoop';
 import {MissionDirector} from './missionDirector';
+import {FrameProfiler,SCENARIOS} from './performanceDiagnostics';
 import {animateForestProps} from './forestTransformFX';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import { LOOP_WIDTH, LOOP_GEOMETRY, LOOP_MARKS, markPosition, LOOP_TREE, LOOP_FINAL, ROUTES, barriers,
@@ -45,6 +46,12 @@ export class ForestLoopScene extends Phaser.Scene {
   private stoneHitbox!:Phaser.GameObjects.Rectangle;
   private pendingVisualLayout:number|null=null;
   private lastSuspensionCableX=Number.NaN;
+  private frameMetricsOn=false;
+  private reducedGraphics=isCoarseDevice();
+  private frameProfiler=new FrameProfiler();
+  private performanceLabel!:Phaser.GameObjects.Text;
+  private lastPerformanceDraw=0;
+  private lastWindUpdate=0;
   private contextText!:Phaser.GameObjects.Text;
    private pipo!:PipoGuide;private missions!:MissionDirector;
   private regionToast!:Phaser.GameObjects.Text;
@@ -247,6 +254,7 @@ export class ForestLoopScene extends Phaser.Scene {
     this.physics.world.setBounds(0,0,LOOP_WIDTH,900);
     this.physics.world.setBoundsCollision(true,true,false,false);
     this.background();
+    this.art.setReducedVisuals(this.reducedGraphics);
     // Five genuine traversal gaps before the original tree bridge, not an enlarged empty floor.
     for(const terrain of LOOP_TERRAIN){
       this.ground((terrain.from+terrain.to)/2,674,terrain.to-terrain.from,72);
@@ -364,6 +372,26 @@ export class ForestLoopScene extends Phaser.Scene {
    this.missions=new MissionDirector(this,this.net,1,this.avatars);
     this.contextText=this.label(0,0,'',12,'#e7f4d6')
       .setDepth(70).setVisible(false).setWordWrapWidth(230);
+    this.performanceLabel=this.add.text(12,150,'',{
+      fontFamily:'monospace',fontSize:'11px',color:'#dcf9c8',
+      backgroundColor:'#071b1bea',padding:{left:8,right:8,top:6,bottom:6},
+      lineSpacing:3
+    }).setScrollFactor(0).setDepth(250).setVisible(false);
+    const toggleFrameMetrics=()=>{
+      this.frameMetricsOn=!this.frameMetricsOn;this.frameProfiler.reset();
+      this.performanceLabel.setVisible(this.frameMetricsOn);
+      this.lastPerformanceDraw=0;
+    };
+    const toggleQuality=()=>{
+      this.reducedGraphics=!this.reducedGraphics;
+      this.art.setReducedVisuals(this.reducedGraphics);
+    };
+    window.addEventListener('stage24:metrics-toggle',toggleFrameMetrics);
+    window.addEventListener('stage24:quality-toggle',toggleQuality);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{
+      window.removeEventListener('stage24:metrics-toggle',toggleFrameMetrics);
+      window.removeEventListener('stage24:quality-toggle',toggleQuality);
+    });
     this.regionToast=this.label(this.scale.gameSize.width/2,111,'',13,'#cbe7c8')
       .setScrollFactor(0).setDepth(90).setVisible(false);
     this.trailToast=this.label(this.scale.gameSize.width/2,148,'',21,'#e4f6ca')
@@ -607,6 +635,7 @@ export class ForestLoopScene extends Phaser.Scene {
   }
   update(time:number,dt:number):void{
     if(!this.body||!this.net.playing||this.net.localSeat===null)return;
+    const perfStart=this.frameMetricsOn?performance.now():0;
     const seat=this.net.localSeat,w=this.w,now=Date.now();
     const pause=blackoutActive(w,now)||w.deadUntil>0||!this.net.everyoneConnected;
     if(pause!==this.paused){
@@ -702,19 +731,64 @@ export class ForestLoopScene extends Phaser.Scene {
     this.tree.setRotation(-1.16*(1-easing));
     // World-space wind: fixed emitters sampled by shared windGuide, not by
     // actor facing, camera offset or local actor position.
-    this.gusts.forEach((leaf,i)=>{
-      const field=leafAt(w,i,time);
-      leaf.setPosition(field.x,field.y).setRotation(field.angle);
-      leaf.alpha=field.direction===0?.28:.44+(i%3)*.08;
-    });
-    this.windVines.forEach((vine,i)=>{vine.rotation=swayAt(w,vine.x,time,i);});
-    this.windFog.forEach((mist,i)=>{
-      const anchorX=210+i*(LOOP_WIDTH-420)/6;
-      mist.x=anchorX+swayAt(w,anchorX,time,i)*65;
-    });
+    const camera=this.cameras.main;
+    const left=camera.scrollX-220,right=left+camera.width/Math.max(.3,camera.zoom)+440;
+    // Decorative world particles outside the view never need a transform update.
+    // The authoritative windGuide and physics are never culled.
+    if(time-this.lastWindUpdate>=(this.reducedGraphics?34:17)){
+      this.lastWindUpdate=time;
+      this.gusts.forEach((leaf,i)=>{
+        const approximate=110+i*(LOOP_WIDTH-220)/(WIND_LEAVES-1);
+        const visible=(!this.reducedGraphics||i%2===0)&&approximate>=left-80&&approximate<=right+80;
+        if(leaf.visible!==visible)leaf.setVisible(visible);
+        if(!visible)return;
+        const field=leafAt(w,i,time);
+        leaf.setPosition(field.x,field.y).setRotation(field.angle);
+        leaf.alpha=field.direction===0?.28:.44+(i%3)*.08;
+      });
+      this.windVines.forEach(vine=>{
+        const visible=vine.x>=left-65&&vine.x<=right+65;
+        if(vine.visible!==visible)vine.setVisible(visible);
+        if(visible)vine.rotation=swayAt(w,vine.x,time,0);
+      });
+      this.windFog.forEach((mist,i)=>{
+        const anchorX=210+i*(LOOP_WIDTH-420)/6;
+        const visible=anchorX>=left-200&&anchorX<=right+200;
+        if(mist.visible!==visible)mist.setVisible(visible);
+        if(visible)mist.x=anchorX+swayAt(w,anchorX,time,i)*65;
+      });
+    }
     this.art.update(time);
-    // HUD has its own 150ms timer; rebuilding DOM from every physics frame
-    // doubles layout cost when the camera scrolls.
+    if(this.frameMetricsOn){
+      const end=performance.now();
+      this.frameProfiler.record({now:end,updateMs:end-perfStart,
+        cameraX:camera.scrollX,velocityX:this.body.velocity.x,velocityY:this.body.velocity.y,
+        x:this.local.x,transforming:blackoutActive(w,now)});
+      if(time-this.lastPerformanceDraw>=380){
+        this.lastPerformanceDraw=time;
+        const snap=this.frameProfiler.snapshot();
+        const fmt=(value:number)=>value.toFixed(1);
+        const rows=SCENARIOS.map(key=>{
+          const m=snap.scenarios[key];
+          return key+': '+(m.count>=2?fmt(m.fps)+' FPS / '+fmt(m.maxMs)+'ms máx.':'aguardando amostras');
+        });
+        const dynamic=this.gusts.filter(p=>p.visible).length+
+          this.art.visibleDecorationCount()+this.routeLeaves.flat().filter(p=>p.visible).length;
+        const objects=this.children.list.filter(p=>p.active&&p.visible).length;
+        const renderer=this.game.renderer.type===Phaser.WEBGL?'WebGL':'Canvas';
+        this.performanceLabel.setText([
+          'DIAGNÓSTICO REAL · FASE 01 · '+(this.reducedGraphics?'REDUZIDO':'NORMAL'),
+          'FPS '+fmt(snap.fps)+' · frame médio '+fmt(snap.avgMs)+'ms · maior '+fmt(snap.maxMs)+'ms',
+          'CPU update '+fmt(snap.avgUpdateMs)+'ms / pico '+fmt(snap.maxUpdateMs)+'ms',
+          'Objetos visíveis '+objects+' · decorativos dinâmicos '+dynamic,
+          'Parallax chunks '+this.art.visibleChunkCount()+'/'+this.art.totalChunkCount(),
+          'Câmera x='+Math.floor(camera.scrollX)+' zoom='+fmt(camera.zoom),
+          'Render '+renderer+' · GPU/draw calls: não medido',
+          ...rows
+        ].join('\n'));
+      }
+    }
+    // HUD has its own 150ms timer; no layout work for each physics frame.
     void dt;
   }
   getCooldown():string{
