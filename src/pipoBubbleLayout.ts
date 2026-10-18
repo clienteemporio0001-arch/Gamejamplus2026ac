@@ -6,7 +6,7 @@ export type PipoViewport={width:number;height:number};
 export type PipoCameraView={x:number;y:number;zoom:number;worldX:number;worldY:number};
 export type PipoSpeechLayout={
  x:number;y:number;width:number;height:number;scale:number;
- tailX:number;tailY:number;birdX:number;birdY:number;offscreen:boolean;
+ tailX:number;tailY:number;tailSide:'top'|'bottom';birdX:number;birdY:number;offscreen:boolean;
  indicatorX:number;indicatorY:number;
 };
 /** Phaser scrollFactor(0) prevents scrolling, NOT zooming. Invert the
@@ -33,13 +33,21 @@ export function pipoSpeechLayout(view:PipoViewport,camera:PipoCameraView,
  // balloon should stay slightly above the bird's head whenever possible.
  const top=44+height/2;
  const bottom=Math.max(top,view.height-130-height/2);
- const preferred=birdY-32*camera.zoom-16-height/2;
- const y=Math.max(top,Math.min(bottom,preferred));
+ const headY=birdY-29*camera.zoom;
+ const above=headY-16-height/2;
+ const below=headY+16+height/2;
+ // Prefer a speech balloon above the beak. Near top HUD, flip the balloon
+ // underneath Pipo: never leave its tail pointing away from the actual bird.
+ const tailSide:'top'|'bottom'=above<top&&below<=bottom?'top':'bottom';
+ const desired=tailSide==='top'?below:above;
+ const y=Math.max(top,Math.min(bottom,desired));
  const tailX=Math.max(-width/2+19,Math.min(width/2-19,birdX-x));
- const tailY=Math.max(height/2+9,Math.min(height/2+45,
-    birdY-29*camera.zoom-y));
+ const tailBase=tailSide==='top'?-height/2:height/2;
+ const tailY=tailSide==='top'
+  ?Math.min(-height/2-9,Math.max(-height/2-48,headY-y))
+  :Math.max(height/2+9,Math.min(height/2+48,headY-y));
  const indicatorX=Math.max(34,Math.min(view.width-34,birdX));
  const indicatorY=Math.max(62,Math.min(view.height-162,birdY));
- return {x,y,width,height,scale,tailX,tailY,birdX,birdY,offscreen,
+ return {x,y,width,height,scale,tailX,tailY,tailSide,birdX,birdY,offscreen,
     indicatorX,indicatorY};
 }
