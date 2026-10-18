@@ -1,5 +1,48 @@
 # A FLORESTA MENTE — MAS O VENTO NÃO
 
+## Etapa 23 — Entradas de trilha identificáveis e reunião dos três
+
+Na Fase 01, após Téo, Lia e Nino concluírem seus três marcos, o HUD
+mantém **TRILHAS LIBERADAS!** e pede que sigam o vento. As duas entradas
+são **trilhas naturais**, com arco de raízes, vegetação que se abre,
+passagem sombria, folhas balançando e oval de reunião. Não são portais
+mágicos visuais; a autoridade move a equipe pelo caminho escolhido.
+
+**Entradas** — ao lado dos marcos, mas fora dos seus corpos sólidos:
+- Árvore oca: **x=1630** (marco perto de x=1300).
+- Pedra rachada: **x=3740** (marco perto de x=3450).
+
+A escolha correta é pedra rachada em A e C, árvore oca em B. A interface
+não revela qual entrada é verdadeira: **o vento** aponta para ela.
+Pipo fornece três dicas, inclusive que as duas trilhas existem e que
+os três amigos precisam se reunir em uma delas. Escolher errado devolve
+os três à clareira, preserva vidas/estamina e deixa nova tentativa após
+3,2 segundos. Durante a mudança de estado, o progresso dos marcos
+permanece concluído.
+
+**Reunião em solo e multiplayer:** cada entrada possui uma área de
+**284 px de largura**, exatamente igual à validação autoritativa.
+Ao aproximar o personagem, aparecem `REÚNAM OS TRÊS AQUI` e
+`0/3`, `1/3`, `2/3` ou `3/3 AMIGOS`. Os três devem estar na
+mesma área, apoiados, com velocidades normais; basta esperar quem
+falta. Em solo, troque entre **1 Téo, 2 Lia e 3 Nino** e posicione
+cada um separadamente. Os demais corpos permanecem no mapa.
+
+**Saída do primeiro setor:** a passagem correta coloca a equipe em
+x=7590, 7629 e 7668, em chão estável e fora da parede de x=7200.
+O evento de travessia atualiza a posição de cada corpo físico
+e a câmera continua seguindo o jogador. O próximo desafio permanece
+a plataforma suspensa, seguida da árvore-ponte; suas dificuldades
+não foram modificadas.
+
+Os testes específicos estão em `tests/stage23Trails.test.ts`, incluídos
+no `npm run test` do CI. O build `npm run build` compila o HTML5.
+Testes estáticos não substituem teste manual em navegador e em
+três celulares para verificar leitura das entradas, precisão da
+reunião, colisões, câmera, joystick e queda.
+
+---
+
 ## Etapa 22 — Fase 1 expandida e plataforma suspensa
 
 A Fase 01, **A Boca da Noite**, mede agora **11.400 pixels**. O grupo nasce
