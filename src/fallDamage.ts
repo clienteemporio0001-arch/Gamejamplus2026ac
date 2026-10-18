@@ -1,5 +1,6 @@
 import type {Pose,Seat} from './network';
-import {LOOP_PHYSICS,LOOP_GEOMETRY,UPPER_BRANCH,LOOP_MARKS,LOOP_FINAL} from './forestLoop';
+import {LOOP_PHYSICS,LOOP_GEOMETRY,UPPER_BRANCH,LOOP_MARKS,LOOP_FINAL,
+ LOOP_TERRAIN,LOOP_NATURAL_LEDGES,LOOP_LAYOUT_BRANCHES,SUSPENSION} from './forestLoop';
 import {TEMP_CHANNEL,TEMP_ECHO,TEMP_ROOTS,TEMP_UPPER,TEMP_SUMMIT,TEMP_LAYOUTS} from './temporalForest';
 
 export const JUMP_RISE=LOOP_PHYSICS.jumpVelocity**2/(2*LOOP_PHYSICS.gravity);
@@ -7,10 +8,13 @@ export const SAFE_FALL_HEIGHT=2*(2*JUMP_RISE);
 export const BODY_HALF_HEIGHT=LOOP_PHYSICS.characterHeight/2;
 export type FallSurface={x:number;width:number;centerY:number;height:number;active?:boolean};
 const surfaceY=(s:FallSurface)=>s.centerY-s.height/2-BODY_HALF_HEIGHT;
-export function loopFallSurfaces(layout:0|1|2,bridge:boolean,summit?:{x:number;centerY:number;width:number;height:number}):FallSurface[]{
+export function loopFallSurfaces(layout:0|1|2,bridge:boolean,summit?:{x:number;centerY:number;width:number;height:number},suspendedOpen=false):FallSurface[]{
  return [
- {x:1132,width:2265,centerY:674,height:72},
- {x:3212,width:1175,centerY:674,height:72},
+ ...LOOP_TERRAIN.map(t=>({x:(t.from+t.to)/2,width:t.to-t.from,centerY:674,height:72})),
+ ...LOOP_NATURAL_LEDGES.map(t=>({x:t.x,width:t.width,centerY:t.y,height:22})),
+ ...LOOP_LAYOUT_BRANCHES.map(t=>({x:t.x,width:t.width,centerY:t.y,height:18,active:t.layout===layout})),
+ {x:SUSPENSION.finalX,width:SUSPENSION.width,centerY:656,height:SUSPENSION.height,active:suspendedOpen},
+ {x:SUSPENSION.branch.x,width:SUSPENSION.branch.width,centerY:SUSPENSION.branch.y,height:SUSPENSION.branch.height},
  {x:LOOP_MARKS[0].x,width:165,centerY:546,height:20},
  {x:UPPER_BRANCH.x,width:UPPER_BRANCH.width,centerY:UPPER_BRANCH.centerY,height:UPPER_BRANCH.height},
  ...(summit?[summit]:[]),
