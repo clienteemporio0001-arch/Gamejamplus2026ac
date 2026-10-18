@@ -271,7 +271,7 @@ function refreshHud(): void {
       const el=document.getElementById(id);
       if(el&&el.textContent!==value)el.textContent=value;
     };
-    const objective=net.level===4?fireObjective(net.fire):net.level===3?treeObjective(net.treetop):net.level===2?temporalObjective(net.temporal):loopObjective(net.loop);
+    const objective=net.level===4?fireObjective(net.fire):net.level===3?treeObjective(net.treetop):net.level===2?temporalObjective(net.temporal):loopObjective(net.loop,net.poses);
     const remaining=net.level===4?
       (net.fire.blackoutUntil>Date.now()?Math.ceil((net.fire.blackoutUntil-Date.now())/1000):
        Math.max(0,Math.ceil((FIRE_SHIFT_PERIOD-
