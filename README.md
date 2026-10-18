@@ -1,5 +1,59 @@
 # A FLORESTA MENTE — MAS O VENTO NÃO
 
+## Etapa 25 — Cinco músicas originais e gerenciador de áudio
+
+**Arquivos reais:** `public/audio/boca_da_noite.mp3` (96 s),
+`floresta_temporal.mp3` (87,3 s),
+`caminho_das_arvores.mp3` (69,8 s),
+`floresta_em_chamas.mp3` (76,8 s) e
+`depois_das_cinzas.mp3` (82,3 s).
+
+Todos foram gerados exclusivamente para o jogo, por
+`scripts/compose_soundtrack.py`, com padrões melódicos, harmonias e
+instrumentação distintos. Licença/proveniência:
+`docs/CREDITOS_E_LICENCAS.md` e `public/audio/manifest.json`.
+
+A reprodução é gerenciada uma só vez por `src/sharedAudio.ts` e
+`src/soundtrack.ts`: o sistema busca/decodifica MP3 somente após a
+primeira interação permitida pelo navegador, carrega sob demanda,
+mantém até dois buffers em cache, loop contínuo e faz crossfade
+de 1,35 s ao mudar de fase. Menus usam uma variação discreta do
+tema inicial. O final da Fase 4 seleciona automaticamente
+`depois_das_cinzas.mp3` durante a cena e os créditos.
+
+Durante rajadas críticas da Fase 3 e incêndio intenso na Fase 4,
+o volume/dinâmica musical reage ao **estado autoritativo**,
+sem alterar colisões, perigos, multiplayer ou progressão. Os efeitos
+de vento/chuva/fogo continuam separados, e sinais críticos aplicam
+redução temporária na música.
+
+### Volume em desktop e celular
+
+Menu principal **Configurações**, ou **Opções → Configurações** dentro
+da fase: **Música**, **Efeitos sonoros**, **Ambiente**,
+**Silenciar somente música** e **Silenciar tudo**. Preferências locais
+permanecem no navegador quando o armazenamento é permitido.
+No celular, toque em qualquer botão do jogo para liberar o áudio
+após a restrição de autoplay. O áudio é individual em cada navegador;
+**nenhum streaming musical via WebRTC**.
+
+Para regenerar os MP3 em um ambiente com Python, NumPy e FFmpeg:
+
+```bash
+python scripts/compose_soundtrack.py
+npm run build
+npm run test
+```
+
+Os testes verificam arquivos MP3 de verdade, manifesto e durações,
+roteamento por fase, loops, crossfade, preferências, carregamento
+com falha, anti-duplicação e regressões das demais fases. Ainda é
+necessário teste auditivo real em navegadores desktop/Android/iOS
+para detectar possíveis lacunas no loop, volumes subjetivos e
+restrições específicas de autoplay.
+
+---
+
 ## Etapa 24 — Performance medida em jogo, plataformas limpas e empilhamento livre
 
 ### Diagnóstico estático dos pontos de custo
