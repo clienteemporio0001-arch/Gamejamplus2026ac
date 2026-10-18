@@ -5,6 +5,8 @@ import { ForestScene } from './forestScene';
 import { ForestLoopScene } from './forestLoopScene';
 import { TemporalForestScene } from './temporalForestScene';
 import { TreetopForestScene } from './treetopForestScene';
+import { BurningForestScene } from './burningForestScene';
+import { FIRE_COLLAPSE_PERIOD,fireObjective,fireWind,fireHeavySmoke } from './burningForest';
 import { TREE_CYCLE,treeObjective,treeWind,treeExposure } from './treetopForest';
 import { TEMP_CYCLE,temporalObjective,tempWind } from './temporalForest';
 import { IntroScene } from './intro';
@@ -24,7 +26,7 @@ const ui = document.querySelector<HTMLDivElement>('#ui')!;
 const controls = document.querySelector<HTMLDivElement>('#mobile-controls')!;
 const touch: TouchInput = { left: false, right: false, jump: false, interact: false, ability: false };
 let game: Phaser.Game | null = null;
-let activeMode: 'none' | 'intro' | 'level1' | 'level2' | 'level3' | 'level4' | 'loop' | 'temporal' | 'treetop' = 'none';
+let activeMode: 'none' | 'intro' | 'level1' | 'level2' | 'level3' | 'level4' | 'loop' | 'temporal' | 'treetop' | 'fire' = 'none';
 let info = '';
 let devToolsOpen=false;
 let mobilePad:MobilePadMount|null=null;
@@ -99,7 +101,7 @@ function banner(): string {
     '<p>Quando chega a boca da noite, a floresta muda de lugar.<br>Três amigos. Uma saída. Ninguém pode ficar para trás.</p>';
 }
 function enterGame(): void {
-  const mode = net.stage === 'intro' ? 'intro' : net.experience==='loop'?(net.level===3?'treetop':net.level===2?'temporal':'loop'):('level' + net.level) as 'level1' | 'level2' | 'level3' | 'level4';
+  const mode = net.stage === 'intro' ? 'intro' : net.experience==='loop'?(net.level===4?'fire':net.level===3?'treetop':net.level===2?'temporal':'loop'):('level' + net.level) as 'level1' | 'level2' | 'level3' | 'level4';
   if (game && activeMode === mode) return;
   exitGame();
   activeMode = mode;
@@ -107,6 +109,7 @@ function enterGame(): void {
     mode === 'loop' ? new ForestLoopScene(net,touch,refreshHud) :
     mode === 'temporal' ? new TemporalForestScene(net,touch,refreshHud) :
     mode === 'treetop' ? new TreetopForestScene(net,touch,refreshHud) :
+    mode === 'fire' ? new BurningForestScene(net,touch,refreshHud) :
     mode === 'level2' ? new JourneyScene(net, touch, refreshHud) :
     net.level >= 3 ? new LateScene(net, touch, refreshHud) : new ForestScene(net, touch, refreshHud);
   // Render at the actual CSS viewport dimensions. World physics remains unchanged.
@@ -132,20 +135,24 @@ function exitGame(): void {
 }
 function refreshHud(): void {
   if(net.playing&&net.experience==='loop'&&net.localSeat!==null){
-    const world=net.level===3?net.treetop:net.level===2?net.temporal:net.loop;
+    const world=net.level===4?net.fire:net.level===3?net.treetop:net.level===2?net.temporal:net.loop;
     const update=(id:string,value:string)=>{
       const el=document.getElementById(id);
       if(el&&el.textContent!==value)el.textContent=value;
     };
-    const objective=net.level===3?treeObjective(net.treetop):net.level===2?temporalObjective(net.temporal):loopObjective(net.loop);
+    const objective=net.level===4?fireObjective(net.fire):net.level===3?treeObjective(net.treetop):net.level===2?temporalObjective(net.temporal):loopObjective(net.loop);
     const remaining=world.blackoutUntil>Date.now()
       ?Math.max(0,Math.ceil((world.blackoutUntil-Date.now())/1000))
-      :Math.max(0,Math.ceil(((net.level===3?TREE_CYCLE:net.level===2?TEMP_CYCLE:LOOP_CYCLE_MS)-Math.max(0,Date.now()-world.cycleStart))/1000));
-    update('loop-state',['A','B','C'][world.layout]);
-    update('loop-timer',(world.blackoutUntil>Date.now()?'MUDANDO ':'APAGÃO EM ')+remaining+'s');
+      :Math.max(0,Math.ceil(((net.level===4?FIRE_COLLAPSE_PERIOD:net.level===3?TREE_CYCLE:net.level===2?TEMP_CYCLE:LOOP_CYCLE_MS)-Math.max(0,Date.now()-world.cycleStart))/1000));
+    update('loop-state',net.level===4?'🔥':['A','B','C'][world.layout]);
+    update('loop-timer',net.level===4?'ÁRVORE EM '+remaining+'s':
+      (world.blackoutUntil>Date.now()?'MUDANDO ':'APAGÃO EM ')+remaining+'s');
     update('loop-objective',objective.title);
     update('loop-progress',objective.progress);
-    update('loop-wind',net.level===3?
+    update('loop-wind',net.level===4?
+      (fireHeavySmoke(net.fire,net.poses[net.localSeat],Date.now())?'⚠ FUMAÇA · ':'')+
+       (fireWind(Date.now(),net.fire)>0?'FOGO E VENTO ▶':'◀ FOGO E VENTO'):
+      net.level===3?
       (net.treetop.windPhase==='gust'?
         (treeExposure(net.poses[net.localSeat])===0?'🛡 ABRIGADO':
           (net.treetop.windDirection>0?'🌪 RAJADA ▶':'◀ RAJADA 🌪')):
@@ -176,7 +183,7 @@ function refreshHud(): void {
         seat===net.localSeat);
     }
   }
-  const scene = game?.scene.keys[net.experience==='loop'?(net.level===3?'TreetopForestScene':net.level===2?'TemporalForestScene':'ForestLoopScene'):net.level >= 3 ? 'LateScene' : net.level === 2 ? 'JourneyScene' : 'ForestScene'] as DemoScene | ForestScene | RiverScene | JourneyScene | LateScene | ForestLoopScene | TemporalForestScene | TreetopForestScene | undefined;
+  const scene = game?.scene.keys[net.experience==='loop'?(net.level===4?'BurningForestScene':net.level===3?'TreetopForestScene':net.level===2?'TemporalForestScene':'ForestLoopScene'):net.level >= 3 ? 'LateScene' : net.level === 2 ? 'JourneyScene' : 'ForestScene'] as DemoScene | ForestScene | RiverScene | JourneyScene | LateScene | ForestLoopScene | TemporalForestScene | TreetopForestScene | BurningForestScene | undefined;
   const skill = document.querySelector<HTMLElement>('#skill-status');
   if (skill && scene?.getCooldown) skill.textContent = scene.getCooldown();
   const team=document.querySelector<HTMLElement>('#team-status');
@@ -211,7 +218,13 @@ function render(): void {
       return;
     }
     if (net.stage === 'transition'&&net.experience==='loop') {
-      ui.innerHTML=net.level===2?
+      ui.innerHTML=net.level===3?
+        '<div class="interlevel fire-transition"><h2>FASE 03 CONCLUÍDA</h2>'+ 
+        '<p>As copas ficaram para trás... mas o horizonte ficou vermelho.</p>'+ 
+        '<div class="fire-horizon">🔥 🌲 🔥</div>'+ 
+        '<p><strong>PIPO:</strong> O fogo está chegando! Não podemos abandonar a floresta!</p>'+ 
+        '<strong>FASE 04 — FLORESTA EM CHAMAS</strong></div>':
+        net.level===2?
         '<div class="interlevel"><h2>FASE 02 CONCLUÍDA</h2>'+
         '<p>Os três sobem por árvores gigantescas que desaparecem na névoa...</p>'+
         '<strong>FASE 03 — CAMINHO DAS ÁRVORES</strong></div>':
@@ -226,6 +239,15 @@ function render(): void {
         (net.level===1?'VOCÊS CONSEGUIRAM ATRAVESSAR!':net.level===2?'VOCÊS VENCERAM A CORRENTEZA!':'VOCÊS SOBREVIVERAM À ESCURIDÃO!') +
         '</p><p>'+(net.level===2?'Mas a noite ainda esconde perigos...':'Os três amigos seguem juntos...')+'</p><strong>FASE 0'+(net.level+1)+' · '+titles[net.level+1]+'</strong></div>';
       return;
+    }
+    if (net.stage === 'final' && net.experience==='loop'&&net.level===4) {
+      ui.innerHTML='<div class="victory fire-victory"><div class="fire-finale-symbol">🌱</div>'+ 
+        '<h2>A FLORESTA MENTE. MAS O FOGO TAMBÉM.</h2>'+ 
+        '<p>Os três chegaram exaustos à margem do rio. Pipo pousou ao lado deles.</p>'+ 
+        '<strong>NINGUÉM FICA PARA TRÁS. NEM A FLORESTA.</strong>'+ 
+        '<p>A AVENTURA FOI CONCLUÍDA!</p>'+ 
+        button('leave-final','VOLTAR AO MENU')+'</div>';
+      ui.querySelector('#leave-final')?.addEventListener('click',()=>net.shutdown());return;
     }
     if (net.stage === 'final' && net.experience==='loop'&&net.level===3) {
       ui.innerHTML='<div class="victory"><h2>FASE 03 CONCLUÍDA!</h2>'+ 
@@ -257,9 +279,9 @@ function render(): void {
     if(net.playing&&net.experience==='loop'){
       const seat=net.localSeat??0;
       const selected=CHARACTERS[seat];
-      const object=net.level===3?treeObjective(net.treetop):net.level===2?temporalObjective(net.temporal):loopObjective(net.loop);
+      const object=net.level===4?fireObjective(net.fire):net.level===3?treeObjective(net.treetop):net.level===2?temporalObjective(net.temporal):loopObjective(net.loop);
       ui.innerHTML='<div class="loop-top-left" aria-label="Estado da floresta">'+
-        '<span class="loop-state">'+(net.level===3?'FASE 03 · CAMINHO DAS ÁRVORES':net.level===2?'FASE 02 · FLORESTA TEMPORAL':'FASE 01 · A BOCA DA NOITE')+' · <strong id="loop-state">'+['A','B','C'][net.level===3?net.treetop.layout:net.level===2?net.temporal.layout:net.loop.layout]+'</strong></span>'+
+        '<span class="loop-state">'+(net.level===4?'FASE 04 · FLORESTA EM CHAMAS':net.level===3?'FASE 03 · CAMINHO DAS ÁRVORES':net.level===2?'FASE 02 · FLORESTA TEMPORAL':'FASE 01 · A BOCA DA NOITE')+' · <strong id="loop-state">'+(net.level===4?'🔥':['A','B','C'][net.level===3?net.treetop.layout:net.level===2?net.temporal.layout:net.loop.layout])+'</strong></span>'+
         '<span id="loop-timer">APAGÃO EM —</span></div>'+
         '<div class="loop-top-right" aria-live="polite"><strong id="loop-objective">'+safeText(object.title)+'</strong>'+
         '<small id="loop-progress">'+safeText(object.progress)+'</small></div>'+
@@ -286,8 +308,8 @@ function render(): void {
         '<div class="loop-menu">'+
         (net.isSolo?'<details id="loop-dev"><summary>⚙ <span>Opções</span></summary>'+
           '<div class="loop-menu-options">'+
-          '<button id="solo-restart">'+(net.level===3?'REINICIAR FASE 03':net.level===2?'REINICIAR FASE 02':'REINICIAR TENTATIVA')+'</button>'+
-          '<button id="solo-cycle">ADIANTAR APAGÃO</button>'+
+          '<button id="solo-restart">'+(net.level===4?'REINICIAR FASE 04':net.level===3?'REINICIAR FASE 03':net.level===2?'REINICIAR FASE 02':'REINICIAR TENTATIVA')+'</button>'+
+          '<button id="solo-cycle">'+(net.level===4?'ADIANTAR QUEDA':'ADIANTAR APAGÃO')+'</button>'+
           '<button id="solo-leave">VOLTAR AO MENU</button></div></details>':
           '<button id="leave" class="loop-online-leave" title="Sair da sala">SAIR</button>')+
         '</div>'+
@@ -357,6 +379,7 @@ function render(): void {
       button('dev-loop','TESTAR FASE 01 · BOCA DA NOITE',true)+
       button('dev-temporal','TESTAR FASE 02 · FLORESTA TEMPORAL',true)+
       button('dev-treetop','TESTAR FASE 03 · CAMINHO DAS ÁRVORES',true)+
+      button('dev-fire','TESTAR FASE 04 · FLORESTA EM CHAMAS',true)+
       ([1,2,3,4] as const).map(level=>button('dev-classic-'+level,'TESTAR FASE CLÁSSICA '+level,true)).join('')+
       button('create-classic','CRIAR SALA CLÁSSICA',true)+'</div></details>'+
       '<p class="menu-footnote">Multiplayer: três pessoas entram na mesma sala pelo código.</p></main>';
@@ -369,6 +392,7 @@ function render(): void {
     ui.querySelector('#dev-loop')?.addEventListener('click',()=>{info='';net.startLoopSolo();});
     ui.querySelector('#dev-temporal')?.addEventListener('click',()=>{info='';net.startTemporalSolo();});
     ui.querySelector('#dev-treetop')?.addEventListener('click',()=>{info='';net.startTreetopSolo();});
+    ui.querySelector('#dev-fire')?.addEventListener('click',()=>{info='';net.startFireSolo();});
     ([1,2,3,4] as const).forEach(level=>
       ui.querySelector('#dev-classic-'+level)?.addEventListener('click',()=>{info='';net.startSolo(level);}));
     ui.querySelector('#join-menu')?.addEventListener('click',showJoin);
