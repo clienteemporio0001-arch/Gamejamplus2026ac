@@ -257,7 +257,7 @@ export class LoopAuthority{
       if(now-this.lastShot[1]<490||action.facing!==1)return false;
       this.lastShot[1]=now;
       const shoot=(target:{x:number;y:number})=>target.x>p.x&&target.x-p.x<=365&&Math.abs(p.y-18-target.y)<=65;
-      if(w.observed&&!w.marks[1]&&shoot(LOOP_MARKS[1])){w.marks[1]=true;return true;}
+      if(w.observed&&w.marks[0]&&!w.marks[1]&&shoot(LOOP_MARKS[1])){w.marks[1]=true;return true;}
       if(allDone(w.marks)&&!w.tree[1]&&shoot(LOOP_TREE[1])){w.tree[1]=true;this.checkTree(now);return true;}
       if(w.bridge&&!w.final[1]&&shoot(LOOP_FINAL[1])){w.final[1]=true;this.checkExit();return true;}
       return false;
@@ -279,7 +279,7 @@ export class LoopAuthority{
     }
     if(action.kind==='switch'&&seat===2 && this.lastDash[2]>0
       &&now-this.lastDash[2] <= 3000 &&p.x-this.dashOrigin[2]>=105){
-      if(w.observed&&!w.marks[2]&&near(p,LOOP_MARKS[2].x,LOOP_MARKS[2].y,67,85)){
+      if(w.observed&&w.marks[0]&&w.marks[1]&&!w.marks[2]&&near(p,LOOP_MARKS[2].x,LOOP_MARKS[2].y,67,85)){
         w.marks[2]=true;this.lastSwitch[2]=now;return true;
       }
       if(allDone(w.marks)&&!w.tree[2]&&near(p,LOOP_TREE[2].x,LOOP_TREE[2].y,65,85)){
