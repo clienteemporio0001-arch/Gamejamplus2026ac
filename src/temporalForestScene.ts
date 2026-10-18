@@ -225,7 +225,7 @@ export class TemporalForestScene extends Phaser.Scene {
    this.solo=new SoloBodies(this,this.net,this.avatars,this.blocks,410,960);
    this.solo.select(this.net.localSeat??0);
    this.off.push(this.net.on('solo-seat',seat=>{
-    this.solo?.select(seat);this.local=this.avatars[seat];this.body=this.solo!.body(seat);
+    this.solo?.select(seat);const active=this.solo!.active(seat);this.local=active.actor;this.body=active.body;
     this.jumps=0;this.pending.clear();this.pendingJump=false;this.dashUntil=0;this.hud?.();
    }));
   }
@@ -378,6 +378,12 @@ export class TemporalForestScene extends Phaser.Scene {
  }
  update(time:number,dt:number):void{
   if(!this.body||!this.net.playing||this.net.localSeat===null)return;
+  // Reconcile physical ownership every frame, including rapid mobile switches.
+  // Only the selected actor gets movement/jump/dash input; no teleport occurs.
+  if(this.solo){
+   const active=this.solo.active(this.net.localSeat);
+   this.local=active.actor;this.body=active.body;
+  }
   const seat=this.net.localSeat,w=this.w,now=Date.now();
   const pause=(w.blackoutUntil>now||w.deadUntil>0||!this.net.everyoneConnected);
   if(pause!==this.paused){
