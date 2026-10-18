@@ -460,6 +460,8 @@ function render(): void {
           '<button id="sound-options">CONFIGURAÇÕES</button>'+
           '<button id="solo-restart">'+(net.level===4?'REINICIAR FASE 04':net.level===3?'REINICIAR FASE 03':net.level===2?'REINICIAR FASE 02':'REINICIAR TENTATIVA')+'</button>'+
           (devSession?'<button id="dev-inspect">PAINEL DE TESTES</button>'+
+            (net.level===1?'<button id="dev-performance">DIAGNÓSTICO FPS · LIGAR/DESLIGAR</button>'+
+            '<button id="dev-quality">PERFIL GRÁFICO · NORMAL/REDUZIDO</button>':'')+
             '<button id="solo-cycle">'+(net.level===4?'ADIANTAR CICLO DE FOGO':'ADIANTAR TRANSFORMAÇÃO')+'</button>':'')+
           '<button id="solo-leave">VOLTAR AO MENU</button></div></details>':
           '<details id="loop-options"><summary>⚙ <span>Opções</span></summary>'+
@@ -472,6 +474,8 @@ function render(): void {
       ui.querySelector('#pipo-help')?.addEventListener('click',()=>window.dispatchEvent(new Event('pipo-help')));
       ui.querySelector('#sound-options')?.addEventListener('click',()=>openPanel('settings'));
       ui.querySelector('#dev-inspect')?.addEventListener('click',()=>openPanel('developer'));
+      ui.querySelector('#dev-performance')?.addEventListener('click',()=>window.dispatchEvent(new Event('stage24:metrics-toggle')));
+      ui.querySelector('#dev-quality')?.addEventListener('click',()=>window.dispatchEvent(new Event('stage24:quality-toggle')));
       ui.querySelector('#solo-restart')?.addEventListener('click',()=>net.restartSolo());
       ui.querySelector('#solo-cycle')?.addEventListener('click',()=>net.advanceLoopCycle());
       ui.querySelector('#solo-leave')?.addEventListener('click',()=>net.shutdown());
