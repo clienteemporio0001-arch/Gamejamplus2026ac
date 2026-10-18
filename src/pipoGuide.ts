@@ -13,6 +13,16 @@ export class PipoGuide {
  private label:Phaser.GameObjects.Text;
  private key?:Phaser.Input.Keyboard.Key;
  private listener=()=>this.ask();
+ private narrativeQueue:string[]=[];
+ private currentPriority=5;
+ private readonly narrativeListener=(event:Event)=>{
+  const e=event as CustomEvent<{line:string;phase:number;priority:number}>;
+  if(!e.detail||e.detail.phase!==this.net.level||!this.net.playing)return;
+  const line=e.detail.line.trim();
+  if(!line||this.narrativeQueue.includes(line))return;
+  this.narrativeQueue.push(line);
+  if(this.narrativeQueue.length>4)this.narrativeQueue.shift();
+ };
  private previousCycle=-1;
  private objective='';
  private depth:0|1|2=0;
@@ -62,8 +72,10 @@ export class PipoGuide {
    .setScrollFactor(0).setVisible(false);
   this.key=scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.H);
   window.addEventListener('pipo-help',this.listener);
+  window.addEventListener('mission-pipo',this.narrativeListener);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{
    window.removeEventListener('pipo-help',this.listener);
+   window.removeEventListener('mission-pipo',this.narrativeListener);
   });
  }
  private source():HintSource{
@@ -86,7 +98,8 @@ export class PipoGuide {
   const now=Date.now();
   if(message===this.lastAlert&&now-this.lastAlertAt<6500)return;
   this.lastAlert=message;this.lastAlertAt=now;
-  this.speak(now,message,3500);
+  this.currentPriority=0;
+  this.speak(now,message,2300);
  }
  warnWind(message:string):void{
   if(this.net.experience!=='loop'||this.net.level!==3||!this.net.playing)return;
@@ -95,6 +108,7 @@ export class PipoGuide {
  private speak(now:number,urgent?:string,duration=6100):void{
   const hint=pipoHint(this.source());
   this.label.setText('PIPO  •  '+(urgent??hint.lines[this.depth]));
+  if(urgent===undefined)this.currentPriority=4;
   const width=290,height=Math.max(76,this.label.height+31);
   this.panel.clear().fillStyle(0x061d20,.95).fillRoundedRect(-width/2,-height/2,width,height,14)
    .lineStyle(2,0x9bdc91,.92).strokeRoundedRect(-width/2,-height/2,width,height,14);
@@ -108,16 +122,23 @@ export class PipoGuide {
    this.objective=hint.objective;this.depth=0;this.hasRequested=false;this.lastProgress=now;
   }
   const source=this.source(),cycle=source.world.cycle;
+  const blackout=source.world.blackoutUntil>now||source.world.deadUntil>now;
+  if(!paused&&!blackout&&this.narrativeQueue.length&&now>=this.talkingUntil){
+   const next=this.narrativeQueue.shift()!;
+   this.currentPriority=2;
+   this.speak(now,next,3100);
+  }
   if(this.previousCycle<0)this.previousCycle=cycle;
   else if(cycle!==this.previousCycle){
    this.previousCycle=cycle;this.depth=0;this.hasRequested=false;
-   this.lastAsk=now;this.speak(now);
+   this.lastAsk=now;
+   if(!paused&&!blackout&&now>=this.talkingUntil)this.speak(now);
   }
-  if(!paused&&now-this.lastProgress>90000&&now>this.fadingUntil){
+  if(!paused&&!blackout&&!this.narrativeQueue.length&&now-this.lastProgress>90000&&now>this.fadingUntil){
    this.depth=Math.min(2,this.depth+1) as 0|1|2;
    this.lastProgress=now;this.speak(now);
   }
-  if(!paused&&this.key&&Phaser.Input.Keyboard.JustDown(this.key))this.ask();
+  if(!paused&&!blackout&&this.key&&Phaser.Input.Keyboard.JustDown(this.key))this.ask();
   const poses=this.net.poses;
   let px=focusX,py=focusY;
   if(!this.net.isSolo){
