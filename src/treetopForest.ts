@@ -2,48 +2,94 @@ import type {Pose,Seat} from './network';
 import {initVitals,validVitals,spendVital,regenVitals,VITALS,type VitalAction,type Vitals} from './loopVitals';
 
 /** Fase 03 da NOVA aventura. Independente da terceira fase clássica. */
-export const TREE_WIDTH=4400, TREE_HEIGHT=1250, TREE_CYCLE=60000, TREE_BLACKOUT=2000;
-export const TREE_VOID_Y=1170;
+/** Distances obey gravity 850, jump -465, walking 235: 127px rise / 257px flat travel. */
+export const TREE_WIDTH=5250,TREE_HEIGHT=1400,TREE_CYCLE=60000,TREE_BLACKOUT=2000;
+export const TREE_VOID_Y=1315;
+export const TREE_GRAVITY=850,TREE_JUMP=465,TREE_SPEED=235;
+export const TREE_JUMP_RISE=TREE_JUMP*TREE_JUMP/(2*TREE_GRAVITY);
+export const TREE_JUMP_RANGE=2*TREE_JUMP/TREE_GRAVITY*TREE_SPEED;
 export type TreeLayout=0|1|2;
-export type TreePlatform={x:number;y:number;width:number;height:number;state?:TreeLayout;puzzle?:'bridge'|'rope'|'final'};
+export type TreePlatform={
+ x:number;y:number;width:number;height:number;state?:TreeLayout;
+ puzzle?:'bridge'|'rope'|'final';material?:'branch'|'root'|'canopy'|'bridge';
+};
+const p=(x:number,y:number,width:number,material:TreePlatform['material']='branch'):TreePlatform=>({x,y,width,height:22,material});
+/** Collidable branches of one continuous climbing adventure, not ground-level terrain. */
 export const TREE_PLATFORMS:readonly TreePlatform[]=[
- {x:1080,y:830,width:190,height:24},{x:1250,y:740,width:130,height:20},
- {x:1440,y:670,width:110,height:18},{x:1620,y:620,width:165,height:20},
- {x:1860,y:620,width:510,height:28}, // clareira suspensa inicial
- {x:2150,y:570,width:125,height:20},{x:2330,y:490,width:115,height:20},
- {x:2530,y:420,width:110,height:20},{x:2750,y:420,width:130,height:20},
- {x:2960,y:365,width:120,height:20},{x:3150,y:300,width:140,height:20},
- {x:3370,y:390,width:110,height:18},{x:3540,y:330,width:105,height:18},
- {x:3710,y:250,width:130,height:20},{x:3940,y:180,width:145,height:22},
- {x:4150,y:145,width:200,height:26},
- {x:2270,y:650,width:170,height:18,state:0},{x:2460,y:580,width:145,height:18,state:1},
- {x:2640,y:530,width:130,height:18,state:2},
- {x:3500,y:490,width:260,height:20,puzzle:'bridge'},
- {x:3260,y:375,width:210,height:20,puzzle:'rope'},
- {x:4010,y:250,width:190,height:20,puzzle:'final'}
+ p(1000,1040,154,'root'),p(1180,951,150),p(1360,855,160),
+ p(1430,694,140),p(1680,780,450,'canopy'),
+ p(1970,750,178),p(2150,705,162),p(2330,655,172),
+ p(2510,606,156),p(2690,558,168),p(2870,520,183),p(3045,490,178),
+ p(3205,458,190,'root'),p(3255,315,152,'branch'),
+ // Gap impossible for a normal jump, opened by the actual cooperative bridge.
+ {...p(3455,462,393,'bridge'),puzzle:'bridge'},
+ p(3730,458,205,'canopy'),p(3905,415,170),p(4090,385,220,'root'),
+ p(4195,265,135),p(4260,167,180,'branch'),
+ {...p(4440,314,300,'bridge'),puzzle:'rope'},
+ p(4660,308,205,'canopy'),p(4810,265,196,'root'),
+ { ...p(4865,203,134),state:1},
+ { ...p(4980,259,169),state:2},
+ { ...p(5085,226,146),state:2},
+ {...p(4980,246,260,'bridge'),puzzle:'final'},
+ p(5142,191,173,'canopy'),
+ // Rotating side branches offer alternate approaches without blocking the spine.
+ {...p(2450,767,147,'root'),state:0},
+ {...p(2555,731,145,'branch'),state:1},
+ {...p(2720,676,152,'branch'),state:2},
+ {...p(4550,412,136,'root'),state:0},
+ {...p(4740,397,137,'root'),state:1},
+ {...p(4830,376,140,'root'),state:2}
 ];
-export const TREE_START:Pose[]=([0,1,2] as Seat[]).map(seat=>({seat,x:1740+seat*60,y:584,vx:0,vy:0}));
+/** A clearly visible hollow or thick trunk protecting a nearby branch. */
+export type TreeShelter={x:number;y:number;radius:number;kind:'hollow'|'roots'|'canopy'};
+export const TREE_SHELTERS:readonly TreeShelter[]=[
+ {x:1610,y:745,radius:89,kind:'hollow'},
+ {x:2300,y:621,radius:65,kind:'roots'},
+ {x:2860,y:487,radius:73,kind:'canopy'},
+ {x:3170,y:425,radius:55,kind:'hollow'},
+ {x:3715,y:425,radius:65,kind:'roots'},
+ {x:4060,y:353,radius:65,kind:'hollow'},
+ {x:4620,y:274,radius:65,kind:'canopy'},
+ {x:4810,y:231,radius:61,kind:'hollow'}
+];
+export const TREE_START:Pose[]=([0,1,2] as Seat[]).map(seat=>({seat,x:1580+seat*62,y:745,vx:0,vy:0}));
+/** Host-approved interaction locations. All linked to visible, reachable branches. */
+export const TREE_TARGETS={
+ bridge:{teo:{x:3255,y:282},lia:{x:3320,y:436},nino:{x:3220,y:426}},
+ tower:{base:{x:4090,y:351},top:{x:4260,y:133}},
+ time:{lia:{x:4840,y:241},teo:{x:4865,y:169},nino:{x:5050,y:193}},
+ exit:{x:5142,y:157}
+} as const;
+export type TreeWindPhase='calm'|'warning'|'gust';
+export const TREE_WIND_PERIOD=18000,TREE_GUST_WARNING=1700,TREE_GUST_DURATION=4400;
+export const TREE_GUST_OFFSET=8700;
 export type TreeWorld=Vitals&{
  layout:TreeLayout;cycle:number;cycleStart:number;blackoutUntil:number;deadUntil:number;resetId:number;
  bridge:[boolean,boolean,boolean];bridgeOpen:boolean;
  tower:[boolean,boolean,boolean];ropeOpen:boolean;
  time:[boolean,boolean,boolean];finalOpen:boolean;completed:boolean;
  supporting:[Seat|null,Seat|null,Seat|null];dashAt:number;dashX:number;
+ windPhase:TreeWindPhase;windDirection:-1|1;windUntil:number;gustCount:number;deathByGust:boolean;
 };
 export function initTree(now=Date.now()):TreeWorld{return {
  layout:0,cycle:0,cycleStart:now,blackoutUntil:0,deadUntil:0,resetId:0,
  bridge:[false,false,false],bridgeOpen:false,tower:[false,false,false],ropeOpen:false,
  time:[false,false,false],finalOpen:false,completed:false,supporting:[null,null,null],
- dashAt:0,dashX:0,...initVitals()
+ dashAt:0,dashX:0,windPhase:'calm',windDirection:1,windUntil:0,gustCount:0,deathByGust:false,
+ ...initVitals()
 };}
 export function validTree(value:unknown):value is TreeWorld{
- if(!value||typeof value!=='object')return false;
+ if(!value||typeof value!=='object'||Array.isArray(value))return false;
  const w=value as Record<string,unknown>;
  return [0,1,2].includes(Number(w.layout))
- &&['cycle','cycleStart','blackoutUntil','deadUntil','resetId','dashAt','dashX'].every(k=>typeof w[k]==='number'&&Number.isFinite(w[k])&&Number(w[k])>=0)
- &&['bridgeOpen','ropeOpen','finalOpen','completed'].every(k=>typeof w[k]==='boolean')
+ &&['cycle','cycleStart','blackoutUntil','deadUntil','resetId','dashAt','dashX','windUntil','gustCount'].every(k=>typeof w[k]==='number'&&Number.isFinite(w[k])&&Number(w[k])>=0)
+ &&['bridgeOpen','ropeOpen','finalOpen','completed','deathByGust'].every(k=>typeof w[k]==='boolean')
+ &&['calm','warning','gust'].includes(String(w.windPhase))
+ &&(w.windDirection===1||w.windDirection===-1)
  &&['bridge','tower','time'].every(k=>Array.isArray(w[k])&&(w[k] as unknown[]).length===3&&(w[k] as unknown[]).every(v=>typeof v==='boolean'))
- &&Array.isArray(w.supporting)&&w.supporting.length===3&&validVitals(w);
+ &&Array.isArray(w.supporting)&&w.supporting.length===3
+ &&w.supporting.every((v,i)=>v===null||(i===0&&v===1)||(i===1&&v===2))
+ &&validVitals(w);
 }
 export function treePlatforms(w:TreeWorld):TreePlatform[]{
  return TREE_PLATFORMS.filter(p=>p.state===undefined||p.state===w.layout)
@@ -54,6 +100,46 @@ export function treePlatforms(w:TreeWorld):TreePlatform[]{
 export function treeFatal(p:Pose,now:number,w:TreeWorld,protectedUntil=0):boolean{
  return now>=protectedUntil&&w.blackoutUntil<=now&&w.deadUntil===0&&!w.completed
  &&p.y>=TREE_VOID_Y&&p.vy>0;
+}
+/** Physical contact with a rendered shelter; 0 protected, .35 at fringe, 1 exposed. */
+export function treeExposure(p:Pick<Pose,'x'|'y'>):number{
+ let exposure=1;
+ for(const zone of TREE_SHELTERS){
+  if(Math.abs(p.y-zone.y)>72)continue;
+  const delta=Math.abs(p.x-zone.x);
+  if(delta<=zone.radius)return 0;
+  if(delta<=zone.radius+32)exposure=Math.min(exposure,.35);
+ }
+ return exposure;
+}
+/** Single shared host clock determines the danger; clients render its last broadcast value. */
+export function treeWindSchedule(w:TreeWorld,now:number):
+ {phase:TreeWindPhase;direction:-1|1;until:number}{
+ const elapsed=Math.max(0,now-w.cycleStart);
+ const round=Math.floor(elapsed/TREE_WIND_PERIOD);
+ const local=elapsed%TREE_WIND_PERIOD;
+ const direction:(-1|1)=(round+w.layout)%2===0?1:-1;
+ const warnStart=TREE_GUST_OFFSET;
+ const gustStart=warnStart+TREE_GUST_WARNING;
+ const gustEnd=gustStart+TREE_GUST_DURATION;
+ const origin=w.cycleStart+round*TREE_WIND_PERIOD;
+ if(w.deadUntil>0||w.blackoutUntil>now||w.completed)
+  return {phase:'calm',direction,until:0};
+ if(local>=warnStart&&local<gustStart)return {phase:'warning',direction,until:origin+gustStart};
+ if(local>=gustStart&&local<gustEnd)return {phase:'gust',direction,until:origin+gustEnd};
+ return {phase:'calm',direction,until:origin+(local<warnStart?warnStart:TREE_WIND_PERIOD+warnStart)};
+}
+/** Velocity is applied to all local Arcade bodies, including unselected solo avatars. */
+export function treeWindVelocity(w:TreeWorld,pose:Pick<Pose,'x'|'y'>,
+ grounded:boolean,desired:number):number{
+ const e=treeExposure(pose);
+ if(w.windPhase==='gust'){
+  const control=grounded?.72:.64;
+  const push=(grounded?175:210)*w.windDirection*e;
+  return Math.max(-395,Math.min(395,desired*control+push));
+ }
+ if(!grounded)return Math.max(-360,Math.min(360,desired+e*w.windDirection*(w.windPhase==='warning'?52:29)));
+ return desired;
 }
 export function treeObjective(w:TreeWorld):{title:string;progress:string}{
  if(!w.bridgeOpen)return {title:'A Ponte dos Três: unam suas habilidades.',progress:w.bridge.filter(Boolean).length+'/3'};
