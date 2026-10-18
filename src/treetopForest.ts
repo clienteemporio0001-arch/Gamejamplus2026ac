@@ -316,8 +316,7 @@ export class TreeAuthority{
    &&!windy&&(target.x-p.x)*facing>=0&&(target.x-p.x)*facing<=360
    &&Math.abs(p.y-18-target.y)<56;
   if(!w.bridgeOpen){
-   // Nino's FIRST bridge switch is a normal E interaction. Dash remains an
-   // ability and is still required by later dedicated dash mechanisms.
+   // Nino's bridge switch requires only E; dash is a separate optional ability.
    if(seat===2&&kind==='switch'&&!w.bridge[2]
      &&close(p,TREE_TARGETS.bridge.nino.x,TREE_TARGETS.bridge.nino.y,62,75))
      changed=w.bridge[2]=true;
@@ -345,9 +344,9 @@ export class TreeAuthority{
    if(seat===0&&kind==='lever'&&!w.time[0]
      &&close(p,TREE_TARGETS.time.teo.x,TREE_TARGETS.time.teo.y,82,70)
      &&Math.abs(p.vy)<210)changed=w.time[0]=true;
-   // Require a genuine dash followed by E, but respect the short ledge.
-   if(seat===2&&kind==='switch'&&!w.time[2]&&w.dashAt>0
-     &&now-w.dashAt<=5000&&Math.abs(p.x-w.dashX)>=35
+   // Nino's final Galhos do Tempo circle uses E alone. Dash is optional.
+   // Host validates the correct character and proximity, in every layout.
+   if(seat===2&&kind==='switch'&&!w.time[2]
      &&close(p,TREE_TARGETS.time.nino.x,TREE_TARGETS.time.nino.y,105,95))
     changed=w.time[2]=true;
    if(w.time.every(Boolean))w.finalOpen=true;

@@ -75,7 +75,7 @@ export class TreetopForestScene extends Phaser.Scene {
     .setStrokeStyle(2,0xe1d59e,.82).setDepth(24);
    const names=stage==='tower'?'TÉO: E • CIPÓ':
     stage==='bridge'&&owner===2?'NINO: APERTE E':
-    owner===1?'LIA: J • ACERTE O ALVO':owner===0?'TÉO: APERTE E':'NINO: DASH → E';
+    owner===1?'LIA: J • ACERTE O ALVO':owner===0?'TÉO: APERTE E':'NINO: APERTE E';
    const label=stage==='tower'||stage==='time'||stage==='bridge'&&owner===2?
     this.caption(target.x,target.y-49,names,12,'#f7e5aa').setDepth(57):undefined;
    label?.setVisible(false);

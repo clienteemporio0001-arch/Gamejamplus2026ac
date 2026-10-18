@@ -134,17 +134,17 @@ export function pipoHint(source:HintSource):PipoHint{
   if(!w.logOpen)return guidance('tronco em chamas',[
    'Ei! O fogo bloqueou a passagem. Precisamos daquela árvore!',
    'Téo alcança a amarra alta, Lia acerta o alvo e Nino ativa a trava.',
-   'Téo usa salto duplo e E no galho; Lia atira com J; Nino usa dash + E na alavanca.'
+   'Téo usa salto duplo e E no galho; Lia atira com J; Nino se aproxima do círculo e aperta apenas E.'
   ]);
   if(!w.smokeOpen)return guidance('corredor de fumaça',[
    'A fumaça está fechando o caminho! Não fiquem parados!',
    'Procurem três respiros na fumaça. O vento está movendo o perigo.',
-   'Lia atira com J no respiro, Nino usa dash + E e Téo sobe e pressiona E.'
+   'Lia atira com J no respiro, Nino se aproxima e aperta E e Téo sobe e pressiona E.'
   ]);
   if(!w.treeOpen)return guidance('árvores caindo',[
    'A madeira está estalando! Aquela árvore vai cair!',
    'Os três precisam soltar os pontos certos para formar outra ponte.',
-   'Téo solta a amarra alta com E; Lia usa J; Nino ativa a raiz com dash + E.'
+   'Téo solta a amarra alta com E; Lia usa J; Nino ativa a raiz apenas com E.'
   ]);
   return guidance('corrida final',[
    'Rápido! A margem do rio está logo ali! Eu vejo água!',
@@ -169,7 +169,7 @@ export function pipoHint(source:HintSource):PipoHint{
  if(!w.finalOpen)return guidance('galhos do tempo',[
   'Os galhos mudaram! O vento ainda sabe o caminho.',
   'Os três alvos ficam sempre ativos: não precisam esperar a floresta mudar.',
-  'Lia atira no círculo da pedra; Téo usa E no seu galho; Nino faz dash e depois aperta E.'
+  'Lia atira no círculo da pedra; Téo usa E no seu galho; Nino encosta no círculo final e aperta somente E.'
  ]);
  return guidance('última copa',[
   'Muito bem! Só falta a última copa!',

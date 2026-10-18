@@ -237,8 +237,9 @@ export class FireAuthority {
   poses:Pose[],now=Date.now(),facing:-1|1=1):boolean{
   const w=this.world,p=poses[seat];if(!p||w.deadUntil||w.completed)return false;
   if(kind==='dash'&&seat===2){w.dashAt[2]=now;w.dashX[2]=p.x;return true;}
-  const nino=seat===2&&kind==='switch'&&w.dashAt[2]>0
-   &&now-w.dashAt[2]<=2800&&p.x-w.dashX[2]>=105;
+  // All three Nino fire-biome circles activate with E only, with proximity
+  // checked independently of dash/cooldown and with authority on the host.
+  const nino=seat===2&&kind==='switch';
   const teo=seat===0&&kind==='lever'&&Math.abs(p.vy)<175;
   const lia=seat===1&&kind==='shoot';
   const shot=(t:{x:number;y:number})=>lia&&facing===1&&t.x>=p.x&&t.x-p.x<=360
