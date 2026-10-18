@@ -557,25 +557,31 @@ export class ForestLoopScene extends Phaser.Scene {
   }
   private action(seat:Seat):void{
     const x=this.local.x,y=this.local.y,w=this.w;
+    // A supported person always detaches on E; jumping also detaches via vitality.
+    if((seat===0||seat===1)&&w.supporting[seat]!==null){
+      this.net.act({kind:'detach'});return;
+    }
     if(seat===0){
       if(w.lastRoute==='right'&&!w.suspended[0]&&
-        Math.abs(x-SUSPENSION.lever.x)<65&&Math.abs(y-SUSPENSION_LANDING_Y)<22)
-        this.net.act({kind:'lever'});
-      else if(w.observed && !w.marks[0]&&Math.abs(x-markPosition(w,0).x)<90)
-        this.net.act({kind:'lever'});
-      else if(allDone(w.marks)&&w.teoSummitReached&&!w.tree[0]
-        &&hasSummitFooting({seat,x,y,vx:this.body.velocity.x,vy:this.body.velocity.y})
-        &&Math.abs(x-LOOP_TREE[0].x)<=37)
-        this.net.act({kind:'lever'});
-      else if(w.bridge&&!w.final[0]&&Math.abs(x-LOOP_FINAL[0].x)<95)this.net.act({kind:'lever'});
-    }else if(seat===2){
-      this.net.act({kind:'switch'});
+        Math.abs(x-SUSPENSION.lever.x)<65&&Math.abs(y-SUSPENSION_LANDING_Y)<22){
+        this.net.act({kind:'lever'});return;
+      }
+      if(w.observed&&!w.marks[0]&&Math.abs(x-markPosition(w,0).x)<90){
+        this.net.act({kind:'lever'});return;
+      }
+      if(allDone(w.marks)&&w.teoSummitReached&&!w.tree[0]&&
+        hasSummitFooting({seat,x,y,vx:this.body.velocity.x,vy:this.body.velocity.y})&&
+        Math.abs(x-LOOP_TREE[0].x)<=37){
+        this.net.act({kind:'lever'});return;
+      }
+      if(w.bridge&&!w.final[0]&&Math.abs(x-LOOP_FINAL[0].x)<95){
+        this.net.act({kind:'lever'});return;
+      }
     }
-    // Physical co-op: Lia mounts stationary Nino, then Téo mounts Lia.
-    if((seat===0||seat===1)&&((x>7550&&x<8000)||(x>9110&&x<9440))
-      &&(seat!==0||!(allDone(w.marks)&&!w.tree[0]&&Math.abs(x-LOOP_TREE[0].x)<83&&Math.abs(y-LOOP_TREE[0].y)<86))){
-      this.net.act({kind:w.supporting[seat]===null?'support':'detach'});
-    }
+    if(seat===2){this.net.act({kind:'switch'});return;}
+    // Universal cooperative ability: the authority validates footing,
+    // free space, distance and stable bodies regardless of sector or puzzle.
+    this.net.act({kind:'support'});
   }
   private requestVital(kind:VitalAction,seat:Seat):void{
     const id=this.net.requestVital(kind,this.facing);
