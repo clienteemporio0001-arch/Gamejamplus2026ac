@@ -63,8 +63,8 @@ ok(network.includes("this.stopReconnect()")&&network.includes("this.grace.clear(
   'limpeza de intervalos e reserva de seats');
 const solo=network.slice(network.indexOf('  startSolo('),network.indexOf('  selectSoloSeat('));
 ok(!solo.includes('new Peer(')&&!solo.includes('this.peer.connect'),'solo não instancia WebRTC');
-ok(network.includes("this.poses=(mode==='loop'?(level===3?TREE_START:level===2?TEMP_START:LOOP_START):"),
-  'spawn solo preserva fases 1 e 2 e adiciona fase 3');
+ok(network.includes("this.poses=(mode==='loop'?(level===4?FIRE_START:level===3?TREE_START:level===2?TEMP_START:LOOP_START):"),
+  'spawn solo preserva fases 1 a 3 e adiciona fase 4');
 ok(network.includes("this.poses = (this.experience==='loop'?LOOP_START:FOREST_SPAWNS)"),
   'mesmo spawn para host online');
 ok(network.includes("this.broadcast({t:'loop',world:this.loop})"),'A/B/C sincronizados pelo host');
