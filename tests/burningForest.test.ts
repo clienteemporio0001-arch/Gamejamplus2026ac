@@ -125,17 +125,53 @@ assert.ok(choking.world.smokeSeconds[1]>2.5);
 const refreshed=FIRE_START.map(clone);
 choking.tickResources(refreshed,start+4000);
 assert.equal(choking.world.smokeSeconds[1],0,'clean air resets accumulated exposure');
-// Fire damages with invulnerability, and collective death restores health at a checkpoint.
+// Fire damages with invulnerability. A death RESTARTS THE ENTIRE phase 4.
 const fatal=new FireAuthority();fatal.reset(start);
 const lost=FIRE_START.map(clone);
-lost[2]={seat:2,x:1100,y:FIRE_DEATH_Y+2,vx:0,vy:700};
+// Simulate the last crossing already solved: no progress may survive death.
+fatal.world.log=[true,true,true];fatal.world.logOpen=true;
+fatal.world.smoke=[true,true,true];fatal.world.smokeOpen=true;
+fatal.world.tree=[true,true,true];fatal.world.treeOpen=true;
+fatal.world.layout=2;fatal.world.cycle=7;fatal.world.phaseStart=start+500;
+fatal.world.stamina=[11,42,75];
+fatal.world.supporting=[null,2,null];
+const oldResetId=fatal.world.resetId;
+lost[2]={seat:2,x:4450,y:FIRE_DEATH_Y+2,vx:0,vy:700};
 fatal.tick(lost,start+1000);
-assert.equal(fatal.world.health[2],0,'fall must kill and trigger reset');
+assert.equal(fatal.world.health[2],0,'fatal drop must kill Nino even after all puzzles');
 assert.ok(fatal.world.deadUntil>start+1000);
-const respawn=fatal.tick(lost,start+2800);
-assert.ok(respawn.respawn);
+assert.equal(fatal.tick(lost,start+1200).respawn,undefined,'no early respawn');
+const resumedAt=start+2800;
+const respawn=fatal.tick(lost,resumedAt);
+assert.equal(respawn.respawn,true,'collective restart after death delay');
+assert.deepEqual(respawn.poses,FIRE_START,'all three must return to ORIGINAL entry');
+assert.notEqual(respawn.poses?.[0].x,fireCheckpoint({
+ ...initFire(start),treeOpen:true
+})[0].x,'never use late checkpoint');
 assert.deepEqual(fatal.world.health,[3,3,3]);
-assert.equal(respawn.poses?.length,3,'checkpoint restores all seats');
+assert.deepEqual(fatal.world.stamina,[100,100,100]);
+assert.equal(fatal.world.logOpen,false,'first bridge locked again');
+assert.equal(fatal.world.smokeOpen,false,'smoke passage locked again');
+assert.equal(fatal.world.treeOpen,false,'last fallen-tree bridge locked again');
+assert.deepEqual(fatal.world.log,[false,false,false]);
+assert.deepEqual(fatal.world.smoke,[false,false,false]);
+assert.deepEqual(fatal.world.tree,[false,false,false]);
+assert.deepEqual(fatal.world.supporting,[null,null,null]);
+assert.deepEqual(fatal.world.dashAt,[0,0,0]);
+assert.equal(fatal.world.layout,0,'forest state A restored');
+assert.equal(fatal.world.cycle,0,'transformation counter reset');
+assert.equal(fatal.world.cycleStart,resumedAt,'hazard timers reset');
+assert.equal(fatal.world.phaseStart,resumedAt);
+assert.equal(fatal.world.deadUntil,0);
+assert.equal(fatal.world.completed,false);
+assert.equal(fatal.world.resetId,oldResetId+1,'force client reset using resetId');
+assert.ok(fatal.world.safeUntil.every(t=>t>=resumedAt+1600),'spawn grace period');
+assert.ok(validFire(fatal.world),'fresh state remains valid on network');
+// Team can play again from scratch after death.
+const restarted=FIRE_START.map(clone);
+restarted[0]={seat:0,x:FIRE_TARGETS.log.teo.x,y:FIRE_TARGETS.log.teo.y,vx:0,vy:0};
+assert.equal(fatal.interact(0,'lever',restarted,resumedAt+250),true);
+assert.equal(fatal.world.log[0],true,'puzzle reacts after full phase reset');
 // Stage-specific source checks verify that classic fourth phase was NOT replaced.
 const network=readFileSync('src/network.ts','utf8');
 const main=readFileSync('src/main.ts','utf8');

@@ -287,10 +287,12 @@ export class FireAuthority {
   const w=this.world;
   if(w.deadUntil){
    if(now<w.deadUntil)return {changed:false};
-   w.deadUntil=0;w.damageCause='none';w.health=[3,3,3];w.stamina=[100,100,100];
-   w.safeUntil=[now+1600,now+1600,now+1600];w.smokeSeconds=[0,0,0];
-   w.supporting=[null,null,null];
-   return {changed:true,poses:fireCheckpoint(w),respawn:true};
+   // Fatal rule for the FINAL LEVEL: any teammate's death restarts the
+   // ENTIRE biome, not the most recent checkpoint. Reset all puzzles, hazards,
+   // timers, lives, stamina, temporary boosts and human-stack state together.
+   this.reset(now);
+   this.world.safeUntil=[now+1600,now+1600,now+1600];
+   return {changed:true,poses:FIRE_START.map(p=>({...p})),respawn:true};
   }
   if(w.completed)return {changed:false,won:true};
   let changed=false;

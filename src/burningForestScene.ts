@@ -279,7 +279,7 @@ export class BurningForestScene extends Phaser.Scene {
    (w.damageCause==='tree'?'A ÁRVORE DESABOU SOBRE A EQUIPE':
     w.damageCause==='smoke'?'A FUMAÇA VENCEU A RESISTÊNCIA':
     w.damageCause==='fall'?'UM AMIGO CAIU NO ABISMO':
-    'O FOGO ATINGIU UM AMIGO')+'\nNINGUÉM FICA PARA TRÁS':
+    'O FOGO ATINGIU UM AMIGO')+'\nA EQUIPE RECOMEÇARÁ DO INÍCIO DA FASE 04':
    'AGUARDANDO A EQUIPE...');
   if(!pause){
    this.solo?.beforeFrame(w.supporting);
