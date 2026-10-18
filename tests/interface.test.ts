@@ -41,7 +41,7 @@ for(const forbidden of ['I · FLORESTA DAS REPETIÇÕES','II · A CLAREIRA CENTR
   'III · A ÁRVORE SUSPENSA','IV · A SAÍDA REAL','this.prompt','this.cycle',
   'this.info','this.wind=this.label','this.life'])
  ok(!scene.includes(forbidden),'nenhuma legenda gigante ou HUD duplicado: '+forbidden);
-ok(scene.includes("this.contextText.setText(fatigue?'SEM ESTAMINA':'')") &&
+ok(scene.includes("this.contextText.setText(fatigue?'SEM ESTAMINA':hint)") &&
    scene.includes("this.pipo.update(time,this.local.x,this.local.y,pause)"),
    'dicas redundantes do cenário substituídas por Pipo, mantendo fadiga');
 ok(scene.includes('this.regionUntil=time+2000'),'título de região dura dois segundos');
@@ -95,7 +95,7 @@ w.marks[1]=true;
 ok(loopContext(w,2,markPosition(w,2).x-150,606,1001).includes('SHIFT'),
   'Nino recebe comando depois dos dois marcos anteriores');
 w.marks=[true,true,true];
-expect('Encontrem a passagem verdadeira.','Três amigos juntos');
+expect('TRILHAS LIBERADAS! SIGAM O VENTO.','PEDRA RACHADA · 0/3 AMIGOS');
 w.lastRoute='right';
 expect('Movam juntos a plataforma suspensa.','Mecanismos 0/3');
 w.suspended=[true,true,true];w.suspendedOpen=true;
