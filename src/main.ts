@@ -22,6 +22,7 @@ import { loopObjective, loopWind } from './forestLoopUI';
 import { LOOP_CYCLE_MS } from './forestLoop';
 import {getAudioSettings,setAudioSettings} from './audioSettings';
 import {GameAudio,type SoundBiome} from './sharedAudio';
+import {missionSnapshot} from './missionChapters';
 
 const net = new Network();
 const ui = document.querySelector<HTMLDivElement>('#ui')!;
@@ -257,6 +258,12 @@ function exitGame(): void {
   activeMode = 'none';
   unmountMobileControls();
 }
+function currentMission(){
+ return net.level===4?missionSnapshot(4,net.fire):
+   net.level===3?missionSnapshot(3,net.treetop):
+   net.level===2?missionSnapshot(2,net.temporal):
+   missionSnapshot(1,net.loop);
+}
 function refreshHud(): void {
   if(net.playing&&net.experience==='loop'&&net.localSeat!==null){
     const world=net.level===4?net.fire:net.level===3?net.treetop:net.level===2?net.temporal:net.loop;
@@ -275,7 +282,7 @@ function refreshHud(): void {
     update('loop-state',['A','B','C'][world.layout]);
     update('loop-timer',net.level===4?'NOVO COLAPSO EM '+remaining+'s':
       (world.blackoutUntil>Date.now()?'MUDANDO ':'APAGÃO EM ')+remaining+'s');
-    update('loop-objective',objective.title);
+    update('loop-objective',currentMission().objective);
     update('loop-progress',objective.progress);
     update('loop-wind',net.level===4?
       (fireHeavySmoke(net.fire,net.poses[net.localSeat],Date.now())?'⚠ FUMAÇA · ':'')+
@@ -423,7 +430,7 @@ function render(): void {
       ui.innerHTML='<div class="loop-top-left" aria-label="Estado da floresta">'+
         '<span class="loop-state">'+(net.level===4?'FASE 04 · FLORESTA EM CHAMAS':net.level===3?'FASE 03 · CAMINHO DAS ÁRVORES':net.level===2?'FASE 02 · FLORESTA TEMPORAL':'FASE 01 · A BOCA DA NOITE')+' · <strong id="loop-state">'+(['A','B','C'][net.level===4?net.fire.layout:net.level===3?net.treetop.layout:net.level===2?net.temporal.layout:net.loop.layout])+'</strong></span>'+
         '<span id="loop-timer">APAGÃO EM —</span></div>'+
-        '<div class="loop-top-right" aria-live="polite"><strong id="loop-objective">'+safeText(object.title)+'</strong>'+
+        '<div class="loop-top-right" aria-live="polite"><strong id="loop-objective">'+safeText(currentMission().objective)+'</strong>'+
         '<small id="loop-progress">'+safeText(object.progress)+'</small></div>'+
         '<div class="loop-wind" id="loop-wind" aria-label="Direção do vento"></div>'+
         '<div class="loop-bottom-left">'+
