@@ -190,7 +190,7 @@ function openPanel(kind:PanelKind):void{
    '<pre class="dev-inspector" id="dev-inspector">'+safeText(devSnapshot())+'</pre>'+
    '<div class="dev-actions">'+
    '<button type="button" id="dev-restart" class="btn secondary">REINICIAR ESTA FASE</button>'+
-   '<button type="button" id="dev-cycle" class="btn secondary">'+(net.level===4?'ADIANTAR CICLO DE FOGO':'ADIANTAR APAGÃO')+'</button>'+
+   '<button type="button" id="dev-cycle" class="btn secondary">'+(net.level===4?'ADIANTAR CICLO DE FOGO':'ADIANTAR TRANSFORMAÇÃO')+'</button>'+
    '<button type="button" id="dev-exit" class="btn secondary">VOLTAR AO MENU</button></div>';
  const wrapper=document.createElement('div');
  wrapper.id='fm-overlay';wrapper.className='fm-overlay';
@@ -281,7 +281,7 @@ function refreshHud(): void {
            Math.max(0,Date.now()-world.cycleStart))/1000));
     update('loop-state',['A','B','C'][world.layout]);
     update('loop-timer',net.level===4?'NOVO COLAPSO EM '+remaining+'s':
-      (world.blackoutUntil>Date.now()?'MUDANDO ':'APAGÃO EM ')+remaining+'s');
+      (world.blackoutUntil>Date.now()?'FLORESTA SE TRANSFORMANDO · ':'FLORESTA MUDA EM ')+remaining+'s');
     update('loop-objective',currentMission().objective);
     update('loop-progress',objective.progress);
     update('loop-wind',net.level===4?
@@ -429,7 +429,7 @@ function render(): void {
       const object=net.level===4?fireObjective(net.fire):net.level===3?treeObjective(net.treetop):net.level===2?temporalObjective(net.temporal):loopObjective(net.loop);
       ui.innerHTML='<div class="loop-top-left" aria-label="Estado da floresta">'+
         '<span class="loop-state">'+(net.level===4?'FASE 04 · FLORESTA EM CHAMAS':net.level===3?'FASE 03 · CAMINHO DAS ÁRVORES':net.level===2?'FASE 02 · FLORESTA TEMPORAL':'FASE 01 · A BOCA DA NOITE')+' · <strong id="loop-state">'+(['A','B','C'][net.level===4?net.fire.layout:net.level===3?net.treetop.layout:net.level===2?net.temporal.layout:net.loop.layout])+'</strong></span>'+
-        '<span id="loop-timer">APAGÃO EM —</span></div>'+
+        '<span id="loop-timer">FLORESTA MUDA EM —</span></div>'+
         '<div class="loop-top-right" aria-live="polite"><strong id="loop-objective">'+safeText(currentMission().objective)+'</strong>'+
         '<small id="loop-progress">'+safeText(object.progress)+'</small></div>'+
         '<div class="loop-wind" id="loop-wind" aria-label="Direção do vento"></div>'+
@@ -459,7 +459,7 @@ function render(): void {
           '<button id="sound-options">CONFIGURAÇÕES</button>'+
           '<button id="solo-restart">'+(net.level===4?'REINICIAR FASE 04':net.level===3?'REINICIAR FASE 03':net.level===2?'REINICIAR FASE 02':'REINICIAR TENTATIVA')+'</button>'+
           (devSession?'<button id="dev-inspect">PAINEL DE TESTES</button>'+
-            '<button id="solo-cycle">'+(net.level===4?'ADIANTAR CICLO DE FOGO':'ADIANTAR APAGÃO')+'</button>':'')+
+            '<button id="solo-cycle">'+(net.level===4?'ADIANTAR CICLO DE FOGO':'ADIANTAR TRANSFORMAÇÃO')+'</button>':'')+
           '<button id="solo-leave">VOLTAR AO MENU</button></div></details>':
           '<details id="loop-options"><summary>⚙ <span>Opções</span></summary>'+
           '<div class="loop-menu-options">'+
