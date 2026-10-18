@@ -70,7 +70,7 @@ export function missionSnapshot(phase:MissionPhase,world:MissionWorld):MissionSn
     'REÚNAM OS TRÊS NA SAÍDA.';
   const s=beats(phase,[discovery,tree,final],next,w.completed);
   if(!w.observed)return {...s,next:null};
-  if(!w.marks.every(Boolean))return {...s,next:discovery.find(b=>!b.done) as MissionBeat??null};
+  if(!w.marks.every(Boolean))return {...s,next:s.beats.find(b=>b.group==='DESCOBERTA'&&!b.done)??null};
   if(w.lastRoute!=='right')return {...s,next:null};
   if(!w.bridge)return {...s,next:s.beats.find(b=>b.group==='ÁRVORE-PONTE'&&!b.done)??null};
   return {...s,next:s.beats.find(b=>b.group==='TRAVAS'&&!b.done)??null};
@@ -118,7 +118,8 @@ export function missionSnapshot(phase:MissionPhase,world:MissionWorld):MissionSn
       'O caminho está livre! Reúnam os três!']}
   ];
   const arrays=groups.map(g=>([0,1,2] as const).map(i=>{
-   const target=(Object.values(g.targets) as {x:number;y:number}[])[i]??{x:0,y:0};
+   const target=g.id==='copas-tower'?(i===2?TREE_TARGETS.tower.top:TREE_TARGETS.tower.base):
+    (g.id==='copas-bridge'?TREE_TARGETS.bridge:TREE_TARGETS.time)[(['teo','lia','nino'] as const)[i]];
    return part(g.id+'-'+i,g.name,i,g.flags[i],target,['E','J','SHIFT + E'][i],
     g.heroes[i],g.pipo[i],g.name+': '+g.flags.filter(Boolean).length+'/3');
   }));
@@ -144,7 +145,7 @@ export function missionSnapshot(phase:MissionPhase,world:MissionWorld):MissionSn
     'ÁRVORE CAINDO! AFASTEM-SE!']}
  ];
  const arrays=groups.map(g=>([0,1,2] as const).map(i=>part(
-   g.id+'-'+i,g.name,i,g.flags[i],g.targets[names[i].toLowerCase() as 'teo'|'lia'|'nino'],
+   g.id+'-'+i,g.name,i,g.flags[i],g.targets[(['teo','lia','nino'] as const)[i]],
    ['E','J','SHIFT + E'][i],g.hero[i],g.bird[i],g.name+': '+g.flags.filter(Boolean).length+'/3')));
  return beats(phase,arrays,!w.logOpen?'LIBEREM O TRONCO EM CHAMAS.':
   !w.smokeOpen?'ABRAM O CORREDOR DE FUMAÇA.':
