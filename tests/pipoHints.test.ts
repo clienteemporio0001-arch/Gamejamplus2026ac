@@ -9,7 +9,9 @@ loop.observed=true;assert.equal(pipoHint({phase:1,world:loop}).objective,'árvor
 loop.marks[0]=true;assert.equal(pipoHint({phase:1,world:loop}).objective,'pedra rachada');
 loop.marks[1]=true;assert.equal(pipoHint({phase:1,world:loop}).objective,'tronco em arco');
 loop.marks[2]=true;assert.equal(pipoHint({phase:1,world:loop}).objective,'rota verdadeira');
-loop.lastRoute='right';assert.equal(pipoHint({phase:1,world:loop}).objective,'escada humana');
+loop.lastRoute='right';assert.equal(pipoHint({phase:1,world:loop}).objective,'plataforma suspensa');
+loop.suspended=[true,true,true];loop.suspendedOpen=true;
+assert.equal(pipoHint({phase:1,world:loop}).objective,'escada humana');
 assert.equal(pipoHint({phase:2,world:temporal}).objective,'marco da chuva');
 temporal.echo=[true,true,true];
 assert.equal(pipoHint({phase:2,world:temporal}).objective,'subida na chuva');
