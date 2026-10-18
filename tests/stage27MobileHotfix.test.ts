@@ -1,6 +1,6 @@
 import {strict as assert} from 'node:assert';
 import {readFileSync} from 'node:fs';
-import {pipoSpeechLayout} from '../src/pipoBubbleLayout';
+import {pipoSpeechLayout,pipoHudCoords} from '../src/pipoBubbleLayout';
 import {LoopAuthority,LOOP_START,SUSPENSION,suspensionLeverStatus,
  SUSPENSION_LEVER_FEEDBACK,canStack,validLoop} from '../src/forestLoop';
 import {TouchPointers,consumeTouch,mobilePadMarkup} from '../src/mobileControls';
@@ -28,6 +28,12 @@ for(const view of [{width:360,height:760},{width:280,height:590},
  assert.ok(layout.width<=view.width-20,'speech word wrap fits mobile');
  assert.ok(layout.tailX<=layout.width/2-18&&layout.tailX>=-layout.width/2+18);
  assert.ok(layout.tailY>=layout.height/2+8);
+ const fixed=pipoHudCoords(layout.x,layout.y,view,camera.zoom);
+ const renderedX=(fixed.x-view.width/2)*camera.zoom+view.width/2;
+ const renderedY=(fixed.y-view.height/2)*camera.zoom+view.height/2;
+ assert.ok(Math.abs(renderedX-layout.x)<.001&&Math.abs(renderedY-layout.y)<.001,
+   'scrollFactor(0) overlay stays anchored even with zoom');
+ assert.equal(fixed.scale*camera.zoom,1,'balloon text size stays readable regardless of zoom');
  const moved=pipoSpeechLayout(view,{...camera,x:1060},55);
  assert.ok(moved.birdX>layout.birdX);
  assert.ok(moved.x>=layout.x||layout.x===view.width-layout.width/2-12,
@@ -46,7 +52,9 @@ assert.ok(pipo.includes('this.nameLabel=add.text('));
 assert.ok(pipo.includes(",'PIPO'"));
 assert.ok(pipo.includes('this.panel.fillTriangle(layout.tailX-10'));
 assert.ok(pipo.includes('this.label.setWordWrapWidth(width-28)'));
-assert.ok(pipo.includes('this.bubble.setPosition(layout.x,layout.y)'));
+assert.ok(pipo.includes('this.bubble.setPosition(fixed.x,fixed.y).setScale(fixed.scale)'));
+assert.ok(pipo.includes('this.offscreenMarker.setPosition(fixed.x,fixed.y).setScale(fixed.scale)'));
+assert.ok(pipo.includes('pipoHudCoords('));
 assert.ok(pipo.includes('this.offscreenMarker.setVisible(layout.offscreen)'));
 assert.ok(pipo.includes('this.bubble.setVisible(!layout.offscreen)'));
 assert.ok(pipo.includes('this.bubble.setVisible(false)'));
