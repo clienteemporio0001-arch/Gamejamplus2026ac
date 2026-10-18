@@ -38,8 +38,8 @@ assert.ok(main.includes("devSession?'<button id=\"dev-inspect\""));
 assert.ok(main.includes("net.level===4?'REINICIAR FASE 04'"));
 assert.ok(net.includes("if(!this.isSolo||this.experience!=='loop'||!this.playing)return;"),
  'cycle testing restricted to solo adventure');
-assert.ok(net.includes("this.fireAuthority.world.cycleStart=Date.now()-13500;"),
- 'stage 4 test advances to warning instead of accidentally restarting the cycle');
+assert.ok(net.includes("this.fireAuthority.world.phaseStart=Date.now()-60000;"),
+ 'stage 4 test advances the visible forest transformation instead of the fire-hazard clock');
 assert.ok(main.includes("info='';devSession=false;closeOverlay();"));
 // Characters are painted by the SAME method in all new adventure biomes.
 assert.ok(characters.includes('export function paintHero('));
