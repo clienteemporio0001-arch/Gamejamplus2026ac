@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {PipoGuide} from './pipoGuide';
 import {CHARACTERS,type Network,type Seat} from './network';
 import type {TouchInput} from './game';
 import {SoloBodies} from './soloBodies';
@@ -26,6 +27,7 @@ export class TreetopForestScene extends Phaser.Scene {
  private dashUntil=0;private pendingJump=false;private paused=false;
  private dark!:Phaser.GameObjects.Rectangle;private darkText!:Phaser.GameObjects.Text;
  private hint!:Phaser.GameObjects.Text;private guide!:Phaser.GameObjects.Text;
+ private pipo!:PipoGuide;
  private canopy!:Phaser.GameObjects.Graphics;private leafParticles:{x:number;y:number;speed:number;phase:number}[]=[];
  constructor(net:Network,touch:TouchInput,hud?:()=>void){
   super({key:'TreetopForestScene'});this.net=net;this.touch=touch;this.hud=hud;
@@ -137,6 +139,7 @@ export class TreetopForestScene extends Phaser.Scene {
   this.cameras.main.startFollow(this.local,false,.095,.075,0,-65);
   this.cursors=this.input.keyboard?.createCursorKeys();
   this.keys=this.input.keyboard?.addKeys('A,D,E') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
+  this.pipo=new PipoGuide(this,this.net);
   this.hint=this.caption(0,0,'',13,'#f0dfb1');
   this.guide=this.caption(this.scale.gameSize.width/2,92,'',14,'#c3f6da')
    .setScrollFactor(0).setDepth(150);
@@ -282,13 +285,15 @@ export class TreetopForestScene extends Phaser.Scene {
     .setColor(i===seat?'#ffffff':CHARACTERS[i].hex);
   }
   const objectives=treeObjective(w);
-  this.guide.setText(objectives.title+' · '+objectives.progress);
+  this.guide.setText('');
   const guidance=(!w.bridgeOpen?'NINO: DASH + E   ·   LIA: DISPARO   ·   TÉO: E':
     !w.ropeOpen?'NINO → LIA → TÉO: SUBAM COM E E LIBEREM O CIPÓ':
     !w.finalOpen?'OBSERVEM OS ESTADOS A / B / C':'REÚNAM OS TRÊS NO ÚLTIMO GALHO');
   const wind=treeWind(w,this.local.x);
-  this.hint.setText((wind<0?'◀ ':wind>0?'▶ ':'')+guidance)
-   .setPosition(this.local.x,this.local.y-86).setVisible(!pause);
+  this.hint.setText('')
+   .setPosition(this.local.x,this.local.y-86).setVisible(false);
+  this.pipo.update(time,this.local.x,this.local.y,pause);
+  void objectives;void guidance;void wind;
   this.canopy.clear();this.canopy.fillStyle(0xa4d5b0,.58);
   for(const leaf of this.leafParticles){
    const x=(leaf.x+time*.001*leaf.speed)%TREE_WIDTH;
