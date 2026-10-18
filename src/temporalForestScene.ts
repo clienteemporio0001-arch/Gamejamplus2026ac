@@ -306,6 +306,7 @@ export class TemporalForestScene extends Phaser.Scene {
   }
 
   const layoutChanged=this.w.layout!==w.layout;
+   if(layoutChanged)this.pipo?.warnDanger('As raízes e as trilhas mudaram! Sigam o vento!');
     this.w={...w,echo:[...w.echo],tree:[...w.tree],roots:[...w.roots],
    supporting:[...w.supporting],health:[...w.health],stamina:[...w.stamina],
    safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],skillAt:[...w.skillAt]};
