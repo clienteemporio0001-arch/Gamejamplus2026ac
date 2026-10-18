@@ -1,5 +1,47 @@
 # A FLORESTA MENTE — MAS O VENTO NÃO
 
+## Etapa 30 — Tronco final sem espera de C e quatro saídas cooperativas
+
+O bloco final da Fase 1 permanecia até o estado C porque
+`LoopAuthority.checkExit` e `LoopAuthority.tick` exigiam
+`layout===2` além de `final.every(Boolean)`. Essa condição foi
+removida **somente da abertura final**, preservando as regras
+rotativas A/B/C nos outros desafios. Agora, com as amarras, a ponte e
+as três travas obrigatórias concluídas, `exit` é autorizado pela
+autoridade em qualquer estado. A colisão do tronco é desativada no
+mesmo snapshot e um efeito visual de vibração e elevação (1–2 s)
+é exibido no cliente. A passagem desbloqueada persiste após ciclos
+da floresta e ao receber estado restaurado.
+
+`src/sharedExit.ts` define os destinos físicos das quatro fases e
+verifica a presença de **três assentos distintos vivos**, com
+`AMIGOS REUNIDOS: 0/3` até `3/3`. Cada autoridade aproveita a
+própria lógica anterior de objetivos para permitir a transição
+sem apertar E simultaneamente. Os modos solo e multiplayer continuam
+partilhando o host; o host transmite o estado e determina as mudanças
+de fase, não os clientes individualmente.
+
+`src/cooperativeExitArt.ts` desenha arcos não mágicos com raízes,
+galhos, elementos úmidos e margem de rio, conforme o bioma.
+Exibe a identificação da próxima região e falas de Pipo apenas quando
+há eventos de abertura ou mudança no número de personagens reunidos.
+A Fase 4 termina a história existente: **não há Fase 5**.
+
+A Fase 1 exige todas as travas antes da abertura; a Fase 2 preserva
+as condições de ponte e raízes; a Fase 3 preserva ponte/corda/galhos
+temporais; a Fase 4 preserva tronco de fogo, fumaça e árvore caída.
+A zona de saída não possui colisão nova ou teletransporte local.
+
+**Verificação:** `npm run build`, `npm run test` e
+`tests/stage30CooperativeExits.test.ts` fazem parte da publicação
+pelo GitHub Actions. O teste simula os três estados A/B/C, todos os
+contadores, personagens mortos e os quatro finais autoritativos.
+A aprovação automatizada **não substitui** um percurso completo
+no navegador, multiplayer entre três dispositivos e inspeção visual
+de celulares; esses testes de ponta a ponta permanecem pendentes.
+
+---
+
 ## Etapa 25 — Cinco músicas originais e gerenciador de áudio
 
 **Arquivos reais:** `public/audio/boca_da_noite.mp3` (96 s),
