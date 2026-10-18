@@ -1,6 +1,6 @@
 import type { Seat,Pose } from './network';
 import { LOOP_MARKS, LOOP_TREE, LOOP_FINAL, LOOP_GEOMETRY, UPPER_BRANCH, upperLandingY, summitLandingY, allDone, windGuide,
-  SUSPENSION,SUSPENSION_LANDING_Y,markPosition,trailOccupants,correctRoute,TRAIL_MEET_RADIUS_X,type LoopWorld } from './forestLoop';
+  SUSPENSION,SUSPENSION_LANDING_Y,markPosition,trailOccupants,correctRoute,TRAIL_MEET_RADIUS_X,canStack,type LoopWorld } from './forestLoop';
 
 /** UI copy is pure data: no world coordinates are used for the fixed-screen HUD. */
 export type LoopObjective={title:string;progress:string};
@@ -78,6 +78,9 @@ export function loopContext(w:LoopWorld,seat:Seat,x:number,y:number,now=Date.now
     if(seat===2&&near(LOOP_FINAL[2].x-145,606,105,85))return 'SHIFT → E · Trava final';
   }
   if(w.exit&&x>11000)return 'Saída aberta · Reúnam os três';
+  if((seat===0||seat===1)&&w.supporting[seat]!==null)return 'E · Soltar do apoio humano';
+  if((seat===0||seat===1)&&poses.length===3&&canStack(w,seat,poses))
+    return seat===1?'E · Lia sobe em Nino':'E · Téo sobe em Lia';
   return '';
 }
 export function loopWind(w:LoopWorld,seat:Seat,x:number):string{
