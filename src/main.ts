@@ -85,6 +85,22 @@ function refreshHud(): void {
     update('loop-wind',loopWind(world,net.localSeat,net.poses[net.localSeat].x));
     update('loop-character',CHARACTERS[net.localSeat].name.toUpperCase());
     update('loop-skill',net.localSeat===0?'SALTO DUPLO':net.localSeat===1?'J · BALADEIRA':'SHIFT · DASH');
+    for(const seat of [0,1,2] as const){
+      const hearts=document.getElementById('loop-hearts-'+seat);
+      if(hearts){
+        for(let h=0;h<3;h++)hearts.children[h]?.classList.toggle('lost',h>=world.health[seat]);
+        hearts.setAttribute('aria-label',world.health[seat]+' de 3 corações');
+      }
+      const percent=world.stamina[seat];
+      const track=document.getElementById('loop-energy-track-'+seat);
+      track?.setAttribute('aria-valuenow',String(Math.floor(percent)));
+      track?.classList.toggle('low-energy',percent<35);
+      const bar=document.getElementById('loop-energy-'+seat) as HTMLElement|null;
+      if(bar)bar.style.width=percent+'%';
+      update('loop-energy-text-'+seat,Math.floor(percent)+'/100');
+      document.getElementById('loop-vital-'+seat)?.classList.toggle('selected',
+        seat===net.localSeat);
+    }
   }
   const scene = game?.scene.keys[net.experience==='loop'?'ForestLoopScene':net.level >= 3 ? 'LateScene' : net.level === 2 ? 'JourneyScene' : 'ForestScene'] as DemoScene | ForestScene | RiverScene | JourneyScene | LateScene | ForestLoopScene | undefined;
   const skill = document.querySelector<HTMLElement>('#skill-status');
@@ -180,9 +196,20 @@ function render(): void {
         '<div class="loop-top-right" aria-live="polite"><strong id="loop-objective">'+safeText(object.title)+'</strong>'+
         '<small id="loop-progress">'+safeText(object.progress)+'</small></div>'+
         '<div class="loop-wind" id="loop-wind" aria-label="Direção do vento"></div>'+
-        '<div class="loop-bottom-left"><span class="loop-avatar" style="background:'+selected.hex+'"></span>'+
-        '<span><strong id="loop-character">'+safeText(selected.name.toUpperCase())+'</strong>'+
-        '<small id="loop-skill"></small></span></div>'+
+        '<div class="loop-bottom-left">'+
+        '<div class="loop-vitals" aria-label="Vida e estamina da equipe">'+
+        ([0,1,2] as const).map(i=>'<div class="loop-vital '+(i===seat?'selected':'')+
+          '" id="loop-vital-'+i+'"><div class="loop-vital-heading">'+
+          '<span style="color:'+CHARACTERS[i].hex+'">'+safeText(CHARACTERS[i].name.toUpperCase())+'</span>'+
+          '<span class="loop-hearts" id="loop-hearts-'+i+'" aria-label="3 corações">'+
+          '<span>♥</span><span>♥</span><span>♥</span></span></div>'+
+          '<div class="loop-energy-track" id="loop-energy-track-'+i+
+          '" role="progressbar" aria-label="Estamina de '+safeText(CHARACTERS[i].name)+
+          '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">'+
+          '<span id="loop-energy-'+i+'" style="width:100%"></span></div>'+
+          '<small id="loop-energy-text-'+i+'">100/100</small></div>').join('')+
+        '</div><span class="loop-current-skill"><strong id="loop-character">'+
+        safeText(selected.name.toUpperCase())+'</strong><small id="loop-skill"></small></span></div>'+
         (net.isSolo?'<nav class="loop-seat-switch" aria-label="Trocar personagem">'+
           ([0,1,2] as const).map(i=>'<button data-seat="'+i+'" '+(i===seat?'class="active" ':'')+
             'aria-label="Controlar '+CHARACTERS[i].name+'">'+(i+1)+' · '+CHARACTERS[i].name+'</button>').join('')+

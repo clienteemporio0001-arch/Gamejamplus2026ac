@@ -1,5 +1,6 @@
 import type { Pose, Seat } from './network';
 import type { PuzzleAction } from './puzzles';
+import {VITALS,initVitals,validVitals,spendVital,regenVitals,damageVitals,type VitalAction,type Vitals} from './loopVitals';
 
 export const LOOP_WIDTH = 3800;
 export const LOOP_CYCLE_MS = 60000;
@@ -52,7 +53,7 @@ export const ROUTES:Readonly<Record<Layout,{correct:Route;wrong:Route;barrierX:n
   2:{correct:'pedra',wrong:'oca',barrierX:LOOP_GEOMETRY.layoutWalls[2],
     returnTo:LOOP_GEOMETRY.returnCenter,advanceTo:LOOP_GEOMETRY.portalLanding},
 };
-export type LoopWorld={
+export type LoopWorld=Vitals & {
   layout:Layout; cycle:number;cycleStart:number;blackoutUntil:number;observed:boolean;
   marks:[boolean,boolean,boolean];tree:[boolean,boolean,boolean];treeFallAt:number;bridge:boolean;
   supporting:[Seat|null,Seat|null,Seat|null];stackMilestone:boolean;
@@ -68,7 +69,7 @@ export const initLoop=(now=Date.now()):LoopWorld=>({
   marks:[false,false,false],tree:[false,false,false],treeFallAt:0,bridge:false,
   supporting:[null,null,null],stackMilestone:false,climbReady:false,teoUpperReached:false,
   final:[false,false,false],exit:false,lastRoute:'none',routeAt:0,routeCount:0,
-  deadUntil:0,resetId:0,completed:false
+  deadUntil:0,resetId:0,completed:false,...initVitals()
 });
 export function validLoop(value:unknown):value is LoopWorld{
   if(!value||typeof value!=='object'||Array.isArray(value))return false;
@@ -79,7 +80,7 @@ export function validLoop(value:unknown):value is LoopWorld{
     &&['observed','bridge','exit','completed','stackMilestone','climbReady','teoUpperReached'].every(k=>typeof w[k]==='boolean')
     &&Array.isArray(w.supporting)&&w.supporting.length===3
     &&w.supporting.every((b:unknown,i:number)=>b===null||(i===0&&b===1)||(i===1&&b===2))
-    &&bool3(w.marks)&&bool3(w.tree)&&bool3(w.final)
+    &&bool3(w.marks)&&bool3(w.tree)&&bool3(w.final)&&validVitals(w)
     &&['none','wrong','right'].includes(String(w.lastRoute));
 }
 export const allDone=(items:readonly boolean[])=>items.every(Boolean);
@@ -155,11 +156,71 @@ export class LoopAuthority{
   world=initLoop();
   private lastShot=[0,0,0];private lastDash=[0,0,0];
   private dashOrigin=[0,0,0]; private lastSwitch=[0,0,0];
+  private lastResourceTick=Date.now();
+  private lastJumpAt:[number,number,number]=[0,0,0];
+  private lastSkillUse:[number,number,number]=[0,0,0];
+  private firstJumpY:[number,number,number]=[0,0,0];
+  private doubleJumpUsed:[boolean,boolean,boolean]=[false,false,false];
   reset(now=Date.now()):void{
     const id=this.world.resetId+1;
     this.world=initLoop(now);this.world.resetId=id;
     this.lastShot=[0,0,0];this.lastDash=[0,0,0];this.dashOrigin=[0,0,0];
-    this.lastSwitch=[0,0,0];
+    this.lastSwitch=[0,0,0];this.lastResourceTick=now;
+    this.lastJumpAt=[0,0,0];this.firstJumpY=[0,0,0];this.doubleJumpUsed=[false,false,false];
+    this.lastSkillUse=[0,0,0];
+  }
+  /** The host validates cost before any movement, cooldown or puzzle action. */
+  authorizeEnergy(seat:Seat,kind:VitalAction,poses:Pose[],now=Date.now(),
+    facing:-1|1=1):{ok:boolean;reason:'ok'|'tired'|'cooldown'|'invalid'}{
+    const w=this.world,p=poses[seat];
+    const fail=(reason:'tired'|'cooldown'|'invalid')=>({ok:false,reason} as const);
+    if(!p||p.seat!==seat||w.completed||w.deadUntil>0||blackoutActive(w,now)||w.health[seat]===0)
+      return fail('invalid');
+    if(kind==='shoot'&&seat!==1||kind==='dash'&&seat!==2||kind==='doubleJump'&&seat!==0)
+      return fail('invalid');
+    if(kind==='shoot'&&now-this.lastSkillUse[1]<VITALS.SHOT_COOLDOWN_MS
+       ||kind==='dash'&&now-this.lastSkillUse[2]<VITALS.DASH_COOLDOWN_MS)
+      return fail('cooldown');
+    if(kind==='jump'){
+      if(now-this.lastJumpAt[seat]<220)return fail('cooldown');
+      const standing=(Math.abs(p.vy)<120&&(p.y>570&&p.y<643
+        ||Math.abs(p.y-upperLandingY)<35
+        ||Math.abs(p.y-514)<35
+        ||Math.abs(p.y-516)<35));
+      if(!standing&&w.supporting[seat]===null)return fail('invalid');
+    }
+    if(kind==='doubleJump'){
+      if(this.lastJumpAt[0]===0||now-this.lastJumpAt[0]<110
+        ||now-this.lastJumpAt[0]>1650||this.doubleJumpUsed[0]
+        ||p.y>this.firstJumpY[0]+12||p.vy>420)return fail('invalid');
+    }
+    if(w.stamina[seat]< (kind==='jump'?VITALS.JUMP:kind==='doubleJump'?VITALS.DOUBLE_JUMP:
+      kind==='shoot'?VITALS.SHOT:VITALS.DASH))return fail('tired');
+    if(!spendVital(w,seat,kind,now))return fail('tired');
+    if(kind==='jump'){
+      this.lastJumpAt[seat]=now;this.firstJumpY[seat]=p.y;this.doubleJumpUsed[seat]=false;
+    }else if(kind==='doubleJump'){
+      this.doubleJumpUsed[0]=true;
+    }else{
+      this.lastSkillUse[seat]=now;
+      this.act(seat,{kind:kind==='shoot'?'shoot':'dash',facing},poses,now);
+    }
+    return {ok:true,reason:'ok'};
+  }
+  /** Time-step resources only while simulation is active; paused seconds never accumulate. */
+  tickResources(poses:Pose[],now=Date.now()):boolean{
+    const elapsed=Math.max(0,Math.min(100,now-this.lastResourceTick));
+    this.lastResourceTick=now;
+    if(this.world.completed||this.world.deadUntil>0||blackoutActive(this.world,now))
+      return false;
+    return regenVitals(this.world,poses,now,elapsed);
+  }
+  /** No ordinary hazards are fabricated in the new adventure. */
+  damage(seat:Seat,now=Date.now(),fatal=false):boolean{
+    if(this.world.deadUntil>0||blackoutActive(this.world,now)||this.world.completed)return false;
+    if(!damageVitals(this.world,seat,now,fatal))return false;
+    if(this.world.health[seat]===0)this.world.deadUntil=now+2200;
+    return true;
   }
   /** Puzzle progress is never discarded by landscape shifts. */
   act(seat:Seat,action:PuzzleAction,poses:Pose[],now=Date.now()):boolean{
@@ -231,8 +292,7 @@ export class LoopAuthority{
     if(allDone(this.world.final)&&this.world.layout===2)this.world.exit=true;
   }
   kill(now=Date.now()):boolean{
-    if(this.world.deadUntil>0||this.world.completed)return false;
-    this.world.deadUntil=now+2200;return true;
+    return this.damage(0,now,true);
   }
   /** One host clock for all players; secure route teleports are whole-party only. */
   tick(poses:Pose[],now=Date.now()):Tick{

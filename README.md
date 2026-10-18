@@ -1,5 +1,22 @@
 # A FLORESTA MENTE — MAS O VENTO NÃO
 
+## Etapa 11-B — Vida, estamina e sobrevivência na floresta mutável
+
+Os três personagens da **nova aventura** possuem três corações e 100 pontos de estamina individual. As vidas, os gastos, a recuperação e o reinício são controlados por LoopAuthority no anfitrião (ou na autoridade local do Modo Solo). Os protótipos clássicos continuam usando suas próprias regras anteriores.
+
+A tabela de custos está centralizada em src/loopVitals.ts: caminhar/E/troca = 0; pulo = 10; salto duplo de Téo = +20; baladeira de Lia = 25; dash de Nino = 35. A regeneração inicia após 800 ms do último gasto, com 12 pontos/seg caminhando e 22 pontos/seg parado, sempre limitada a 100, usando deltas de tempo do host. Apagões, morte, desconexão ou pausa suspensa não fornecem energia grátis.
+
+Pulos, tiros e dash agora passam pelo protocolo de solicitação individual (vital-action, vital-reply) e são autorizados pelo anfitrião **antes** da aplicação de movimento/efeito no cliente. A conexão autenticada determina o personagem, os valores de estamina não podem ser enviados pelo convidado, solicitações repetidas são rejeitadas e cooldowns não descontam energia. O anfitrião controla o estado de LoopWorld (health, stamina, safeUntil, lastSpent), sincronizado nos snapshots loop de qualquer sessão e também durante a reconexão.
+
+O HUD compacto mostra os três nomes, três corações e barras proporcionais para os três personagens. O atual é destacado, níveis baixos ficam âmbar, falta de estamina gera feedback discreto junto ao personagem. Dano não fatal (API da autoridade para perigos compatíveis futuros) tira um coração e concede 1,2 segundo de invulnerabilidade, piscando o sprite. Não foram criados inimigos novos: na nova aventura o abismo é o perigo fatal já presente, e a queda da árvore em área de impacto também é fatal. Cobras, ataques de predadores e armadilhas comuns **não estão implementados na nova aventura**; suas regras antigas não foram transplantadas nem simuladas. Ao perder todos os corações ou sofrer fatalidade, os três aguardam breve transição e reiniciam com vida e energia restauradas, no estado A, na clareira central e com puzzles zerados. Apagões regulares preservam todos os recursos.
+
+Para testar energia: abra JOGAR SOZINHO, selecione 1/2/3; use Espaço/↑, J e Shift. Cada recurso diminui apenas depois da autorização e se regenera ao descansar. Para testar dano fatal: alcance o abismo sem a ponte e caia; aparece UM AMIGO CAIU NA FLORESTA / NINGUÉM FICA PARA TRÁS e o mundo reinicia. Não há perigo não fatal na nova aventura que permita perder somente um coração durante um playtest normal nesta etapa; a API de dano gradual é coberta por testes unitários. Os três dispositivos devem mostrar o mesmo HUD graças às mensagens do host. Uma partida real com três navegadores e validação de barras no mobile continuam necessárias.
+
+Validação: npm run build e npm test. Suite adicional tests/loopVitals.test.ts. Observação técnica: o host valida os pedidos de pulo usando as poses reportadas pelos convidados e verificações de janela temporal/velocidade, mas não reconstrói por completo a física Arcade remota; por isso um teste multiplayer real com latência ainda é necessário.
+
+---
+
+
 ## Etapa 11 — marcos, vento ambiental e escalada obrigatória
 
 Os marcos iniciais agora têm arte SVG original ancorada ao solo de y=638: árvore oca de 235×320 com raízes, pedra rachada 155×104 com colisão estática 120×91 e arco retorcido 244×182 com abertura livre. Seus brilhos de interação seguem as coordenadas da autoridade. Assets adicionais: public/assets/loop-stone.svg, public/assets/loop-arch.svg e public/assets/loop-elevated-tree.svg. A árvore oca existente tem base alinhada ao solo; sua plataforma de galho mantém colisão física.

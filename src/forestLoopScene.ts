@@ -9,6 +9,7 @@ import { leafAt, swayAt, WIND_LEAVES } from './loopWind';
 import { SoloBodies } from './soloBodies';
 import { gameKeys } from './keyboard';
 import type { TouchInput } from './game';
+import type { VitalAction } from './loopVitals';
 
 /** One 3800px landscape. All puzzle decisions are made by LoopAuthority in Network. */
 export class ForestLoopScene extends Phaser.Scene {
@@ -42,6 +43,8 @@ export class ForestLoopScene extends Phaser.Scene {
   private blackout!:Phaser.GameObjects.Rectangle;private blackoutText!:Phaser.GameObjects.Text;
   private shots=0;private dashes=0;private dashUntil=0;private facing:-1|1=1;
   private jumps=0;private paused=false;private pendingJump=false;
+  private pendingVitals=new Map<number,{seat:Seat;kind:VitalAction}>();
+  private tiredUntil=0;
   constructor(net:Network,touch:TouchInput,hud?:()=>void){
     super({key:'ForestLoopScene'});this.net=net;this.touch=touch;this.hud=hud;
     this.w={...net.loop,marks:[...net.loop.marks],tree:[...net.loop.tree],final:[...net.loop.final]};
@@ -209,7 +212,7 @@ export class ForestLoopScene extends Phaser.Scene {
       this.off.push(this.net.on('solo-seat',seat=>{
         this.solo?.select(seat);
         this.local=this.avatars[seat];this.body=this.solo!.body(seat);
-        this.jumps=0;this.dashUntil=0;this.pendingJump=false;
+        this.jumps=0;this.dashUntil=0;this.pendingJump=false;this.pendingVitals.clear();
         this.hud?.();
       }));
     }
@@ -251,6 +254,34 @@ export class ForestLoopScene extends Phaser.Scene {
       this.tweens.add({targets:stone,x:stone.x+fx.facing*270,alpha:0,
         duration:400,onComplete:()=>stone.destroy()});
     }));
+    this.off.push(this.net.on('vital-reply',reply=>{
+      const requested=this.pendingVitals.get(reply.id);
+      if(!requested||requested.kind!==reply.kind)return;
+      this.pendingVitals.delete(reply.id);
+      if(!reply.ok){
+        if(reply.reason==='tired')this.tiredUntil=this.time.now+800;
+        return;
+      }
+      const seat=requested.seat;
+      if(seat!==this.net.localSeat||!this.net.playing||this.paused)return;
+      if(reply.kind==='jump'||reply.kind==='doubleJump'){
+        if(reply.kind==='jump'&&this.net.loop.supporting[seat]!==null){
+          this.pendingJump=true;this.net.act({kind:'detach'});
+        }else{
+          this.body.setVelocityY(-465);
+          this.jumps=reply.kind==='doubleJump'?2:1;
+        }
+      }else if(reply.kind==='shoot'){
+        this.shots=this.time.now+510;
+        const shot=this.add.circle(this.local.x+15,this.local.y-18,5,0xf0c184,.9).setDepth(25);
+        this.tweens.add({targets:shot,x:shot.x+this.facing*260,alpha:0,
+          duration:420,onComplete:()=>shot.destroy()});
+      }else if(reply.kind==='dash'){
+        this.dashes=this.time.now+1900;
+        this.dashUntil=this.time.now+760;
+        this.body.setVelocityX(this.facing*340);
+      }
+    }));
     this.off.push(this.net.on('snapshot',poses=>{
       for(const p of poses)if(p.seat!==this.net.localSeat)this.remote[p.seat]={...p};
     }));
@@ -259,7 +290,7 @@ export class ForestLoopScene extends Phaser.Scene {
       if(this.net.isSolo)this.solo?.reset(p);
       if(p.seat===this.net.localSeat){
         this.body.reset(p.x,p.y);this.body.setAllowGravity(true);
-        this.jumps=0;this.dashUntil=0;this.pendingJump=false;
+        this.jumps=0;this.dashUntil=0;this.pendingJump=false;this.pendingVitals.clear();
       }
     }));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>this.off.forEach(off=>off()));
@@ -302,18 +333,13 @@ export class ForestLoopScene extends Phaser.Scene {
       this.net.act({kind:w.supporting[seat]===null?'support':'detach'});
     }
   }
+  private requestVital(kind:VitalAction,seat:Seat):void{
+    const id=this.net.requestVital(kind,this.facing);
+    if(id!==null)this.pendingVitals.set(id,{seat,kind});
+  }
   private ability(seat:Seat,time:number):void{
-    if(seat===1&&time>this.shots){
-      this.shots=time+510;
-      this.net.act({kind:'shoot',facing:this.facing});
-      // Lightweight local projectile feedback; logic stays on host.
-      const shot=this.add.circle(this.local.x+15,this.local.y-18,5,0xf0c184,.9).setDepth(25);
-      this.tweens.add({targets:shot,x:shot.x+this.facing*260,alpha:0,
-        duration:420,onComplete:()=>shot.destroy()});
-    }else if(seat===2&&time>this.dashes){
-      this.dashes=time+1900;this.dashUntil=time+760;
-      this.net.act({kind:'dash',facing:this.facing});
-    }
+    if(seat===1&&time>this.shots)this.requestVital('shoot',seat);
+    else if(seat===2&&time>this.dashes)this.requestVital('dash',seat);
   }
   update(time:number,dt:number):void{
     if(!this.body||!this.net.playing||this.net.localSeat===null)return;
@@ -321,14 +347,15 @@ export class ForestLoopScene extends Phaser.Scene {
     const pause=blackoutActive(w,now)||w.deadUntil>0||!this.net.everyoneConnected;
     if(pause!==this.paused){
       this.paused=pause;
-      if(pause){this.physics.pause();gameKeys.clear();this.touch.jump=false;this.touch.ability=false;this.touch.interact=false;}
+      if(pause){this.physics.pause();this.pendingVitals.clear();gameKeys.clear();this.touch.jump=false;this.touch.ability=false;this.touch.interact=false;}
       else this.physics.resume();
     }
     const fade=pause&&w.deadUntil===0?(w.blackoutUntil-now>1000?.94:.86):w.deadUntil>0?.89:0;
     this.blackout.setAlpha(fade);
     this.blackoutText.setVisible(pause);
     if(pause){
-      this.blackoutText.setText(w.deadUntil>0?'NINGUÉM FICA PARA TRÁS\nREINICIANDO A AVENTURA...':
+      this.blackoutText.setText(w.deadUntil>0?
+        'UM AMIGO CAIU NA FLORESTA\nNINGUÉM FICA PARA TRÁS\nREINICIANDO EM '+Math.max(1,Math.ceil((w.deadUntil-now)/1000))+'...':
         'A FLORESTA ESTÁ MUDANDO\nO VENTO NÃO MENTE');
       this.solo?.report();
     }else{
@@ -353,13 +380,14 @@ export class ForestLoopScene extends Phaser.Scene {
       const special=gameKeys.consumeSkill(seat)||this.touch.ability;
       this.touch.jump=false;this.touch.interact=false;this.touch.ability=false;
       if(base===null){
-        this.body.setVelocityX(dir*(seat===2&&time<this.dashUntil?329:235));
+        const dashing=seat===2&&time<this.dashUntil;
+        this.body.setVelocityX(dashing?this.facing*340:dir*235);
         if(jumping&&(grounded||(seat===0&&this.jumps<2))){
-          this.body.setVelocityY(-465);this.jumps++;
+          this.requestVital(grounded?'jump':'doubleJump',seat);
         }
       }else{
         this.body.setVelocityX(0);
-        if(jumping){this.pendingJump=true;this.net.act({kind:'detach'});}
+        if(jumping&&!this.pendingJump)this.requestVital('jump',seat);
       }
       if(using)this.action(seat);
       if(special)this.ability(seat,time);
@@ -378,8 +406,14 @@ export class ForestLoopScene extends Phaser.Scene {
     }
     // Context is the only gameplay instruction rendered in world coordinates.
     const hint=loopContext(w,seat,this.local.x,this.local.y,now);
-    this.contextText.setText(hint).setVisible(Boolean(hint))
+    const fatigue=time<this.tiredUntil;
+    this.contextText.setText(fatigue?'SEM ESTAMINA':hint)
+      .setVisible(fatigue||Boolean(hint)).setColor(fatigue?'#ffd28e':'#e7f4d6')
       .setPosition(this.local.x,this.local.y-87);
+    this.avatars.forEach((actor,i)=>{
+      const blink=w.safeUntil[i]>now&&Math.floor(now/120)%2===0;
+      actor.setAlpha(blink?.42:1);
+    });
     const region=regionTitle(this.local.x);
     if(region!==this.regionShown){
       this.regionShown=region;this.regionUntil=time+2000;

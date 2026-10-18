@@ -217,3 +217,42 @@ body.playing #game canvas{image-rendering:auto}
 @media(pointer:coarse){#ui.in-game .solo-hud{bottom:109px;left:8px}
   .solo-hud .solo-switch{display:none}}
 @media(max-height:500px) and (pointer:coarse){#ui.in-game .solo-hud{bottom:85px}}
+
+/* ETAPA 11-B: compacto e legível, três recursos independentes. */
+.loop-bottom-left:has(.loop-vitals){gap:8px;padding:6px 8px;align-items:center;max-width:min(94vw,450px)}
+.loop-vitals{display:flex;gap:5px;align-items:stretch}
+.loop-vital{min-width:84px;width:94px;display:flex;flex-direction:column;gap:3px;
+  padding:5px 6px;border-radius:8px;border:1px solid #68857d55;
+  background:#0e2724c9;opacity:.72;transition:opacity .2s,border-color .2s}
+.loop-vital.selected{opacity:1;border-color:#c8f4ab;box-shadow:0 0 0 1px #a4dba061;background:#1e3b33}
+.loop-vital-heading{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.loop-vital-heading>span:first-child{font-size:10px;font-weight:900}
+.loop-hearts{display:inline-flex!important;flex-direction:row!important;gap:1px;color:#fa6570}
+.loop-hearts span{font-size:12px!important;line-height:1;filter:drop-shadow(0 1px 2px #000a)}
+.loop-hearts .lost{color:#51575a;opacity:.65;filter:none}
+.loop-energy-track{height:6px;width:100%;border-radius:8px;background:#0c1e25;
+  border:1px solid #45666b;overflow:hidden}
+.loop-energy-track>span{display:block;height:100%;background:linear-gradient(90deg,#287c86,#6fded1);
+  border-radius:8px;transition:width .13s linear,background .15s}
+.loop-energy-track.low-energy>span{background:linear-gradient(90deg,#9e5e27,#e3ad62)}
+.loop-vital small{color:#d0e0d7;font-size:9px!important;line-height:1}
+.loop-current-skill{display:flex;flex-direction:column;gap:2px;white-space:nowrap}
+.loop-current-skill strong{font-size:10px}
+.loop-current-skill small{font-size:9px}
+@media(max-width:1100px) and (pointer:fine){
+  .loop-seat-switch{bottom:88px}
+}
+@media(pointer:coarse){
+  #ui.in-game .loop-bottom-left:has(.loop-vitals){bottom:117px;left:7px;gap:5px;padding:5px}
+  .loop-vital{width:75px;min-width:72px;padding:3px 4px}
+  .loop-vital-heading>span:first-child{font-size:9px}
+  .loop-hearts span{font-size:10px!important}
+  .loop-current-skill{display:none}
+}
+@media(max-width:410px){
+  .loop-vital{min-width:66px;width:69px}
+  .loop-bottom-left:has(.loop-vitals){max-width:calc(100vw - 10px)}
+}
+@media(max-height:500px) and (pointer:coarse){
+  #ui.in-game .loop-bottom-left:has(.loop-vitals){bottom:88px}
+}

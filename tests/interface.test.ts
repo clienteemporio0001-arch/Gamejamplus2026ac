@@ -39,7 +39,7 @@ for(const forbidden of ['I · FLORESTA DAS REPETIÇÕES','II · A CLAREIRA CENTR
   'III · A ÁRVORE SUSPENSA','IV · A SAÍDA REAL','this.prompt','this.cycle',
   'this.info','this.wind=this.label','this.life'])
  ok(!scene.includes(forbidden),'nenhuma legenda gigante ou HUD duplicado: '+forbidden);
-ok(scene.includes('this.contextText.setText(hint).setVisible(Boolean(hint))'),
+ok(scene.includes('this.contextText.setText(fatigue?')&&scene.includes('.setVisible(fatigue||Boolean(hint))'),
   'uma dica contextual no mundo, não em overlay fixo');
 ok(scene.includes('this.regionUntil=time+2000'),'título de região dura dois segundos');
 ok(scene.includes('.setScrollFactor(0).setDepth(90)'),'título de região fica ancorado à tela');

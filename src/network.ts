@@ -7,6 +7,7 @@ import { nextPlayableLevel } from './levels';
 import { JourneyAuthority, initialJourney, validJourney, floatingLogs, validMotion, journeyDanger, JOURNEY_SPAWNS, JOURNEY_CHECKPOINTS, RIVER_WIDTH, type JourneyWorld, type JourneyMotion } from './riverJourney';
 import { ForestAuthority, FOREST_WIDTH, FOREST_SPAWNS, FOREST_CHECKPOINTS, forestDanger, validForest, initialForest, type ForestWorld } from './forest';
 import { LoopAuthority, LOOP_START, LOOP_WIDTH, validLoop, initLoop, blackoutActive, type LoopWorld } from './forestLoop';
+import { type VitalAction } from './loopVitals';
 
 export type Stage = 'lobby' | 'intro' | 'playing' | 'transition' | 'final';
 export type Experience = 'classic' | 'loop';
@@ -25,6 +26,8 @@ type Wire =
   | { t: 'begin' }
   | { t: 'state'; poses: Pose[] }
   | { t: 'act'; action: PuzzleAction }
+  | { t: 'vital-action'; id:number; kind:VitalAction; facing:-1|1 }
+  | { t: 'vital-reply'; id:number; kind:VitalAction; ok:boolean; reason:'ok'|'tired'|'cooldown'|'invalid' }
   | { t: 'fx'; fx: SkillFx }
   | { t: 'puzzle'; world: WorldState }
   | { t: 'forest'; world: ForestWorld }
@@ -47,6 +50,7 @@ type Events = {
   start: undefined;
   snapshot: Pose[];
   effect: SkillFx;
+  'vital-reply': { id:number;kind:VitalAction;ok:boolean;reason:'ok'|'tired'|'cooldown'|'invalid' };
   puzzle: WorldState;
   forest: ForestWorld;
   loop: LoopWorld;
@@ -110,6 +114,12 @@ function parseWire(value: unknown): Wire | null {
     case 'state': return Array.isArray(p.poses) && p.poses.length === 3 && p.poses.every(validPose)
       && p.poses.every((pose: Pose, i: number) => pose.seat === i) ? value as Wire : null;
     case 'act': return validAction(p.action) ? value as Wire : null;
+    case 'vital-action':return Number.isInteger(p.id)&&Number(p.id)>0&&Number(p.id)<1000000000
+      &&['jump','doubleJump','shoot','dash'].includes(String(p.kind))&&[1,-1].includes(Number(p.facing))
+      ?value as Wire:null;
+    case 'vital-reply':return Number.isInteger(p.id)&&Number(p.id)>0
+      &&['jump','doubleJump','shoot','dash'].includes(String(p.kind))&&typeof p.ok==='boolean'
+      &&['ok','tired','cooldown','invalid'].includes(String(p.reason))?value as Wire:null;
     case 'fx': return validSkillFx(p.fx) ? value as Wire : null;
     case 'puzzle': return validWorld(p.world) ? value as Wire : null;
     case 'forest': return validForest(p.world) ? value as Wire : null;
@@ -174,6 +184,8 @@ export class Network {
   private listeners: { [K in keyof Events]?: Array<(payload: Events[K]) => void> } = {};
   private heartbeat: ReturnType<typeof setInterval> | null = null;
   private reconnectTimer: ReturnType<typeof setInterval> | null = null;
+  private vitalityRequestId=0;
+  private lastVitalRequestIds:[number,number,number]=[0,0,0];
   private lastInput = 0;
   private lastReceived: number[] = [0, 0, 0];
   private sessionToken = '';
@@ -445,6 +457,13 @@ export class Network {
       if (msg.t === 'act' && this.playing && this.everyoneConnected) {
         this.hostAction(seat, msg.action);
       }
+      if(msg.t==='vital-action'&&this.experience==='loop'&&this.playing&&this.everyoneConnected){
+        const repeat=msg.id<=this.lastVitalRequestIds[seat];
+        if(!repeat)this.lastVitalRequestIds[seat]=msg.id;
+        const result=repeat?{ok:false as const,reason:'invalid' as const}:
+          this.approveVital(seat,msg.kind,msg.facing);
+        this.message(conn,{t:'vital-reply',id:msg.id,kind:msg.kind,...result});
+      }
       if (msg.t === 'pose' && this.playing && this.everyoneConnected) {
         const now = performance.now();
         if (now - this.lastReceived[seat] < 35) return; // ~28 Hz no máximo por convidado.
@@ -560,6 +579,11 @@ export class Network {
         this.emit('river', this.river);
         this.emit('change', undefined);
         break;
+      case 'vital-reply':
+        if(this.playing&&this.experience==='loop')this.emit('vital-reply',{
+          id:msg.id,kind:msg.kind,ok:msg.ok,reason:msg.reason
+        });
+        break;
       case 'fx':
         // Apenas a DataConnection autenticada do anfitrião chega a este handler.
         // O originador não recebe o mesmo efeito, evitando duplicação local.
@@ -568,7 +592,7 @@ export class Network {
         }
         break;
       case 'loop':
-        this.loop={...msg.world,marks:[...msg.world.marks] as LoopWorld['marks'],tree:[...msg.world.tree] as LoopWorld['tree'],final:[...msg.world.final] as LoopWorld['final'],supporting:[...msg.world.supporting] as LoopWorld['supporting']};
+        this.loop={...msg.world,marks:[...msg.world.marks] as LoopWorld['marks'],tree:[...msg.world.tree] as LoopWorld['tree'],final:[...msg.world.final] as LoopWorld['final'],supporting:[...msg.world.supporting] as LoopWorld['supporting'],health:[...msg.world.health] as LoopWorld['health'],stamina:[...msg.world.stamina] as LoopWorld['stamina'],safeUntil:[...msg.world.safeUntil] as LoopWorld['safeUntil'],lastSpent:[...msg.world.lastSpent] as LoopWorld['lastSpent']};
         this.emit('loop',this.loop);
         break;
       case 'forest':
@@ -710,8 +734,43 @@ export class Network {
     if (this.isHost) this.hostAction(this.isSolo ? this.localSeat : 0, action);
     else this.message(this.hostConn, { t: 'act', action });
   }
+  /** Requests contain a kind, never client-authored life or stamina values. */
+  requestVital(kind:VitalAction,facing:-1|1=1):number|null{
+    if(this.experience!=='loop'||!this.playing||!this.everyoneConnected||
+      this.localSeat===null||this.loop.deadUntil>0||blackoutActive(this.loop,Date.now()))return null;
+    const id=++this.vitalityRequestId;
+    if(this.isHost){
+      const result=this.approveVital(this.localSeat,kind,facing);
+      const epoch=this.sessionEpoch;
+      queueMicrotask(()=>{
+        if(this.sessionEpoch===epoch&&this.playing&&this.experience==='loop')
+          this.emit('vital-reply',{id,kind,...result});
+      });
+    }else this.message(this.hostConn,{t:'vital-action',id,kind,facing});
+    return id;
+  }
+  private approveVital(seat:Seat,kind:VitalAction,facing:-1|1):{
+    ok:boolean;reason:'ok'|'tired'|'cooldown'|'invalid'
+  }{
+    const result=this.loopAuthority.authorizeEnergy(seat,kind,this.poses,Date.now(),facing);
+    if(result.ok){
+      this.shareLoop();
+      if(kind==='shoot'||kind==='dash')this.emitSkillFx(seat,{kind:kind==='shoot'?'shoot':'dash',facing});
+    }
+    return result;
+  }
+  private emitSkillFx(seat:Seat,action:PuzzleAction):void{
+    const effect=this.effectGate.accept(seat,this.level,action,this.poses[seat],
+      this.puzzle.unlocked,performance.now());
+    if(!effect)return;
+    for(const [otherSeat,connection] of this.conns){
+      if(otherSeat!==seat)this.message(connection,{t:'fx',fx:effect});
+    }
+    if(seat!==0&&!this.isSolo)this.emit('effect',effect);
+  }
   private hostAction(seat: Seat, action: PuzzleAction): void {
     if (!this.isHost || !this.playing || !this.everyoneConnected) return;
+    if(this.experience==='loop'&&(action.kind==='shoot'||action.kind==='dash'))return;
     // O puzzle continua na autoridade original. A animação é um evento leve,
     // independente do acerto (a pedra também precisa aparecer quando erra).
     if(this.experience==='loop'){
@@ -728,21 +787,11 @@ export class Network {
       if (this.journeyAuthority.act(seat,action,this.poses,this.puzzle.unlocked))this.shareJourney();
     } else if (this.chapterAuthority.act(seat, action, this.poses, this.puzzle.unlocked)) this.shareChapter();
 
-    const effect = this.effectGate.accept(
-      seat, this.level, action, this.poses[seat], this.puzzle.unlocked, performance.now()
-    );
-    if (!effect) return;
-    // Não reenvia ao jogador de origem: ele já renderizou localmente sem latência.
-    // Atribuímos seat pelo DataConnection do host, nunca pelo pacote recebido.
-    for (const [otherSeat, connection] of this.conns) {
-      if (otherSeat !== seat) this.message(connection, { t: 'fx', fx: effect });
-    }
-    // O host já animou suas próprias habilidades; convidados animam no host aqui.
-    if (seat !== 0 && !this.isSolo) this.emit('effect', effect);
+    this.emitSkillFx(seat,action);
   }
   private shareLoop():void{
     const w=this.loopAuthority.world;
-    this.loop={...w,marks:[...w.marks] as LoopWorld['marks'],tree:[...w.tree] as LoopWorld['tree'],final:[...w.final] as LoopWorld['final'],supporting:[...w.supporting] as LoopWorld['supporting']};
+    this.loop={...w,marks:[...w.marks] as LoopWorld['marks'],tree:[...w.tree] as LoopWorld['tree'],final:[...w.final] as LoopWorld['final'],supporting:[...w.supporting] as LoopWorld['supporting'],health:[...w.health] as LoopWorld['health'],stamina:[...w.stamina] as LoopWorld['stamina'],safeUntil:[...w.safeUntil] as LoopWorld['safeUntil'],lastSpent:[...w.lastSpent] as LoopWorld['lastSpent']};
     this.broadcast({t:'loop',world:this.loop});
     this.emit('loop',this.loop);
   }
@@ -806,10 +855,21 @@ export class Network {
     if(this.experience==='loop'){
       const now=Date.now();
       if(!blackoutActive(this.loopAuthority.world,now)
-        &&this.loopAuthority.world.deadUntil===0
-        &&this.poses.some(p=>p.y>=690)){
-        if(this.loopAuthority.kill(now))this.shareLoop();
+        &&this.loopAuthority.world.deadUntil===0){
+        for(const p of this.poses){
+          if(p.y>=690){
+            if(this.loopAuthority.damage(p.seat,now,true))this.shareLoop();
+            break;
+          }
+        }
+        const tree=this.loopAuthority.world;
+        if(tree.treeFallAt>0&&!tree.bridge&&now-tree.treeFallAt>=1100
+          &&this.poses.some(p=>p.x>2300&&p.x<2430&&p.y>560)){
+          const hit=this.poses.find(p=>p.x>2300&&p.x<2430&&p.y>560);
+          if(hit&&this.loopAuthority.damage(hit.seat,now,true))this.shareLoop();
+        }
       }
+      if(this.loopAuthority.tickResources(this.poses,now))this.shareLoop();
       const state=this.loopAuthority.tick(this.poses,now);
       if(state.poses){
         this.poses=state.poses.map(p=>({...p}));
@@ -972,7 +1032,8 @@ export class Network {
     this.forestAuthority.reset();this.forest=initialForest();
     this.authority.reset(); this.puzzle = initialWorld(); this.lastAction.clear(); this.effectGate.reset(); this.pendingRestore = false;
     this.tokens = [null, null, null]; this.lastInput = 0; this.lastReceived = [0, 0, 0];
-    this.sessionToken='';this.reconnectDeadline=0;
+    this.sessionToken='';this.reconnectDeadline=0;this.vitalityRequestId=0;
+    this.lastVitalRequestIds=[0,0,0];
     this.emit('change', undefined);
   }
 }
