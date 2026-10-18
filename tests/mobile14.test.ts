@@ -140,8 +140,8 @@ ok(scene.includes('this.echoLabels.push(')&&scene.includes('label.setVisible(fal
   'Pipo substitui nomes repetidos de mecanismos e mantém feedback visual');
 ok(scene.includes('this.echoChecks.push(')&&scene.includes('setVisible(w.echo[i])'),
   'feedback visual marca mecanismo concluído');
-ok(scene.includes('temporalHint(w,seat,')&&scene.includes('guidance?.action'),
-  'instruções são calculadas a partir da lógica autoritativa');
+ok(scene.includes('temporalHint(w,seat,')&&scene.includes('this.pipo.update(time,this.local.x,this.local.y,pause)'),
+  'estado sincronizado continua disponível e Pipo fornece a orientação autoritativa');
 ok(scene.includes('this.net.act({kind:')&&scene.includes("this.net.requestVital(kind,this.facing)"),
   'ações do usuário continuam dirigidas à autoridade multiplayer');
 ok(scene.includes("consumeTouch(this.touch,'interact')"),
