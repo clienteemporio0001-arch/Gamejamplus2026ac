@@ -31,10 +31,12 @@ export function pipoHint(source:HintSource):PipoHint{
    'É hora de usar o dash e alcançar o mecanismo.',
    'Corra com Nino, use Shift para dash e pressione E na raiz marcada.'
   ]);
-  if(w.lastRoute!=='right')return guidance('rota verdadeira',[
-   'Nem toda passagem da floresta leva para a frente...',
-   'Observem o vento: ele aponta a rota verdadeira deste estado.',
-   'Sigam o vento até '+(w.layout===1?'a árvore oca':'a pedra rachada')+'. A outra rota devolve vocês à clareira!'
+  if(w.lastRoute!=='right')return guidance(w.lastRoute==='wrong'?'trilha enganosa':'rota verdadeira',[
+   w.lastRoute==='wrong'?
+    'Essa trilha está nos confundindo! Observem a direção do vento!':
+    'Trilhas liberadas! Procurem a passagem que acompanha o vento!',
+   'Há uma trilha perto da árvore oca e outra perto da pedra rachada!',
+   'Os três precisam ficar juntos na entrada correta para atravessar!'
   ]);
   if(!w.suspendedOpen){
    if(!w.suspended[0])return guidance('plataforma suspensa',[
