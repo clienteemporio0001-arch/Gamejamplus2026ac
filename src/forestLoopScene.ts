@@ -404,8 +404,10 @@ export class ForestLoopScene extends Phaser.Scene {
         if(this.pendingJump){this.body.setVelocityY(-465);this.jumps=1;this.pendingJump=false;}
       }
       let dir=0;
-      if(this.cursors?.left.isDown||this.keys?.A?.isDown||this.touch.left)dir--;
-      if(this.cursors?.right.isDown||this.keys?.D?.isDown||this.touch.right)dir++;
+      if(this.cursors?.left.isDown||this.keys?.A?.isDown)dir--;
+    if(this.cursors?.right.isDown||this.keys?.D?.isDown)dir++;
+    // Teclado conserva prioridade; eixo analógico varia a velocidade sem exceder 235.
+    if(!dir)dir=Math.max(-1,Math.min(1,this.touch.moveX??(this.touch.right?1:this.touch.left?-1:0)));
       if(dir)this.facing=dir>0?1:-1;
       const grounded=this.body.blocked.down||this.body.touching.down;
       if(grounded)this.jumps=0;
