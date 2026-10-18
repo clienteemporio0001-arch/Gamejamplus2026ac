@@ -5,7 +5,7 @@ export function isMobilePortrait(view:ViewSize,coarse:boolean):boolean{
   return coarse&&view.height>view.width&&view.width<=MOBILE_PORTRAIT_LIMIT;
 }
 export function cameraZoomFor(view:ViewSize,coarse:boolean):number{
-  if(coarse)return Math.max(.62,Math.min(1.12,view.height/545));
+  if(coarse)return Math.max(.72,Math.min(1.02,Math.min(view.height/440,view.width/850)));
   return Math.max(.85,Math.min(1.16,view.height/700));
 }
 export function viewportSize(win:{innerWidth:number;innerHeight:number;
