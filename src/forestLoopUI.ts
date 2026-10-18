@@ -1,6 +1,6 @@
 import type { Seat } from './network';
 import { LOOP_MARKS, LOOP_TREE, LOOP_FINAL, LOOP_GEOMETRY, UPPER_BRANCH, upperLandingY, summitLandingY, allDone, windGuide,
-  SUSPENSION,SUSPENSION_LANDING_Y,type LoopWorld } from './forestLoop';
+  SUSPENSION,SUSPENSION_LANDING_Y,markPosition,type LoopWorld } from './forestLoop';
 
 /** UI copy is pure data: no world coordinates are used for the fixed-screen HUD. */
 export type LoopObjective={title:string;progress:string};
@@ -32,7 +32,7 @@ export function loopContext(w:LoopWorld,seat:Seat,x:number,y:number,now=Date.now
   const near=(tx:number,ty:number,radius=100,dy=100)=>
     Math.abs(x-tx)<=radius&&Math.abs(y-ty)<=dy;
   if(w.observed&&!w.marks[seat]&&w.marks.slice(0,seat).every(Boolean)){
-    const point=LOOP_MARKS[seat];
+    const point=markPosition(w,seat);
     if(seat===0&&near(point.x,point.y,90,90))return 'E · Investigar árvore oca';
     if(seat===1&&near(point.x-150,604,125,85))return 'J · Acertar pedra rachada';
     if(seat===2&&near(point.x-155,604,115,85))return 'SHIFT → E · Tronco em arco';
