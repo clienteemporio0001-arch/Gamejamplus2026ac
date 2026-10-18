@@ -28,19 +28,32 @@ export function pipoSpeechLayout(view:PipoViewport,camera:PipoCameraView,
  const offscreen=birdX< -12||birdX>view.width+12||birdY< -22||birdY>view.height+18;
  const inset=12;
  const minX=width/2+inset,maxX=Math.max(minX,view.width-width/2-inset);
- const x=Math.max(minX,Math.min(maxX,birdX));
- // Reserve mobile HUD above and touch controls below. The bottom of the
- // balloon should stay slightly above the bird's head whenever possible.
+ // Candidate positions beside the bird, away from the avatar directly below it.
  const top=44+height/2;
  const bottom=Math.max(top,view.height-130-height/2);
  const headY=birdY-29*camera.zoom;
- const above=headY-16-height/2;
- const below=headY+16+height/2;
- // Prefer a speech balloon above the beak. Near top HUD, flip the balloon
- // underneath Pipo: never leave its tail pointing away from the actual bird.
- const tailSide:'top'|'bottom'=above<top&&below<=bottom?'top':'bottom';
- const desired=tailSide==='top'?below:above;
- const y=Math.max(top,Math.min(bottom,desired));
+ const gap=22;
+ const candidates=[
+  {x:birdX+width/2+gap,y:headY-height/2-gap},
+  {x:birdX-width/2-gap,y:headY-height/2-gap},
+  {x:birdX+width/2+gap,y:headY},
+  {x:birdX-width/2-gap,y:headY},
+  {x:birdX+width/2+gap,y:headY+height/2+gap},
+  {x:birdX-width/2-gap,y:headY+height/2+gap}
+ ];
+ const clamp=(n:number,lo:number,hi:number)=>Math.max(lo,Math.min(hi,n));
+ const scored=candidates.map(c=>{
+  const x=clamp(c.x,minX,maxX),y=clamp(c.y,top,bottom);
+  const overlapX=Math.max(0,width/2+38-Math.abs(x-birdX));
+  const overlapY=Math.max(0,height/2+35-Math.abs(y-birdY));
+  const avatarX=birdX-80*camera.zoom,avatarY=birdY+110*camera.zoom;
+  const actorOverlapX=Math.max(0,width/2+28-Math.abs(x-avatarX));
+  const actorOverlapY=Math.max(0,height/2+48-Math.abs(y-avatarY));
+  return {x,y,score:overlapX*overlapY*8+actorOverlapX*actorOverlapY*5+
+    Math.abs(c.x-x)*2+Math.abs(c.y-y)*2};
+ }).sort((a,b)=>a.score-b.score);
+ const {x,y}=scored[0];
+ const tailSide:'top'|'bottom'=y>headY?'top':'bottom';
  const tailX=Math.max(-width/2+19,Math.min(width/2-19,birdX-x));
  const tailBase=tailSide==='top'?-height/2:height/2;
  const tailY=tailSide==='top'
