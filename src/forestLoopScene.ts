@@ -27,6 +27,7 @@ export class ForestLoopScene extends Phaser.Scene {
   private tree!:Phaser.GameObjects.Container;private ropes:Phaser.GameObjects.Graphics[]=[];
   private finalBarrier!:Phaser.GameObjects.Rectangle;
   private marks:Phaser.GameObjects.Container[]=[];
+  private routeCurtains:Phaser.GameObjects.Container[]=[];
   private contextText!:Phaser.GameObjects.Text;
    private pipo!:PipoGuide;private missions!:MissionDirector;
   private regionToast!:Phaser.GameObjects.Text;
@@ -138,9 +139,25 @@ export class ForestLoopScene extends Phaser.Scene {
       pad(point.x,point.y,[0x8eda9e,0xf7b074,0x8ec9f4][index]);
     for(const [index,point] of LOOP_FINAL.entries())
       pad(point.x,point.y,[0x8eda9e,0xf7b074,0x8ec9f4][index]);
-    // Subtle route cues: world objects stay anchored, captions only appear nearby.
+    // Physical-looking woodland passages: roots & dangling foliage, never a magic portal.
+    // Host still decides whether a route is true or false in each A/B/C state.
     for(const x of [LOOP_GEOMETRY.portal.oca,LOOP_GEOMETRY.portal.pedra]){
-      this.add.circle(x,625,19,0x88bd97,.14).setStrokeStyle(2,0xb2d8af,.55).setDepth(12);
+      const roots=this.add.graphics();
+      roots.lineStyle(10,0x453c2b,.96);
+      roots.lineBetween(-73,1,-37,-91);roots.lineBetween(74,1,37,-92);
+      roots.lineStyle(6,0x5a5b37,.84);
+      roots.lineBetween(-39,-93,-12,-111);roots.lineBetween(38,-93,12,-111);
+      for(let i=0;i<7;i++){
+        const vx=-52+i*17,leaf=roots;
+        leaf.lineStyle(3,0x466a3e,.7);leaf.lineBetween(vx,-96,vx-4,-55+(i%3)*7);
+        leaf.fillStyle(i%2?0x63834d:0x386548,.78);
+        leaf.fillEllipse(vx-6,-52+(i%3)*7,19,11);
+      }
+      const warning=this.add.graphics();
+      warning.lineStyle(3,0xc0e3a0,.43);
+      warning.beginPath();warning.moveTo(-36,-106);
+      warning.lineTo(0,-118);warning.lineTo(36,-106);warning.strokePath();
+      this.routeCurtains.push(this.add.container(x,638,[roots,warning]).setDepth(14));
     }
     for(const x of [1080,2122,3400])
       this.add.rectangle(x,625,72,5,0x7cbed4,.7).setDepth(11);
@@ -352,6 +369,17 @@ export class ForestLoopScene extends Phaser.Scene {
       // Static targets must never drift away from host collision coordinates.
       mark.setX(LOOP_MARKS[i].x);
       mark.setAlpha(w.marks[i]?.56:1);
+      const image=mark.list[0] as Phaser.GameObjects.Image;
+      image.setTint(w.marks[i]?[0xa9e5b4,0xe6d69e,0xa4dded][i]:0xffffff);
+      image.setScale(w.marks[i]?1.018:1);
+    });
+    this.routeCurtains.forEach((curtain,i)=>{
+      const unlocked=allDone(w.marks);
+      const correct=ROUTES[w.layout].correct===(i===0?'oca':'pedra');
+      const target=unlocked&&correct?.40:1;
+      if(Math.abs(curtain.alpha-target)>.08)
+        this.tweens.add({targets:curtain,alpha:target,duration:380,ease:'Sine.easeOut'});
+      else curtain.setAlpha(target);
     });
   }
   private action(seat:Seat):void{
