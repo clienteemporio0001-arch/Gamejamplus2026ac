@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import { LOOP_WIDTH, LOOP_GEOMETRY, LOOP_MARKS, LOOP_TREE, LOOP_FINAL, ROUTES, barriers,
-  allDone, windGuide, blackoutActive, warningActive, type LoopWorld, LOOP_START } from './forestLoop';
+  allDone, windGuide, blackoutActive, warningActive, type LoopWorld, LOOP_START,
+  UPPER_BRANCH,upperLandingY,markerBaseY,hasBranchFooting } from './forestLoop';
 import { NightArt } from './visuals';
 import { loopContext, regionTitle } from './forestLoopUI';
+import { leafAt, swayAt, WIND_LEAVES } from './loopWind';
 import { SoloBodies } from './soloBodies';
 import { gameKeys } from './keyboard';
 import type { TouchInput } from './game';
@@ -24,6 +26,9 @@ export class ForestLoopScene extends Phaser.Scene {
   private regionToast!:Phaser.GameObjects.Text;
   private regionShown='';private regionUntil=0;
   private gusts:Phaser.GameObjects.Ellipse[]=[];
+  private windVines:Phaser.GameObjects.Rectangle[]=[];
+  private windFog:Phaser.GameObjects.Ellipse[]=[];
+  private upperBranch!:Phaser.GameObjects.Rectangle;
   private clearingTree!:Phaser.GameObjects.Image;
   private shiftShade!:Phaser.GameObjects.Rectangle;
   private movingRoots:Phaser.GameObjects.Ellipse[]=[];
@@ -61,6 +66,9 @@ export class ForestLoopScene extends Phaser.Scene {
   preload():void{
     this.load.svg('loop-clearing-tree',import.meta.env.BASE_URL+'assets/clearing-tree.svg');
     this.load.svg('loop-hollow-tree',import.meta.env.BASE_URL+'assets/hollow-tree.svg');
+    this.load.svg('loop-stone',import.meta.env.BASE_URL+'assets/loop-stone.svg');
+    this.load.svg('loop-arch',import.meta.env.BASE_URL+'assets/loop-arch.svg');
+    this.load.svg('loop-elevated-tree',import.meta.env.BASE_URL+'assets/loop-elevated-tree.svg');
   }
   private background():void{
     this.art=new NightArt(this,LOOP_WIDTH,'forest');
@@ -77,33 +85,47 @@ export class ForestLoopScene extends Phaser.Scene {
       const root=this.add.ellipse(1450+i*100,632,135,29,0x224234,.30).setDepth(-2);
       this.movingRoots.push(root);
     }
-    // Three distinguishable memory landmarks. Their positions shift cosmetically with layout.
-    for(let i=0;i<3;i++){
-      const pos=LOOP_MARKS[i];const obj=this.add.container(pos.x,pos.y-85).setDepth(12);
-      const g=this.add.graphics();
-      if(i===0){
-        obj.add(this.add.image(0,0,'loop-hollow-tree').setDisplaySize(150,180));
-        g.fillStyle(0x4a4335,1);g.fillRoundedRect(-28,-49,56,98,14);
-        g.fillStyle(0x091d1b,1);g.fillEllipse(0,14,27,43);
-        g.lineStyle(5,0x8d825c,.65);g.strokeEllipse(0,7,40,73);
-        g.fillStyle(0x2d5942,1);g.fillEllipse(0,-44,98,55);
-      }else if(i===1){
-        g.fillStyle(0x687873,.96);g.fillTriangle(-44,45,-17,-43,43,28);
-        g.lineStyle(4,0x172a2d,1);g.lineBetween(-15,-16,8,4);g.lineBetween(8,4,-1,34);
-        g.lineStyle(2,0xa9beb1,.72);g.lineBetween(-25,20,-4,-20);
-      }else{
-        g.lineStyle(18,0x503b2e,1);g.beginPath();
-        g.moveTo(-53,47);g.lineTo(-48,-7);g.lineTo(-15,-29);g.lineTo(27,-30);g.lineTo(51,-4);g.lineTo(56,47);g.strokePath();
-        g.lineStyle(4,0x8b6745,.55);g.lineBetween(-38,-13,0,-26);
+    // All landmark sprites are rooted at the exact collision-ground level.
+    // Their luminous targets use the same coordinates as LoopAuthority.
+    const shapes=['loop-hollow-tree','loop-stone','loop-arch'] as const;
+    const sizing=[{width:235,height:320},{width:155,height:104},{width:244,height:182}];
+    for(const index of [0,1,2] as const){
+      const mark=LOOP_MARKS[index],shape=sizing[index];
+      const holder=this.add.container(mark.x,markerBaseY).setDepth(12);
+      const sprite=this.add.image(0,-shape.height/2,shapes[index])
+        .setDisplaySize(shape.width,shape.height);
+      holder.add(sprite);
+      const detail=this.add.graphics();
+      detail.fillStyle(0x31563e,.75);
+      for(let j=0;j<4;j++){
+        const dx=(j-1.5)*31;
+        detail.fillEllipse(dx,-4,58,10);
       }
-      g.setAlpha(i===0?.13:1);
-      obj.add(g);this.marks.push(obj);
+      detail.lineStyle(3,0x9dcb91,.6);
+      detail.strokeCircle(0,mark.y-markerBaseY,9);
+      detail.fillStyle([0xc7f5a5,0xf3dfa8,0x9bd3f3][index],.5);
+      detail.fillCircle(0,mark.y-markerBaseY,5);
+      holder.add(detail);
+      this.marks.push(holder);
     }
+    // Towering chasm tree is attached to its roots, while the narrow branch
+    // at UPPER_BRANCH.centerY is the ONLY solid high landing for Téo.
+    this.add.image(2200,341,'loop-elevated-tree')
+      .setDisplaySize(500,590).setDepth(5);
+    const root=this.add.graphics().setDepth(6);
+    root.lineStyle(16,0x534937,.9);
+    root.beginPath();root.moveTo(2252,637);root.lineTo(2201,565);root.lineTo(2190,484);root.strokePath();
+    root.lineStyle(7,0x8d7755,.56);
+    root.beginPath();root.moveTo(2229,535);root.lineTo(2185,410);root.lineTo(2152,315);root.strokePath();
+    const ring=this.add.graphics().setDepth(14);
+    ring.lineStyle(3,0xcfe9a8,.75);
+    ring.strokeCircle(LOOP_TREE[0].x,LOOP_TREE[0].y-9,10);
+    ring.fillStyle(0xe7efb5,.55);
+    ring.fillEllipse(LOOP_TREE[0].x,LOOP_TREE[0].y-9,8,13);
+    // Colored markers remain compact and coincide with host action coordinates.
     const pad=(x:number,y:number,color:number)=>{
-      this.add.circle(x,y,13,color,.76).setStrokeStyle(2,0xeafaf0,.65).setDepth(13);
+      this.add.circle(x,y,8,color,.56).setStrokeStyle(2,0xeafaf0,.38).setDepth(13);
     };
-    for(const [index,point] of LOOP_MARKS.entries())
-      pad(point.x,point.y,[0x8eda9e,0xf7b074,0x8ec9f4][index]);
     for(const [index,point] of LOOP_TREE.entries())
       pad(point.x,point.y,[0x8eda9e,0xf7b074,0x8ec9f4][index]);
     for(const [index,point] of LOOP_FINAL.entries())
@@ -142,8 +164,21 @@ export class ForestLoopScene extends Phaser.Scene {
     this.background();
     this.ground(1132,674,2265,72);
     this.ground(3212,674,1175,72);
+    // Hollow-tree cavity is served by an actual branch, not a floating plank.
     this.ground(LOOP_MARKS[0].x,546,165,20,'wood');
-    this.ground(2108,550,141,20,'wood');
+    // Physical stone collider matches the artwork's 155x104 silhouette;
+    // its top can be cleared by normal jumps. The arch has a free central gap.
+    const stoneHitbox=this.add.rectangle(LOOP_MARKS[1].x,592,120,91,0x1b3741,0)
+      .setDepth(10);
+    this.physics.add.existing(stoneHitbox,true);
+    this.blocks.push(stoneHitbox);
+    this.upperBranch=this.ground(UPPER_BRANCH.x,UPPER_BRANCH.centerY,
+      UPPER_BRANCH.width,UPPER_BRANCH.height,'wood');
+    const ledgeBody=this.upperBranch.body as Phaser.Physics.Arcade.StaticBody;
+    ledgeBody.checkCollision.down=false;
+    ledgeBody.checkCollision.left=false;
+    ledgeBody.checkCollision.right=false;
+    ledgeBody.checkCollision.up=true;
     this.ground(3320,548,145,20,'wood');
     this.bridge=this.ground(LOOP_GEOMETRY.bridge.x,LOOP_GEOMETRY.bridge.y,
       LOOP_GEOMETRY.bridge.width,LOOP_GEOMETRY.bridge.height,'wood');
@@ -192,9 +227,18 @@ export class ForestLoopScene extends Phaser.Scene {
     this.blackout=this.add.rectangle(this.scale.gameSize.width/2,350,this.scale.gameSize.width+200,800,0x02080e,1)
       .setDepth(190).setScrollFactor(0).setAlpha(0);
     // Wind is readable through moving leaves, and its sign comes exclusively from windGuide().
-    for(let i=0;i<11;i++){
-      const leaf=this.add.ellipse(200+i*24,370+i%3*24,11,3,i%2?0x9ab994:0xc4d5b0,.55).setDepth(22);
+    for(let i=0;i<WIND_LEAVES;i++){
+      const leaf=this.add.ellipse(0,0,11,4,i%2?0x9ab994:0xc4d5b0,.5).setDepth(17);
       this.gusts.push(leaf);
+    }
+    for(let i=0;i<10;i++){
+      const x=200+i*355;
+      this.windVines.push(this.add.rectangle(x,157+(i%3)*40,4,96+(i%3)*18,0x668b6d,.55)
+        .setDepth(9).setOrigin(.5,0));
+    }
+    for(let i=0;i<7;i++){
+      this.windFog.push(this.add.ellipse(210+i*535,400+(i%3)*50,340,73,0x93c5bc,.07)
+        .setDepth(4));
     }
     this.blackoutText=this.label(this.scale.gameSize.width/2,330,'A FLORESTA ESTÁ MUDANDO...',24,'#eef2db')
       .setScrollFactor(0).setDepth(191).setVisible(false);
@@ -235,16 +279,18 @@ export class ForestLoopScene extends Phaser.Scene {
       root.setAlpha([.28,.45,.4][w.layout]);
     });
     this.marks.forEach((mark,i)=>{
-      const shift=w.layout===0?0:w.layout===1?[14,-22,17][i]:[-17,18,-10][i];
-      mark.setX(LOOP_MARKS[i].x+shift);
-      mark.setAlpha(w.marks[i]?.42:1);
+      // Static targets must never drift away from host collision coordinates.
+      mark.setX(LOOP_MARKS[i].x);
+      mark.setAlpha(w.marks[i]?.56:1);
     });
   }
   private action(seat:Seat):void{
     const x=this.local.x,y=this.local.y,w=this.w;
     if(seat===0){
       if(w.observed && !w.marks[0]&&Math.abs(x-LOOP_MARKS[0].x)<90)this.net.act({kind:'lever'});
-      else if(allDone(w.marks)&&!w.tree[0]&&Math.abs(x-LOOP_TREE[0].x)<95&&Math.abs(y-LOOP_TREE[0].y)<100)
+      else if(allDone(w.marks)&&w.teoUpperReached&&!w.tree[0]
+        &&hasBranchFooting({seat,x,y,vx:this.body.velocity.x,vy:this.body.velocity.y})
+        &&Math.abs(x-LOOP_TREE[0].x)<=37)
         this.net.act({kind:'lever'});
       else if(w.bridge&&!w.final[0]&&Math.abs(x-LOOP_FINAL[0].x)<95)this.net.act({kind:'lever'});
     }else if(seat===2){
@@ -340,17 +386,20 @@ export class ForestLoopScene extends Phaser.Scene {
       this.regionToast.setText(region);
     }
     this.regionToast.setVisible(time<this.regionUntil&&!pause);
-    const wind=windGuide(w,seat,this.local.x);
     const fallProgress=w.treeFallAt>0?Math.min(1,(now-w.treeFallAt)/1900):0;
     const easing=fallProgress*fallProgress*(3-2*fallProgress);
     this.tree.setRotation(-1.16*(1-easing));
-    const gust=wind.direction;
+    // World-space wind: fixed emitters sampled by shared windGuide, not by
+    // actor facing, camera offset or local actor position.
     this.gusts.forEach((leaf,i)=>{
-      const displacement=(((time/15+i*69)*gust)%520+520)%520;
-      leaf.x=this.local.x-240+displacement;
-      leaf.y=375+(i%4)*55+Math.sin(time/700+i)*13;
-      leaf.rotation=gust<0?Math.PI-.2:.2;
-      leaf.alpha=gust===0?.23:.42+(i%3)*.1;
+      const field=leafAt(w,i,time);
+      leaf.setPosition(field.x,field.y).setRotation(field.angle);
+      leaf.alpha=field.direction===0?.28:.44+(i%3)*.08;
+    });
+    this.windVines.forEach((vine,i)=>{vine.rotation=swayAt(w,vine.x,time,i);});
+    this.windFog.forEach((mist,i)=>{
+      const anchorX=210+i*535;
+      mist.x=anchorX+swayAt(w,anchorX,time,i)*65;
     });
     this.art.update(time);
     this.hud?.();

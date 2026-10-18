@@ -78,7 +78,10 @@ ok(a.act(1,{kind:'detach'},p,65350),'Lia pode soltar Nino');
 ok(a.world.supporting.every(x=>x===null),'vínculos soltos sem teleporte dos corpos');
 
 goto(0,LOOP_TREE[0].x,LOOP_TREE[0].y);
-ok(act(0,'lever',66000),'Téo solta primeira amarra');
+ok(!act(0,'lever',65880),'Téo não solta amarra apenas por estar perto, antes do pouso validado');
+ok(a.tick(p,65900).changed&&a.world.teoUpperReached,
+  'o anfitrião confirma o pouso no galho alto depois do desprendimento');
+ok(act(0,'lever',66000),'Téo solta primeira amarra somente apoiado no galho');
 goto(1,2060,604);
 ok(act(1,'shoot',66600),'Lia corta segunda amarra');
 goto(2,2115);ok(!act(2,'dash',67000),'Nino parte do lado correto');

@@ -1,5 +1,5 @@
 import type { Seat } from './network';
-import { LOOP_MARKS, LOOP_TREE, LOOP_FINAL, LOOP_GEOMETRY, allDone, windGuide,
+import { LOOP_MARKS, LOOP_TREE, LOOP_FINAL, LOOP_GEOMETRY, UPPER_BRANCH, upperLandingY, allDone, windGuide,
   type LoopWorld } from './forestLoop';
 
 /** UI copy is pure data: no world coordinates are used for the fixed-screen HUD. */
@@ -35,7 +35,10 @@ export function loopContext(w:LoopWorld,seat:Seat,x:number,y:number,now=Date.now
     if(near(LOOP_GEOMETRY.portal.pedra,606,135,85))return 'Passagem da pedra rachada · Reúnam os três';
   }
   if(w.lastRoute==='right'&&!w.bridge){
-    if(seat===0&&!w.tree[0]&&near(LOOP_TREE[0].x,LOOP_TREE[0].y,88,90))return 'E · Soltar primeira amarra';
+    if(seat===0&&!w.tree[0]&&w.teoUpperReached
+      &&near(LOOP_TREE[0].x,upperLandingY,46,9))return 'E · Soltar amarra no galho alto';
+    if(seat===0&&!w.tree[0]&&w.stackMilestone&&!w.teoUpperReached
+      &&near(UPPER_BRANCH.x,520,115,66))return 'ESPAÇO → ESPAÇO · Salto duplo até o galho';
     if(seat===1&&!w.tree[1]&&near(LOOP_TREE[1].x-150,606,115,85))return 'J · Acertar amarra';
     if(seat===2&&!w.tree[2]&&near(LOOP_TREE[2].x-143,606,105,85))return 'SHIFT → E · Soltar raiz';
     if(!w.stackMilestone&&near(2090,605,150,110))return 'E · Lia sobe em Nino, depois Téo em Lia';

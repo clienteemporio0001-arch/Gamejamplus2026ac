@@ -1,5 +1,24 @@
 # A FLORESTA MENTE — MAS O VENTO NÃO
 
+## Etapa 11 — marcos, vento ambiental e escalada obrigatória
+
+Os marcos iniciais agora têm arte SVG original ancorada ao solo de y=638: árvore oca de 235×320 com raízes, pedra rachada 155×104 com colisão estática 120×91 e arco retorcido 244×182 com abertura livre. Seus brilhos de interação seguem as coordenadas da autoridade. Assets adicionais: public/assets/loop-stone.svg, public/assets/loop-arch.svg e public/assets/loop-elevated-tree.svg. A árvore oca existente tem base alinhada ao solo; sua plataforma de galho mantém colisão física.
+
+O vento foi separado do movimento do jogador em src/loopWind.ts. Folhas, cipós e névoa utilizam âncoras de mundo e a direção determinística de windGuide para cada região. A direção não depende de x, facing, velocidade do jogador ou movimento da câmera. São objetos leves do Phaser que continuam animados com o personagem parado; clientes de uma mesma região compartilham a orientação lógica.
+
+A árvore do abismo ganhou uma plataforma one-way em (2140,313) com tamanho 156×20. O galho só colide por cima, e o centro do personagem ao aterrissar fica em y=281. A gravidade é 850 e o impulso de salto -465; um salto atinge ≈127px e dois atingem ≈254px. Do chão y=606 até o galho são 325px, inalcançáveis com salto duplo sem cooperação. A torre Nino→Lia→Téo coloca Téo em y≈518; o salto duplo daí vence os 237px exigidos. O degrau antigo em (2108,550) foi removido.
+
+A autoridade da partida só libera a primeira amarra após Nino apoiar Lia, Lia apoiar Téo, Téo se soltar de uma torre válida ao lado da árvore, e o host reconhecer pouso estável no alto. Além desses marcos, a interação E ainda exige corpo dentro da plataforma e muito próximo ao nó, com velocidade baixa. A memória de empilhamento sozinha não conclui a tarefa. Lia continua acertando sua amarra com J e Nino continua usando Shift e E. A árvore cai apenas após as três ações e a colisão da ponte permanece sincronizada.
+
+A dica de Téo agora diferencia a formação (E), o salto duplo partindo dela (Espaço duas vezes) e a interação no galho (E). O menu e o HUD da Etapa 10 continuam preservados.
+
+Teste manual: em JOGAR SOZINHO, conclua os três marcos e o portal correto. Na base da árvore do abismo, posicione Nino perto de x2160; selecione Lia (2) e pressione E perto de Nino. Selecione Téo (1), pressione E perto de Lia e depois Espaço para sair do apoio com o primeiro salto. Pressione Espaço novamente no ar, pouse no galho alto e use E na amarra. Depois complete as amarras de Lia (J) e Nino (Shift+E), aguarde a queda e atravessem juntos. A altura física é validada por simulação em testes, mas o percurso ainda precisa de confirmação jogada em navegadores reais.
+
+Arquivos-chave: src/forestLoop.ts, src/forestLoopScene.ts, src/forestLoopUI.ts, src/loopWind.ts, tests/loopEnvironment.test.ts e tests/forestLoop.test.ts. Execute npm run build e npm run test:logic antes de publicar.
+
+---
+
+
 ## Etapa 10 — interface enxuta e sessões de rede estáveis
 
 - **Menu principal:** apenas **JOGAR SOZINHO** (Network.startLoopSolo) e **MULTIPLAYER ONLINE** (Network.createRoom('loop')) como ações destacadas; **ENTRAR COM CÓDIGO** aparece secundariamente para convidados. As quatro fases antigas estão em **FERRAMENTAS DE DESENVOLVIMENTO**, dentro de uma seção recolhível, sem serem apresentadas como capítulos da floresta mutável. O multiplayer da versão clássica também permanece acessível nessa área técnica.

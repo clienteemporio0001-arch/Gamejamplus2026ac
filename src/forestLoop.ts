@@ -22,13 +22,24 @@ export const LOOP_GEOMETRY = {
 export const LOOP_START: Pose[] = ([0,1,2] as Seat[]).map(seat=>({
   seat,x:1840+seat*60,y:606,vx:0,vy:0,
 }));
+/** Character 30x44, gravity 850, jump velocity 465; the ledge can only be
+ * attained by a real stacked double jump (from body-center height 518). */
+export const LOOP_PHYSICS={characterHeight:44,gravity:850,jumpVelocity:465} as const;
+export const UPPER_BRANCH={x:2140,centerY:313,width:156,height:20,anchorX:2130} as const;
+export const upperLandingY=UPPER_BRANCH.centerY-UPPER_BRANCH.height/2-LOOP_PHYSICS.characterHeight/2;
+export const soloJumpRise=LOOP_PHYSICS.jumpVelocity**2/(2*LOOP_PHYSICS.gravity);
+export const hasBranchFooting=(p:Pose):boolean=>
+  Math.abs(p.y-upperLandingY)<=5 &&
+  Math.abs(p.x-UPPER_BRANCH.x)<=UPPER_BRANCH.width/2-LOOP_PHYSICS.characterHeight/2 &&
+  Math.abs(p.vy)<=65 && Math.abs(p.vx)<=155;
+export const markerBaseY=638;
 export const LOOP_MARKS=[
-  {x:700,y:480,seat:0,name:'ÁRVORE OCA'},
+  {x:700,y:510,seat:0,name:'ÁRVORE OCA'},
   {x:1000,y:574,seat:1,name:'PEDRA RACHADA'},
   {x:1260,y:589,seat:2,name:'TRONCO EM ARCO'},
 ] as const;
 export const LOOP_TREE=[
-  {x:2130,y:514,seat:0},{x:2310,y:574,seat:1},{x:2242,y:592,seat:2}
+  {x:UPPER_BRANCH.anchorX,y:upperLandingY,seat:0},{x:2310,y:574,seat:1},{x:2242,y:592,seat:2}
 ] as const;
 export const LOOP_FINAL=[
   {x:3320,y:510,seat:0},{x:3470,y:573,seat:1},{x:3595,y:590,seat:2}
@@ -45,6 +56,7 @@ export type LoopWorld={
   layout:Layout; cycle:number;cycleStart:number;blackoutUntil:number;observed:boolean;
   marks:[boolean,boolean,boolean];tree:[boolean,boolean,boolean];treeFallAt:number;bridge:boolean;
   supporting:[Seat|null,Seat|null,Seat|null];stackMilestone:boolean;
+  climbReady:boolean;teoUpperReached:boolean;
   final:[boolean,boolean,boolean];exit:boolean;
   lastRoute:'none'|'wrong'|'right'; routeAt:number;routeCount:number;
   deadUntil:number;resetId:number; completed:boolean;
@@ -54,7 +66,7 @@ const nonNegative=(value:unknown):value is number=>typeof value==='number'&&Numb
 export const initLoop=(now=Date.now()):LoopWorld=>({
   layout:0,cycle:0,cycleStart:now,blackoutUntil:0,observed:false,
   marks:[false,false,false],tree:[false,false,false],treeFallAt:0,bridge:false,
-  supporting:[null,null,null],stackMilestone:false,
+  supporting:[null,null,null],stackMilestone:false,climbReady:false,teoUpperReached:false,
   final:[false,false,false],exit:false,lastRoute:'none',routeAt:0,routeCount:0,
   deadUntil:0,resetId:0,completed:false
 });
@@ -64,7 +76,7 @@ export function validLoop(value:unknown):value is LoopWorld{
   return (w.layout===0||w.layout===1||w.layout===2)
     &&nonNegative(w.cycle)&&Number.isInteger(w.cycle)
     &&['cycleStart','blackoutUntil','treeFallAt','routeAt','routeCount','deadUntil','resetId'].every(k=>nonNegative(w[k]))
-    &&['observed','bridge','exit','completed','stackMilestone'].every(k=>typeof w[k]==='boolean')
+    &&['observed','bridge','exit','completed','stackMilestone','climbReady','teoUpperReached'].every(k=>typeof w[k]==='boolean')
     &&Array.isArray(w.supporting)&&w.supporting.length===3
     &&w.supporting.every((b:unknown,i:number)=>b===null||(i===0&&b===1)||(i===1&&b===2))
     &&bool3(w.marks)&&bool3(w.tree)&&bool3(w.final)
@@ -92,8 +104,9 @@ export function windGuide(w:LoopWorld,seat:Seat,x:number):{direction:-1|0|1;targ
     hint='PASSAGEM VERDADEIRA: '+(ROUTES[w.layout].correct==='oca'?'ÁRVORE OCA':'PEDRA RACHADA')+
       '. AS OUTRAS DEVOLVEM À CLAREIRA.';
   }else if(!w.bridge){
-    target=!w.stackMilestone?2160:LOOP_TREE[w.tree.findIndex(value=>!value)]?.x??2110;
+    target=!w.stackMilestone?2160:!w.teoUpperReached?UPPER_BRANCH.x:LOOP_TREE[w.tree.findIndex(value=>!value)]?.x??2110;
     hint=!w.stackMilestone?'APOIO: NINO PARADO, LIA SOBE COM E, TÉO SOBE EM LIA COM E.':
+      !w.teoUpperReached?'TÉO: SOLTE-SE, USE SALTO DUPLO E ATERRISSE NO GALHO ALTO.':
       'SOLTEM AS TRÊS AMARRAS PARA A ÁRVORE FORMAR A PONTE.';
   }else if(x<2990){
     target=2910;hint='ATRAVESSEM A ÁRVORE DEITADA PARA A OUTRA MARGEM.';
@@ -162,6 +175,9 @@ export class LoopAuthority{
       return true;
     }
     if(action.kind==='detach'&&w.supporting[seat]!==null){
+      // Detached Téo must actually leave a valid human tower beside the tree.
+      if(seat===0 && w.supporting[0]===1&&w.supporting[1]===2
+        &&Math.abs(p.x-UPPER_BRANCH.x)<115 &&p.y<=535)w.climbReady=true;
       w.supporting[seat]=null;
       if(seat===1)w.supporting[0]=null;
       return true;
@@ -183,7 +199,11 @@ export class LoopAuthority{
       if(w.observed&&!w.marks[0]&&near(p,LOOP_MARKS[0].x,LOOP_MARKS[0].y,68,87)){
         w.marks[0]=true;return true;
       }
-      if(w.stackMilestone&&allDone(w.marks)&&!w.tree[0]&&near(p,LOOP_TREE[0].x,LOOP_TREE[0].y,70,78)){
+      if(w.stackMilestone&&w.teoUpperReached&&w.climbReady
+        &&allDone(w.marks)&&!w.tree[0]
+        &&hasBranchFooting(p)
+        &&Math.abs(p.x-LOOP_TREE[0].x)<=37){
+
         w.tree[0]=true;this.checkTree(now);return true;
       }
       if(w.bridge&&!w.final[0]&&near(p,LOOP_FINAL[0].x,LOOP_FINAL[0].y,70,81)){
@@ -217,6 +237,14 @@ export class LoopAuthority{
   /** One host clock for all players; secure route teleports are whole-party only. */
   tick(poses:Pose[],now=Date.now()):Tick{
     const w=this.world;
+    // A legal ascent is a two-stage event: detach from an actual human tower,
+    // then arrive stably on the one-way elevated branch. Proximity alone cannot
+    // claim success. The ledge is not reachable with a ground double-jump.
+    if(w.climbReady&&!w.teoUpperReached&&w.supporting[0]===null
+      &&w.blackoutUntil===0&&w.deadUntil===0&&hasBranchFooting(poses[0])){
+      w.teoUpperReached=true;
+      return{changed:true};
+    }
     // Pose authority for the two supported players. Their bases retain physics.
     for(const seat of [1,0] as Seat[]){
       const base=w.supporting[seat];
@@ -237,6 +265,7 @@ export class LoopAuthority{
       this.checkExit();
       // Detach temporary human towers before moving collisions; progress stays saved.
       w.supporting=[null,null,null];
+      w.climbReady=false;
       const corrected=safeReposition(poses,w);
       return{changed:true,poses:corrected};
     }
@@ -256,7 +285,7 @@ export class LoopAuthority{
         const correct=ROUTES[w.layout].correct===route;
         w.lastRoute=correct?'right':'wrong';w.routeAt=now;w.routeCount++;
         const to=correct?ROUTES[w.layout].advanceTo:ROUTES[w.layout].returnTo;
-        w.supporting=[null,null,null];
+        w.supporting=[null,null,null];w.climbReady=false;
         const moved=poses.map((p,i)=>({...p,x:to+i*39,y:606,vx:0,vy:0}));
         return{changed:true,poses:moved};
       }
@@ -265,7 +294,7 @@ export class LoopAuthority{
     if(now-w.routeAt>=3200&&w.bridge&&poses.every(p=>near(p,3070,605,115,53)&&safeForRoute(p))
       &&w.layout!==2){
       w.lastRoute='wrong';w.routeAt=now;w.routeCount++;
-      w.supporting=[null,null,null];
+      w.supporting=[null,null,null];w.climbReady=false;
       return{changed:true,poses:LOOP_START.map(p=>({...p}))};
     }
     return{changed:false};
