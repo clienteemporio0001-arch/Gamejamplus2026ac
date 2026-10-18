@@ -219,9 +219,8 @@ export class ForestLoopScene extends Phaser.Scene {
       for(let i=0;i<6;i++){
         const leaf=this.add.ellipse(x-116+i*45,494+i%2*16,
           10+i%3*3,6,0xb6d6a4,.65).setDepth(15);
-        this.tweens.add({targets:leaf,
-          x:leaf.x+(i%2===0?14:-17),y:leaf.y-8,rotation:.6,
-          duration:1450+i*115,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
+        // Wind motion is calculated only for trails near the camera.
+        // No perpetual off-screen TweenManager jobs per leaf.
         leaves.push(leaf);
       }
       this.routeLeaves.push(leaves);
@@ -769,6 +768,19 @@ export class ForestLoopScene extends Phaser.Scene {
         const visible=anchorX>=left-200&&anchorX<=right+200;
         if(mist.visible!==visible)mist.setVisible(visible);
         if(visible)mist.x=anchorX+swayAt(w,anchorX,time,i)*65;
+      });
+      this.routeLeaves.forEach((leaves,routeIndex)=>{
+        const x=routeIndex===0?LOOP_GEOMETRY.portal.oca:LOOP_GEOMETRY.portal.pedra;
+        const visible=x>=left-230&&x<=right+230;
+        const direction=visible?windGuide(w,seat,x).direction:0;
+        leaves.forEach((leaf,i)=>{
+          if(leaf.visible!==visible)leaf.setVisible(visible);
+          if(!visible)return;
+          const phase=time/970+i*.87;
+          leaf.setPosition(x-116+i*45+Math.sin(phase)*10+direction*8,
+            494+i%2*16+Math.cos(phase)*6);
+          leaf.rotation=Math.sin(phase)*.22+direction*.1;
+        });
       });
     }
     this.art.update(time);
