@@ -42,7 +42,7 @@ export function missionSnapshot(phase:MissionPhase,world:MissionWorld):MissionSn
     'NINO: ATIVE O ARCO DE MADEIRA.'),
    part('mark-arch','DESCOBERTA',2,w.marks[2],markPosition(w,2),'SHIFT + E',
     'Funcionou! A passagem está aberta!',
-    'TRILHAS LIBERADAS! Reúnam os três na passagem indicada pelo vento!',
+    'Boa, equipe! Agora encontrem a trilha indicada pelo vento e reúnam os três na entrada!',
     'REÚNAM OS TRÊS NA PASSAGEM CERTA.')];
   const suspension:PartialBeat[]=[
    part('suspended-teo','PLATAFORMA SUSPENSA',0,w.suspended[0],SUSPENSION.lever,'E',
@@ -78,7 +78,7 @@ export function missionSnapshot(phase:MissionPhase,world:MissionWorld):MissionSn
     !w.marks[0]?'TÉO: INVESTIGUE A ÁRVORE OCA.':
     !w.marks[1]?'LIA: INVESTIGUE A PEDRA RACHADA.':
     !w.marks[2]?'NINO: ATIVE O ARCO DE MADEIRA.':
-    w.lastRoute!=='right'?'REÚNAM OS TRÊS NA PASSAGEM '+(route==='oca'?'DA ÁRVORE OCA.':'DA PEDRA RACHADA.') :
+    w.lastRoute!=='right'?'TRILHAS LIBERADAS! REÚNAM OS TRÊS NA PASSAGEM '+(route==='oca'?'DA ÁRVORE OCA.':'DA PEDRA RACHADA.') :
     !w.suspendedOpen?
       (!w.suspended[0]?'TÉO: COM A ESCADA HUMANA, ALCANCE A ALAVANCA ELEVADA.':
         !w.suspended[1]?'LIA: ACERTE A TRAVA DA PLATAFORMA SUSPENSA.':
