@@ -291,8 +291,12 @@ export function canStack(w:LoopWorld,seat:Seat,poses:readonly Pose[]):boolean{
     ||Math.abs(p.x-other.x)>45||Math.abs(p.y-other.y)>75)return false;
  const y=other.y-44,x=other.x;
  if(y<55||y>652)return false;
+ // Check the swept ascent, not merely the destination: no teleport through a
+ // thin shelf when mounting from below it.
+ const top=Math.min(y,p.y)-LOOP_PHYSICS.characterHeight/2;
+ const bottom=Math.max(y,p.y)+LOOP_PHYSICS.characterHeight/2;
  return stackBlockers(w).every(b=>Math.abs(x-b.x)>=b.width/2+15
-    ||Math.abs(y-b.y)>=b.height/2+22);
+    ||bottom<=b.y-b.height/2||top>=b.y+b.height/2);
 }
 
 type Tick={changed:boolean;poses?:Pose[];reset?:boolean;won?:boolean};
@@ -477,13 +481,23 @@ export class LoopAuthority{
       w.teoSummitReached=true;
       return{changed:true};
     }
-    // Pose authority for the two supported players. Their bases retain physics.
+    // Pose authority for the two supported players. No ladder passenger may
+    // tunnel into a wall or one-way plank while the base moves underneath it.
+    let supportChanged=false;
+    const solids=w.supporting[1]!==null||w.supporting[0]!==null?stackBlockers(w):[];
     for(const seat of [1,0] as Seat[]){
       const base=w.supporting[seat];
-      if(base!==null){
-        poses[seat].x=poses[base].x;poses[seat].y=Math.max(30,poses[base].y-44);
-        poses[seat].vx=poses[base].vx;poses[seat].vy=0;
+      if(base===null)continue;
+      const passenger=poses[seat],carrier=poses[base],x=carrier.x,y=carrier.y-44;
+      const intersect=solids.some(b=>Math.abs(x-b.x)<b.width/2+15
+        &&Math.abs(y-b.y)<b.height/2+22);
+      if(intersect||w.health[seat]<=0||w.health[base]<=0){
+        w.supporting[seat]=null;supportChanged=true;
+        if(seat===1)w.supporting[0]=null;
+        continue;
       }
+      passenger.x=x;passenger.y=Math.max(30,y);
+      passenger.vx=carrier.vx;passenger.vy=0;
     }
     if(w.deadUntil>0){
       if(now<w.deadUntil)return{changed:false};
@@ -537,6 +551,6 @@ export class LoopAuthority{
       w.supporting=[null,null,null];w.climbReady=false;
       return{changed:true,poses:LOOP_START.map(p=>({...p}))};
     }
-    return{changed:false};
+    return{changed:supportChanged};
   }
 }
