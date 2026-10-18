@@ -35,7 +35,7 @@ export const hasBranchFooting=(p:Pose):boolean=>
 export const markerBaseY=638;
 export const LOOP_MARKS=[
   {x:700,y:510,seat:0,name:'ÁRVORE OCA'},
-  {x:1000,y:586,seat:1,name:'PEDRA RACHADA'},
+  {x:1000,y:598,seat:1,name:'PEDRA RACHADA'},
   {x:1260,y:589,seat:2,name:'TRONCO EM ARCO'},
 ] as const;
 export const LOOP_TREE=[

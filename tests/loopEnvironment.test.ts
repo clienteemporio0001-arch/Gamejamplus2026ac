@@ -27,7 +27,7 @@ ok(scene.includes('LOOP_MARKS[index]')&&scene.includes('mark.y-markerBaseY'),
   'brilho da interação usa posição do mesmo marco');
 ok(scene.includes('stoneHitbox')&&scene.includes('this.blocks.push(stoneHitbox)'),
   'rocha natural possui colisão estática proporcional');
-ok(Math.abs(606-18-LOOP_MARKS[1].y)<=4,
+ok(Math.abs((LOOP_GEOMETRY.clearing.groundY-LOOP_PHYSICS.characterHeight/2)-18-LOOP_MARKS[1].y)<=4,
   'projétil horizontal de Lia cruza o centro da rachadura');
 ok(LOOP_MARKS[1].y>markerBaseY-104&&LOOP_MARKS[1].y<markerBaseY,
   'rachadura dentro da altura visual da rocha');
