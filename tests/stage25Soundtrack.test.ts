@@ -15,7 +15,7 @@ for(const [key,spec] of Object.entries(SCORE_CATALOG)){
  const bytes=readFileSync(file);
  assert.ok(bytes.subarray(0,3).toString()==='ID3'||(bytes[0]===0xff&&(bytes[1]&0xe0)===0xe0),
    'MP3 header: '+file);
- const metadata=manifest[key];
+ const metadata=manifest[spec.file.replace('.mp3','')];
  assert.ok(metadata&&metadata.file===spec.file);
  assert.ok(metadata.durationSeconds>=60&&metadata.durationSeconds<=120);
  assert.ok(Math.abs(metadata.durationSeconds-spec.seconds)<.05);
