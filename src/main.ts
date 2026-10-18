@@ -5,7 +5,7 @@ import { ForestScene } from './forestScene';
 import { ForestLoopScene } from './forestLoopScene';
 import { TemporalForestScene } from './temporalForestScene';
 import { TreetopForestScene } from './treetopForestScene';
-import { TREE_CYCLE,treeObjective,treeWind } from './treetopForest';
+import { TREE_CYCLE,treeObjective,treeWind,treeExposure } from './treetopForest';
 import { TEMP_CYCLE,temporalObjective,tempWind } from './temporalForest';
 import { IntroScene } from './intro';
 import { RiverScene } from './riverScene';
@@ -146,8 +146,13 @@ function refreshHud(): void {
     update('loop-objective',objective.title);
     update('loop-progress',objective.progress);
     update('loop-wind',net.level===3?
-      (treeWind(net.treetop,net.poses[net.localSeat].x)<0?'VENTO ◀':
-       treeWind(net.treetop,net.poses[net.localSeat].x)>0?'VENTO ▶':'VENTO ↓'):
+      (net.treetop.windPhase==='gust'?
+        (treeExposure(net.poses[net.localSeat])===0?'🛡 ABRIGADO':
+          (net.treetop.windDirection>0?'🌪 RAJADA ▶':'◀ RAJADA 🌪')):
+       net.treetop.windPhase==='warning'?
+        (net.treetop.windDirection>0?'⚠ VENTO FORTE ▶':'◀ VENTO FORTE ⚠'):
+       (treeWind(net.treetop,net.poses[net.localSeat].x)<0?'VENTO ◀':
+        treeWind(net.treetop,net.poses[net.localSeat].x)>0?'VENTO ▶':'VENTO ↓')):
       net.level===2?
       (tempWind(net.temporal,net.poses[net.localSeat].x)<0?'CHUVA ◀':
        tempWind(net.temporal,net.poses[net.localSeat].x)>0?'CHUVA ▶':'CHUVA ↓'):
