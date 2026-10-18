@@ -105,9 +105,9 @@ expect('Trabalhem juntos para derrubar a árvore.','Amarras 2/3');
 w.bridge=true;
 expect('Destravem a saída juntos.','Travas 0/3');
 w.final=[true,true,true];
-expect('Aguardem a floresta C.','Travas 3/3');
+expect('As três travas abrirão o caminho.','Travas 3/3');
 w.exit=true;
-expect('Reúnam os três na saída.','Equipe 0/3');
+expect('TRILHA PARA A FLORESTA TEMPORAL','AMIGOS REUNIDOS: 0/3');
 w.completed=true;
 expect('A equipe encontrou a saída.','3 / 3');
 ok(regionTitle(5660)==='CLAREIRA CENTRAL'&&regionTitle(8150)==='PLATAFORMA SUSPENSA',
