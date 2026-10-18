@@ -66,6 +66,14 @@ export const TREE_TARGETS={
  time:{lia:{x:4840,y:241},teo:{x:4865,y:169},nino:{x:5050,y:193}},
  exit:{x:5142,y:157}
 } as const;
+/** Shared scene/authority interaction bounds. */
+export const TREE_TOWER_REACH={baseX:105,baseY:105,topX:72,topY:70} as const;
+export function treeTowerNearBase(p:Pick<Pose,'x'|'y'>):boolean{
+ return Math.abs(p.x-TREE_TARGETS.tower.base.x)<=TREE_TOWER_REACH.baseX&&Math.abs(p.y-TREE_TARGETS.tower.base.y)<=TREE_TOWER_REACH.baseY;
+}
+export function treeTowerNearTop(p:Pick<Pose,'x'|'y'>):boolean{
+ return Math.abs(p.x-TREE_TARGETS.tower.top.x)<=TREE_TOWER_REACH.topX&&Math.abs(p.y-TREE_TARGETS.tower.top.y)<=TREE_TOWER_REACH.topY;
+}
 export type TreeWindPhase='calm'|'warning'|'gust';
 export const TREE_WIND_PERIOD=18000,TREE_GUST_WARNING=1700,TREE_GUST_DURATION=4400;
 export const TREE_GUST_OFFSET=8700;
@@ -277,7 +285,7 @@ export class TreeAuthority{
   if(kind==='support'&&(seat===0||seat===1)){
    const base:Seat=seat===0?1:2,b=poses[base];
    if(!b||w.supporting[seat]!==null||!close(p,b.x,b.y,49,69)
-    ||!close(p,TREE_TARGETS.tower.base.x,TREE_TARGETS.tower.base.y,105,105)
+    ||!treeTowerNearBase(p)
     ||!w.bridgeOpen||w.ropeOpen)return false;
    if(seat===0&&w.supporting[1]!==2)return false;
    w.supporting[seat]=base;
@@ -306,7 +314,7 @@ export class TreeAuthority{
   }else if(!w.ropeOpen){
    if(seat===0&&kind==='lever'&&w.tower[0]&&w.tower[1]
      &&w.supporting[0]===null&&!windy
-     &&close(p,TREE_TARGETS.tower.top.x,TREE_TARGETS.tower.top.y,64,35)
+     &&treeTowerNearTop(p)
      &&Math.abs(p.vy)<110)changed=w.tower[2]=true;
    if(w.tower.every(Boolean))w.ropeOpen=true;
   }else if(!w.finalOpen){
