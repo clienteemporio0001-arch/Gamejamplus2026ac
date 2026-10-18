@@ -3,7 +3,7 @@ import {PipoGuide} from './pipoGuide';
 import {SUSPENSION,SUSPENSION_LANDING_Y,LOOP_TERRAIN,LOOP_NATURAL_LEDGES,LOOP_LAYOUT_BRANCHES} from './forestLoop';
 import {MissionDirector} from './missionDirector';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
-import { LOOP_WIDTH, LOOP_GEOMETRY, LOOP_MARKS, LOOP_TREE, LOOP_FINAL, ROUTES, barriers,
+import { LOOP_WIDTH, LOOP_GEOMETRY, LOOP_MARKS, markPosition, LOOP_TREE, LOOP_FINAL, ROUTES, barriers,
   allDone, windGuide, blackoutActive, warningActive, type LoopWorld, LOOP_START,
   UPPER_BRANCH,SUMMIT_BRANCH,upperLandingY,summitLandingY,markerBaseY,hasBranchFooting,hasSummitFooting } from './forestLoop';
 import { NightArt } from './visuals';
@@ -442,7 +442,7 @@ export class ForestLoopScene extends Phaser.Scene {
     });
     this.marks.forEach((mark,i)=>{
       // Static targets must never drift away from host collision coordinates.
-      mark.setX(LOOP_MARKS[i].x);
+      mark.setX(markPosition(w,i).x);
       mark.setAlpha(w.marks[i]?.56:1);
       const image=mark.list[0] as Phaser.GameObjects.Image;
       image.setTint(w.marks[i]?[0xa9e5b4,0xe6d69e,0xa4dded][i]:0xffffff);
@@ -463,7 +463,7 @@ export class ForestLoopScene extends Phaser.Scene {
       if(w.lastRoute==='right'&&!w.suspended[0]&&
         Math.abs(x-SUSPENSION.lever.x)<65&&Math.abs(y-SUSPENSION_LANDING_Y)<22)
         this.net.act({kind:'lever'});
-      else if(w.observed && !w.marks[0]&&Math.abs(x-LOOP_MARKS[0].x)<90)
+      else if(w.observed && !w.marks[0]&&Math.abs(x-markPosition(w,0).x)<90)
         this.net.act({kind:'lever'});
       else if(allDone(w.marks)&&w.teoSummitReached&&!w.tree[0]
         &&hasSummitFooting({seat,x,y,vx:this.body.velocity.x,vy:this.body.velocity.y})
