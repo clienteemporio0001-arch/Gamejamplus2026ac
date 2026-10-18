@@ -495,8 +495,21 @@ export class ForestLoopScene extends Phaser.Scene {
     const layoutChanged=this.w.layout!==w.layout;
     const transformationStarted=w.blackoutUntil>0&&this.w.blackoutUntil!==w.blackoutUntil;
     const wasUnlocked=allDone(this.w.marks),previousRouteCount=this.w.routeCount;
+    const oldSupporting=[...this.w.supporting];
     this.w={...w,marks:[...w.marks],tree:[...w.tree],final:[...w.final],
       suspended:[...w.suspended],supporting:[...w.supporting]};
+    // A discrete, pooled-cost (<300ms) confirmation, only when an actual
+    // host-approved mounting transition occurs (never every snapshot).
+    if(this.avatars.length===3)for(const seat of [1,0] as Seat[]){
+      const base=w.supporting[seat];
+      if(base===null||oldSupporting[seat]!==null)continue;
+      const anchor=this.avatars[base];
+      const puff=this.add.ellipse(anchor.x,anchor.y-22,35,9,
+        0xa5e7ad,.66).setDepth(34);
+      this.tweens.add({targets:puff,scaleX:1.6,scaleY:.55,
+        y:puff.y-11,alpha:0,duration:270,ease:'Sine.easeOut',
+        onComplete:()=>puff.destroy()});
+    }
     if(transformationStarted){
       const upcoming=((w.layout+1)%3) as 0|1|2;
       const previous=LOOP_LAYOUT_BRANCHES.filter(p=>p.layout===w.layout);
