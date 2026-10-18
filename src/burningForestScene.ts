@@ -8,6 +8,7 @@ import {gameKeys} from './keyboard';
 import type {VitalAction} from './loopVitals';
 import {PipoGuide} from './pipoGuide';
 import {BurningForestArt} from './burningForestArt';
+import {BurningForestAudio} from './burningForestAudio';
 import {
  FIRE_WIDTH,FIRE_HEIGHT,FIRE_START,FIRE_PLATFORMS,FIRE_TARGETS,
  firePlatforms,fireTreePhase,fireHeavySmoke,fireDamageZone,fireFlareActive,
@@ -19,6 +20,7 @@ export class BurningForestScene extends Phaser.Scene {
  private net:Network;private touch:TouchInput;private hud?:()=>void;
  private world:FireWorld;
  private art!:BurningForestArt;private pipo!:PipoGuide;
+ private audio!:BurningForestAudio;
  private platforms:Phaser.GameObjects.Rectangle[]=[];
  private skins:Phaser.GameObjects.Graphics[]=[];
  private gate!:Phaser.GameObjects.Rectangle;
@@ -52,6 +54,7 @@ export class BurningForestScene extends Phaser.Scene {
   this.physics.world.setBounds(0,0,FIRE_WIDTH,FIRE_HEIGHT+200);
   this.physics.world.setBoundsCollision(true,true,false,false);
   this.art=new BurningForestArt(this);
+  this.audio=new BurningForestAudio();
   for(const p of FIRE_PLATFORMS){
    const rect=this.add.rectangle(p.x,p.y,p.width,p.height,0xffffff,.001).setDepth(11);
    this.physics.add.existing(rect,true);
@@ -164,6 +167,7 @@ export class BurningForestScene extends Phaser.Scene {
   };
   this.scale.on(Phaser.Scale.Events.RESIZE,onResize);onResize(this.scale.gameSize);
   this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{
+   this.audio.destroy();
    this.off.forEach(off=>off());this.scale.off(Phaser.Scale.Events.RESIZE,onResize);
   });
  }
@@ -278,6 +282,7 @@ export class BurningForestScene extends Phaser.Scene {
    inFire?'⚠ CHAMAS ATIVAS':'';
   this.dangerText.setText(warning).setVisible(Boolean(warning)&&!pause);
   this.art.update(w,poses,time,now);
+  this.audio.update(w,now);
   this.pipo.update(time,this.local.x,this.local.y,pause);
   this.cameras.main.followOffset.x=Phaser.Math.Linear(
    this.cameras.main.followOffset.x,this.facing*42,.035);
