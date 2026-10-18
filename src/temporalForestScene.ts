@@ -152,6 +152,7 @@ export class TemporalForestScene extends Phaser.Scene {
   this.art.water(TEMP_CHANNEL.start,TEMP_CHANNEL.end,638);
   this.text(2800,511,'CORRENTEZA PROFUNDA',14,'#efc6b3').setAlpha(.9);
  }
+ preload():void{preloadOfficialLandmarks(this);}
  create():void{
   this.physics.world.setBounds(0,0,TEMP_WIDTH,900);
   this.physics.world.setBoundsCollision(true,true,false,false);
