@@ -1,5 +1,49 @@
 # A FLORESTA MENTE — MAS O VENTO NÃO
 
+## Etapa 20 — base visual e técnica para revisar as quatro fases
+
+A aventura principal mantém **01 A Boca da Noite → 02 A Floresta Temporal →
+03 Caminho das Árvores → 04 Floresta em Chamas**, com encerramento cooperativo.
+A implementação da **Etapa 20 não altera as geometrias nem as regras dos puzzles**.
+
+- **Menu:** duas entradas principais (Jogar Sozinho / Multiplayer Online), convite
+  com código, Como Jogar, Configurações, Créditos e ferramentas de desenvolvimento
+  recolhidas em uma seção secundária. Fundo animado com folhas e névoa.
+- **Personagens:** `src/sharedCharacterArt.ts` centraliza formas, proporções e
+  animações dos três amigos nas quatro fases e no prólogo. Os retângulos da
+  física Arcade continuam com as dimensões originais.
+- **Pipo:** dicas de todas as fases, prioridade para alertas de perigo,
+  progressão de ajuda e redução de mensagens repetidas.
+- **HUD:** estado A/B/C, ciclo, vento, objetivo, três corações e estamina de
+  cada amigo; no solo, o personagem ativo é destacado. A Fase 4 mostra seu
+  ciclo de fogo e não inventa apagões ausentes no bioma.
+- **Áudio:** síntese procedural de ambientes e efeitos via Web Audio API,
+  com volumes de música ambiente, efeitos e botão de silenciar. Não há
+  trilha comercial nem necessidade de API externa. Respeita gesto de autoplay.
+- **Mobile:** joystick analógico multitouch já existente, botões e safe areas
+  preservados. O prólogo agora adapta zoom à tela sem distorcer sua proporção.
+- **Desenvolvimento:** ao iniciar uma fase pelo painel de testes, surge uma
+  opção interna com posição, estado/ciclo e status dos mecanismos. Reinício,
+  troca de personagem e avanço de ciclo são restritos ao solo de teste.
+- **Créditos e revisão:** consulte
+  `docs/CREDITOS_E_LICENCAS.md` e `docs/REVISAO_DAS_FASES.md`.
+
+**Ponto de restauração anterior:** branch `backup/etapa19-estavel-20261018`,
+commit `129fdccb7ad7424fae293a1f38f067c7676e5a64`.
+Esta referência fica intacta para permitir comparação futura.
+
+**Validação automatizada:** `npm run build` e `npm run test:logic`, exigidos
+pela publicação em `.github/workflows/pages.yml`.
+**Pendente:** percurso manual completo nas quatro fases, multiplayer real com
+três dispositivos, validação visual, FPS e controles em Android horizontal.
+Passar nos testes automáticos não comprova ausência de softlocks.
+
+**Versão HTML5:** https://clienteemporio0001-arch.github.io/Gamejamplus2026ac/
+
+---
+
+# A FLORESTA MENTE — MAS O VENTO NÃO
+
 ## Etapa 15 — joystick analógico, escalada em dois galhos e queda perigosa
 
 **Controles:** o mobile substituiu os botões direcionais por joystick analógico virtual à esquerda, com raio limitado e zona morta de 15%. A manopla acompanha o dedo, gera `TouchInput.moveX` normalizado entre −1 e +1 e volta ao centro ao soltar, cancelar ou perder foco. Outro dedo continua podendo pressionar PULAR, E ou a habilidade. Téo não tem botão de habilidade redundante. O teclado continua digital e tem prioridade quando há A/D ou setas. O joystick não aumenta a velocidade máxima e os botões de habilidade continuam sujeitos à autoridade. Os protótipos clássicos mantêm compatibilidade via flags left/right sintetizadas a partir do eixo.
