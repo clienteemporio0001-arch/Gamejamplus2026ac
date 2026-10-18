@@ -6,7 +6,7 @@ import {FrameProfiler,SCENARIOS} from './performanceDiagnostics';
 import {animateForestProps} from './forestTransformFX';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import { LOOP_WIDTH, LOOP_GEOMETRY, LOOP_MARKS, markPosition, LOOP_TREE, LOOP_FINAL, ROUTES, barriers,
-  allDone, windGuide, blackoutActive, warningActive,trailOccupants,correctRoute,TRAIL_MEET_RADIUS_X,type LoopWorld, LOOP_START,
+  allDone, windGuide, blackoutActive, warningActive,trailOccupants,correctRoute,TRAIL_MEET_RADIUS_X,canStack,suspensionLeverStatus,SUSPENSION_LEVER_FEEDBACK,type LoopWorld, LOOP_START,
   UPPER_BRANCH,SUMMIT_BRANCH,upperLandingY,summitLandingY,markerBaseY,hasBranchFooting,hasSummitFooting } from './forestLoop';
 import { NightArt } from './visuals';
 import { loopContext, regionTitle } from './forestLoopUI';
@@ -41,6 +41,9 @@ export class ForestLoopScene extends Phaser.Scene {
   private suspension!:Phaser.GameObjects.Container;
   private suspensionCollider!:Phaser.GameObjects.Rectangle;
   private suspensionCables!:Phaser.GameObjects.Graphics;
+  private leverArt!:Phaser.GameObjects.Graphics;
+  private useFeedback!:Phaser.GameObjects.Text;
+  private useFeedbackUntil=0;
   private layoutLedges:Phaser.GameObjects.Rectangle[]=[];
   private hollowLedge!:Phaser.GameObjects.Rectangle;
   private stoneHitbox!:Phaser.GameObjects.Rectangle;
@@ -302,12 +305,11 @@ export class ForestLoopScene extends Phaser.Scene {
     const oneWay=high.body as Phaser.Physics.Arcade.StaticBody;
     oneWay.checkCollision.left=false;oneWay.checkCollision.right=false;
     oneWay.checkCollision.down=false;oneWay.checkCollision.up=true;
-    const lever=this.add.graphics().setDepth(23);
-    lever.lineStyle(7,0x8fae77,1);lever.lineBetween(
-      SUSPENSION.lever.x,SUSPENSION.lever.y+23,
-      SUSPENSION.lever.x,SUSPENSION.lever.y-10);
-    lever.fillStyle(0xffd38b,.95);
-    lever.fillCircle(SUSPENSION.lever.x,SUSPENSION.lever.y-12,9);
+    const lever=this.add.graphics().setDepth(23)
+      .setPosition(SUSPENSION.lever.x,SUSPENSION.lever.y);
+    lever.lineStyle(7,0x8fae77,1);lever.lineBetween(0,23,0,-10);
+    lever.fillStyle(0xffd38b,.95);lever.fillCircle(0,-12,9);
+    this.leverArt=lever;
     for(const spot of [SUSPENSION.lia,SUSPENSION.nino]){
       this.add.circle(spot.x,spot.y-15,11,0xb7edac,.28)
         .setStrokeStyle(2,0xc8e1b1,.8).setDepth(22);
@@ -368,6 +370,17 @@ export class ForestLoopScene extends Phaser.Scene {
     this.cursors=this.input.keyboard?.createCursorKeys();
     this.keys=this.input.keyboard?.addKeys('A,D,E') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
     this.pipo=new PipoGuide(this,this.net);
+    this.useFeedback=this.add.text(this.scale.gameSize.width/2,
+      this.scale.gameSize.height-150,'',{
+      fontFamily:'Arial',fontSize:'14px',fontStyle:'bold',color:'#f7f4cf',
+      backgroundColor:'#0d2927ed',stroke:'#071b18',strokeThickness:2,
+      padding:{left:12,right:12,top:8,bottom:8},
+      align:'center',wordWrap:{width:Math.min(350,this.scale.gameSize.width-36)}
+    }).setOrigin(.5).setScrollFactor(0).setDepth(182).setVisible(false);
+    this.off.push(this.net.on('loop-lever-reply',reply=>{
+      this.notifyUse(SUSPENSION_LEVER_FEEDBACK[reply.reason]);
+      if(reply.ok)this.pipo.warnDanger('Boa, Téo! A passarela está se movendo. Lia, prepare a baladeira!');
+    }));
    this.missions=new MissionDirector(this,this.net,1,this.avatars);
     this.contextText=this.label(0,0,'',12,'#e7f4d6')
       .setDepth(70).setVisible(false).setWordWrapWidth(230);
@@ -609,16 +622,37 @@ export class ForestLoopScene extends Phaser.Scene {
         :'Essa trilha nos trouxe de volta! O vento mudou. Vamos procurar outra!');
     }
   }
+  private notifyUse(message:string):void{
+    this.useFeedback.setText(message).setVisible(true);
+    this.useFeedbackUntil=this.time.now+2450;
+  }
   private action(seat:Seat):void{
-    const x=this.local.x,y=this.local.y,w=this.w;
-    // A supported person always detaches on E; jumping also detaches via vitality.
+    const x=this.local.x,y=this.local.y,w=this.net.loop;
+    // A supported person always detaches on E. For mounted Téo, E releases
+    // the tower; PULAR starts the assisted ascent towards the high branch.
     if((seat===0||seat===1)&&w.supporting[seat]!==null){
-      this.net.act({kind:'detach'});return;
+      this.net.act({kind:'detach'});
+      if(seat===0&&w.lastRoute==='right'&&!w.suspended[0]&&
+         Math.abs(x-SUSPENSION.lever.x)<190)
+        this.notifyUse('Téo soltou o apoio. Salte até o galho superior e use E na alavanca.');
+      return;
     }
     if(seat===0){
-      if(w.lastRoute==='right'&&!w.suspended[0]&&
-        Math.abs(x-SUSPENSION.lever.x)<65&&Math.abs(y-SUSPENSION_LANDING_Y)<22){
-        this.net.act({kind:'lever'});return;
+      if(w.lastRoute==='right'&&Math.abs(x-SUSPENSION.lever.x)<=190){
+        if(!w.suspended[0]){
+          // The first E may legitimately mount the human tower. Once
+          // mounted/detached, every E near the lever reaches the HOST,
+          // which validates branch landing, speed and tower milestones.
+          if(canStack(w,seat,this.net.poses)){
+            this.net.act({kind:'support'});
+            return;
+          }
+          this.net.act({kind:'lever'});
+          return;
+        }
+        this.notifyUse(SUSPENSION_LEVER_FEEDBACK[
+          w.suspendedX!==w.suspendedTo?'moving':'finished']);
+        return;
       }
       if(w.observed&&!w.marks[0]&&Math.abs(x-markPosition(w,0).x)<=68&&
         Math.abs(y-markPosition(w,0).y)<=87){
@@ -635,8 +669,12 @@ export class ForestLoopScene extends Phaser.Scene {
       }
     }
     if(seat===2){this.net.act({kind:'switch'});return;}
-    // Universal cooperative ability: the authority validates footing,
-    // free space, distance and stable bodies regardless of sector or puzzle.
+    // Existing universal human tower, subject to all host collision checks.
+    if(seat===1&&w.lastRoute==='right'&&!w.suspended[0]&&
+      Math.abs(x-SUSPENSION.lever.x)<185&&!canStack(w,seat,this.net.poses)){
+      this.notifyUse('Aproxime Lia de Nino, que precisa ficar parado em solo seguro.');
+      return;
+    }
     this.net.act({kind:'support'});
   }
   private requestVital(kind:VitalAction,seat:Seat):void{
@@ -684,9 +722,14 @@ export class ForestLoopScene extends Phaser.Scene {
       if(dir)this.facing=dir>0?1:-1;
       const grounded=this.body.blocked.down||this.body.touching.down;
       if(grounded)this.jumps=0;
-      const jumping=gameKeys.consumeJump()||consumeTouch(this.touch,'jump');
-      const using=Boolean((this.keys?.E&&Phaser.Input.Keyboard.JustDown(this.keys.E))||consumeTouch(this.touch,'interact'));
-      const special=gameKeys.consumeSkill(seat)||consumeTouch(this.touch,'ability');
+      // Always drain each touch queue even when a keyboard key is held;
+      // short-circuit OR left a queued USAR for the following frame.
+      const touchJump=consumeTouch(this.touch,'jump');
+      const touchUse=consumeTouch(this.touch,'interact');
+      const touchSkill=consumeTouch(this.touch,'ability');
+      const jumping=gameKeys.consumeJump()||touchJump;
+      const using=Boolean((this.keys?.E&&Phaser.Input.Keyboard.JustDown(this.keys.E))||touchUse);
+      const special=gameKeys.consumeSkill(seat)||touchSkill;
       this.touch.jump=false;this.touch.interact=false;this.touch.ability=false;
       if(base===null){
         const dashing=seat===2&&time<this.dashUntil;
@@ -698,10 +741,12 @@ export class ForestLoopScene extends Phaser.Scene {
         this.body.setVelocityX(0);
         if(jumping&&!this.pendingJump)this.requestVital('jump',seat);
       }
-      if(using)this.action(seat);
-      if(special)this.ability(seat,time);
+      // Refresh host-owned poses BEFORE testing E/USAR. Previously the
+      // authority could see last frame's height/velocity at the high branch.
       if(base===null)this.net.report(this.local.x,this.local.y,this.body.velocity.x,this.body.velocity.y);
       this.solo?.report();
+      if(using)this.action(seat);
+      if(special)this.ability(seat,time);
     }
     const v=this.net.poses;
     for(const i of [0,1,2] as Seat[]){
@@ -737,6 +782,11 @@ export class ForestLoopScene extends Phaser.Scene {
     }
     this.regionToast.setVisible(time<this.regionUntil&&!pause);
     this.trailToast.setVisible(time<this.crossingBannerUntil&&!pause);
+    this.useFeedback.setVisible(time<this.useFeedbackUntil&&!pause);
+    if(this.useFeedback.visible){
+      this.useFeedback.setPosition(this.scale.gameSize.width/2,
+        Math.max(170,this.scale.gameSize.height-158));
+    }
     this.missions.update(time,pause);
    this.pipo.update(time,this.local.x,this.local.y,pause);
     // Trail instructions remain visible whenever the selected character approaches.
