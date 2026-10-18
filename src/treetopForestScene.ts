@@ -80,7 +80,7 @@ export class TreetopForestScene extends Phaser.Scene {
   for(let i=0;i<75;i++)this.leafParticles.push({
    x:(i*233)%TREE_WIDTH,y:(i*83)%TREE_HEIGHT,speed:13+i%7*5,phase:i*1.91});
   // Floating landmarks explain each cooperative obstacle.
-  const markers:[
+  const markers=[
    [2960,240,'1 · PONTE DOS TRÊS'],[3540,135,'2 · ESCADA HUMANA'],
    [3890,55,'3 · GALHOS DO TEMPO'],[4170,55,'A ÚLTIMA COPA']
   ] as const;
