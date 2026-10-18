@@ -623,3 +623,67 @@ body.playing{overflow:hidden;touch-action:none;overscroll-behavior:none}
  #ui:not(.in-game)::after,.menu-atmosphere i,.menu-atmosphere:before,
  .menu-atmosphere:after{animation:none}
 }
+
+/* ETAPA 22: a single physical toolbar, superseding separate legacy Pipo/menu anchors. */
+#ui.in-game .game-tool-strip{
+ position:fixed;right:max(12px,env(safe-area-inset-right));
+ bottom:max(14px,env(safe-area-inset-bottom));
+ top:auto;left:auto;z-index:68;
+ display:flex;flex-direction:row;align-items:center;justify-content:flex-end;
+ gap:6px;isolation:isolate;max-width:calc(100vw - 25px);
+ pointer-events:auto
+}
+#ui.in-game .game-tool-strip #pipo-help,
+#ui.in-game .game-tool-strip .loop-menu{
+ position:relative!important;inset:auto!important;
+ top:auto!important;right:auto!important;bottom:auto!important;left:auto!important;
+ width:auto!important;height:36px!important;min-height:36px!important;
+ flex:0 0 auto;box-sizing:border-box;
+ display:flex;align-items:center;justify-content:center;
+ margin:0;z-index:auto
+}
+#ui.in-game .game-tool-strip #pipo-help{
+ min-width:84px!important;padding:7px 12px!important;
+ border-radius:9px;font-size:12px!important;white-space:nowrap
+}
+#ui.in-game .game-tool-strip .loop-menu summary{
+ display:flex;align-items:center;justify-content:center;
+ box-sizing:border-box;min-width:90px;width:auto!important;
+ min-height:36px;height:36px!important;padding:6px 12px!important;
+ font-size:14px!important;border-radius:9px
+}
+#ui.in-game .game-tool-strip .loop-menu summary span{display:inline!important}
+#ui.in-game .game-tool-strip .loop-menu-options{
+ position:absolute!important;left:auto!important;right:0!important;
+ top:auto!important;bottom:calc(100% + 8px)!important;
+ width:min(230px,calc(100vw - 26px))!important;
+ max-height:min(65dvh,340px);overflow:auto;
+ z-index:75
+}
+@media (pointer:coarse) and (orientation:landscape){
+ #ui.in-game .game-tool-strip{
+  top:calc(max(6px,env(safe-area-inset-top)) + 55px);
+  bottom:auto;right:max(8px,env(safe-area-inset-right));
+  gap:5px
+ }
+ #ui.in-game .game-tool-strip #pipo-help,
+ #ui.in-game .game-tool-strip .loop-menu{height:30px!important;min-height:30px!important}
+ #ui.in-game .game-tool-strip #pipo-help{min-width:67px!important;padding:4px 8px!important;font-size:10px!important}
+ #ui.in-game .game-tool-strip .loop-menu summary{
+  min-height:30px;height:30px!important;min-width:77px;
+  padding:4px 8px!important;font-size:11px!important
+ }
+ #ui.in-game .game-tool-strip .loop-menu-options{
+  top:calc(100% + 6px)!important;bottom:auto!important;
+  max-height:calc(100dvh - 100px - env(safe-area-inset-bottom))
+ }
+}
+@media (pointer:coarse) and (orientation:portrait){
+ #ui.in-game .game-tool-strip{
+  top:calc(max(7px,env(safe-area-inset-top)) + 68px);
+  bottom:auto;right:max(8px,env(safe-area-inset-right))
+ }
+ #ui.in-game .game-tool-strip .loop-menu-options{
+  top:calc(100% + 6px)!important;bottom:auto!important
+ }
+}
