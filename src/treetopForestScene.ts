@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {preloadOfficialLandmarks,officialLandmark} from './officialLandmarks';
 import {PipoGuide} from './pipoGuide';
 import {CooperativeExitArt} from './cooperativeExitArt';
 import {MissionDirector} from './missionDirector';
@@ -49,9 +50,19 @@ export class TreetopForestScene extends Phaser.Scene {
   return this.add.text(x,y,value,{fontFamily:'Arial',fontSize:size+'px',fontStyle:'bold',
    color,stroke:'#071c1b',strokeThickness:4,align:'center'}).setOrigin(.5).setDepth(55);
  }
+ preload():void{preloadOfficialLandmarks(this);}
+
  private makeEnvironment():void{
   this.art=new TreetopArt(this,TREE_WIDTH,TREE_HEIGHT);
   for(const zone of TREE_SHELTERS)this.art.shelter(zone);
+  // Familiar landmark family beside host-approved challenge targets.
+  // Visual only; authority, collisions and puzzle positions are unchanged.
+  officialLandmark(this,'hollow','canopy',TREE_TARGETS.bridge.teo.x,463,
+    TREE_TARGETS.bridge.teo.y,.54);
+  officialLandmark(this,'stone','canopy',TREE_TARGETS.time.lia.x,283,
+    TREE_TARGETS.time.lia.y,.67);
+  officialLandmark(this,'arch','canopy',TREE_TARGETS.time.nino.x,239,
+    TREE_TARGETS.time.nino.y,.57);
   for(const target of [TREE_TARGETS.bridge.teo,TREE_TARGETS.bridge.lia,TREE_TARGETS.bridge.nino,
     TREE_TARGETS.tower.top,TREE_TARGETS.time.lia,TREE_TARGETS.time.teo,TREE_TARGETS.time.nino]){
    const ring=this.add.circle(target.x,target.y-12,11,0xf2d899,.2)
