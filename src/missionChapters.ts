@@ -42,7 +42,7 @@ export function missionSnapshot(phase:MissionPhase,world:MissionWorld):MissionSn
     'NINO: ATIVE O ARCO DE MADEIRA.'),
    part('mark-arch','DESCOBERTA',2,w.marks[2],markPosition(w,2),'SHIFT + E',
     'Funcionou! A passagem está aberta!',
-    'Boa, equipe! Agora encontrem a trilha indicada pelo vento e reúnam os três na entrada!',
+    'TRILHAS LIBERADAS! Boa, equipe! Agora encontrem a trilha indicada pelo vento e reúnam os três na entrada!',
     'REÚNAM OS TRÊS NA PASSAGEM CERTA.')];
   const suspension:PartialBeat[]=[
    part('suspended-teo','PLATAFORMA SUSPENSA',0,w.suspended[0],SUSPENSION.lever,'E',
