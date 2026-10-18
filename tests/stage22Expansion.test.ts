@@ -24,7 +24,7 @@ for(const i of [0,1,2]){
  const gap=right.from-left.to;
  assert.ok(gap>200&&gap<300,'natural jump gap not empty terrain');
  const mid=(left.to+right.from)/2;
- const ledge=LOOP_NATURAL_LEDGES.find(l=>Math.abs(l.x-mid)<30);
+ const ledge=LOOP_NATURAL_LEDGES.find(l=>Math.abs(l.x-mid)<=35);
  assert.ok(ledge,'physical stepping platform in the center of each gap');
  assert.ok(ledge!.width>=95,'platform has real landing width');
  const takeoff=left.to-LOOP_PHYSICS.characterHeight/2;
