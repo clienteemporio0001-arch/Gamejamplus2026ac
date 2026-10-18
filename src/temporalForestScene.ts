@@ -123,11 +123,15 @@ export class TemporalForestScene extends Phaser.Scene {
    this.add.circle(p.x,p.y,12,markColor[i],.52).setDepth(14)
     .setStrokeStyle(2,0xe0e9bc,.55);
   }
-  for(let i=0;i<14;i++){
-   const x=110+i*290;
-   const pool=this.add.ellipse(x,639,126+(i%3)*33,13,0x5aadc0,.25)
-     .setDepth(10).setStrokeStyle(2,0xa1d4d1,.32);
-   this.pools.push(pool);
+  // Visible wet surfaces are the SAME coordinates as the authoritative friction zones.
+  // Deep water is drawn separately by NightArt and has fatal bounds in Network.
+  for(const [i,x] of TEMP_LAYOUTS[0].puddles.entries()){
+   this.pools.push(this.add.ellipse(x,638,150,13,0x5aadc0,.29)
+     .setDepth(10).setStrokeStyle(2,0xa1d4d1,.45));
+  }
+  for(const [x,width] of [[720,200],[1780,140],[3285,190]]){
+   this.add.ellipse(x,638,width,19,0x4c362a,.46).setDepth(9)
+     .setStrokeStyle(2,0x867157,.48);
   }
   // Regions A-E are not persistent text overlays.
   this.art.water(TEMP_CHANNEL.start,TEMP_CHANNEL.end,638);
@@ -234,7 +238,10 @@ export class TemporalForestScene extends Phaser.Scene {
   this.roots.forEach((r,i)=>r.setVisible(!w.tree[i]));
   this.stormShade.setFillStyle([0x1b3b46,0x254d64,0x112639][w.layout])
    .setAlpha([.12,.20,.27][w.layout]);
-  this.pools.forEach((p,i)=>p.setScale(w.layout===2?1.7:w.layout===1?1.36:1,1));
+  this.pools.forEach((p,i)=>{
+    p.x=TEMP_LAYOUTS[w.layout].puddles[i];
+    p.setScale(w.layout===2?1.2:w.layout===1?1.1:1,1);
+  });
  }
  private request(kind:VitalAction,seat:Seat){
   const id=this.net.requestVital(kind,this.facing);

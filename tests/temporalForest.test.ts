@@ -174,6 +174,10 @@ ok(scene.includes('this.solo=new SoloBodies')&&scene.includes("net.on('solo-seat
   'três corpos sem IA e mudança manual no solo');
 ok(scene.includes("tempSurface(w,this.local.x)")&&scene.includes("surface==='wet'")&&
    scene.includes("surface==='mud'"),'lama reduz velocidade e poça altera frenagem');
+ok(scene.includes('p.x=TEMP_LAYOUTS[w.layout].puddles[i]'),
+  'poças desenhadas exatamente nas áreas de atrito molhado de cada layout');
+ok(scene.includes('for(const [x,width] of [[720,200],[1780,140],[3285,190]]'),
+  'lama possui indicação visual nos três trechos lentos');
 ok(scene.includes("this.setActive(this.bridge,w.bridge)"),
   'colisão da ponte acompanha árvore encharcada');
 ok(scene.includes("this.setActive(this.temporary,TEMP_LAYOUTS[w.layout].temporaryBridge)"),
