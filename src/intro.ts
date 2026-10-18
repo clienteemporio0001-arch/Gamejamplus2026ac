@@ -1,11 +1,12 @@
 import Phaser from 'phaser';
+import {paintHero} from './sharedCharacterArt';
 import { CHARACTERS } from './network';
 
 const STORY = [
   'Era mais uma tarde de brincadeiras na beira da mata...',
   'Mas a diversão fez os três perderem a noção do tempo.',
   'Quando a boca da noite chegou, perceberam que a floresta havia mudado.',
-  'A floresta mente. E ninguém sairá dela sozinho.',
+  'A FLORESTA MENTE. MAS O VENTO NÃO. NINGUÉM FICA PARA TRÁS.',
 ] as const;
 /** Sequência cinematográfica leve; encerramento e skip são sempre decididos pelo anfitrião. */
 export class IntroScene extends Phaser.Scene {
@@ -43,10 +44,12 @@ export class IntroScene extends Phaser.Scene {
     this.tree.x = 1260;
     for (let i = 0; i < 3; i++) {
       const avatar = this.add.container(270 + i * 90, 583).setDepth(6);
-      const body = this.add.rectangle(0, -30, 34, 49, CHARACTERS[i].color).setStrokeStyle(3, 0x163327);
-      const face = this.add.rectangle(6, -40, 9, 5, 0xf4ffdf);
-      const name = this.add.text(0, -90, CHARACTERS[i].name, { fontFamily: 'Arial', fontSize: '17px', color: CHARACTERS[i].hex, fontStyle: 'bold' }).setOrigin(.5);
-      avatar.add([body, face, name]); this.characters.push(avatar);
+      const hero = this.add.graphics();hero.setPosition(0,-29);
+      paintHero(hero,i as 0|1|2);
+      const name = this.add.text(0, -98, CHARACTERS[i].name, {
+        fontFamily: 'Arial', fontSize: '17px', color: CHARACTERS[i].hex, fontStyle: 'bold'
+      }).setOrigin(.5);
+      avatar.add([hero,name]);this.characters.push(avatar);
       this.tweens.add({ targets: avatar, y: 580, yoyo: true, repeat: -1, duration: 510 + i * 110, ease: 'Sine.easeInOut' });
     }
     this.night = this.add.rectangle(600, 350, 1200, 700, 0x020d22, 0).setDepth(7);
