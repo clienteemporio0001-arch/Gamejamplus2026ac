@@ -1,5 +1,18 @@
 # A FLORESTA MENTE — MAS O VENTO NÃO
 
+## Etapa 14 — hotfix de controle e clareza da Floresta Temporal
+
+Foi removido o listener destrutivo de troca de personagem em src/main.ts. O touch pad tem estado de montagem explícito: ensureMobileControls() verifica integridade e remonta somente se não existir; updateMobileCharacter() altera o botão de habilidade e a seleção sem destruir os botões de movimentação, pulo e E; unmountMobileControls() encerra os listeners somente no menu, prólogo ou transição. A função mountMobilePad usa event delegation nos botões, captura IDs de toque individuais e remove listeners em shutdown, evitando vazamentos na troca de cena/reinício. A mesma instância de controle serve às Fases 1 e 2. Fullscreen e rotação atualizam o viewport sem reload.
+
+A transição Fase 01 → Fase 02 usa painel fixo ao viewport com margens seguras, fontes responsivas e altura máxima; não utiliza mais porcentagens sobre o container de jogo de altura zero. Em paisagem, Opções e ⛶ Tela Cheia são dois ícones com alturas iguais na mesma faixa superior direita; o menu de opções abre abaixo, dentro do viewport, e pode rolar caso necessário.
+
+Os três primeiros marcos da Floresta Temporal agora possuem arte própria de **ÁRVORE ENCHARCADA** (Téo usa E numa plataforma de madeira molhada), **PEDRA FENDIDA** (Lia precisa atirar J a partir da esquerda, na fenda) e **ARCO DE RAÍZES** (Nino dá dash desde a esquerda e pressiona E perto da raiz). Os indicadores são ancorados às coordenadas reais da autoridade e exibem rótulo/dica apenas quando o personagem correto está próximo. Um ✓ discreto permanece no mecanismo já concluído, enquanto a missão superior mostra Marcos 0/3 a 3/3. Isso não altera física, estamina, chuva, apagões ou cooperação.
+
+Verificar com `npm run build` e `npm run test:logic`, incluindo `tests/mobile14.test.ts`. Testes automatizados de código não substituem a validação visual de 915×412, 844×390, 740×360 e 1280×720 nem o teste físico em Android.
+
+---
+
+
 ## Etapa 13 — mobile responsivo (Fases 01 e 02)
 
 O Phaser agora utiliza `Phaser.Scale.RESIZE` com o viewport real (por exemplo 844×390, 915×412 ou 740×360). O canvas ocupa a tela inteira em vez de encaixar uma renderização fixa de 1200×700 com faixas laterais. A câmera ajusta SOMENTE o zoom e suas legendas fixas ao resize; os mundos, gravidade (850), salto (-465), velocidade, colisões, poses e puzzles permanecem nas coordenadas originais. O mesmo ajuste atua na Boca da Noite e na Floresta Temporal.

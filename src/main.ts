@@ -11,7 +11,7 @@ import { JourneyScene } from './journeyScene';
 import { LateScene } from './lateScene';
 import './style.css';
 import { gameKeys } from './keyboard';
-import {mountMobilePad,clearTouch} from './mobileControls';
+import {mountMobilePad,clearTouch,type MobilePadMount} from './mobileControls';
 import {viewportSize,isCoarseDevice,isMobilePortrait} from './mobileViewport';
 import { GUIDE_DIALOGUES } from './forestPresentation';
 import { loopObjective, loopWind } from './forestLoopUI';
@@ -25,7 +25,25 @@ let game: Phaser.Game | null = null;
 let activeMode: 'none' | 'intro' | 'level1' | 'level2' | 'level3' | 'level4' | 'loop' | 'temporal' = 'none';
 let info = '';
 let devToolsOpen=false;
-let unbindPad:(()=>void)|null=null;
+let mobilePad:MobilePadMount|null=null;
+function unmountMobileControls():void{
+  mobilePad?.destroy();mobilePad=null;
+  clearTouch(touch);
+}
+function ensureMobileControls():void{
+  if(!net.playing||net.localSeat===null){unmountMobileControls();return;}
+  if(!mobilePad||!mobilePad.ready()){
+    mobilePad?.destroy();
+    mobilePad=mountMobilePad(controls,touch,net.isSolo,net.localSeat,
+      seat=>net.selectSoloSeat(seat));
+  }else mobilePad.update(net.localSeat);
+}
+function updateMobileCharacter(seat:0|1|2):void{
+  gameKeys.clear();
+  // No DOM destruction: only active avatar and contextual ability button change.
+  mobilePad?.update(seat);
+  if(!mobilePad?.ready()&&net.playing)ensureMobileControls();
+}
 const fullscreen=document.querySelector<HTMLButtonElement>('#mobile-fullscreen')!;
 const rotate=document.querySelector<HTMLDivElement>('#rotate')!;
 function applyViewport():void{
@@ -58,7 +76,7 @@ async function requestFullscreen():Promise<void>{
 }
 fullscreen.addEventListener('click',()=>{void requestFullscreen();});
 window.addEventListener('resize',applyViewport,{passive:true});
-window.addEventListener('orientationchange',()=>{clearTouch(touch);applyViewport();},{passive:true});
+window.addEventListener('orientationchange',()=>{mobilePad?.reset();applyViewport();},{passive:true});
 window.visualViewport?.addEventListener('resize',applyViewport,{passive:true});
 document.addEventListener('fullscreenchange',()=>{
   const label=fullscreen.querySelector('span');
@@ -107,9 +125,7 @@ function exitGame(): void {
   game.destroy(true);
   game = null;
   activeMode = 'none';
-  unbindPad?.();unbindPad=null;
-  clearTouch(touch);
-  controls.replaceChildren();
+  unmountMobileControls();
 }
 function refreshHud(): void {
   if(net.playing&&net.experience==='loop'&&net.localSeat!==null){
@@ -165,15 +181,12 @@ function refreshHud(): void {
   }
 }
 setInterval(refreshHud, 150);
-function bindMobile(): void {
-  unbindPad?.();
-  unbindPad=mountMobilePad(controls,touch,net.isSolo,net.localSeat,
-    seat=>net.selectSoloSeat(seat));
-}
+
 function render(): void {
   gameKeys.setEnabled(net.playing);
   const showing = net.stage !== 'lobby' && net.role !== 'idle';
   document.body.classList.toggle('playing', net.playing);
+  if(!net.playing)unmountMobileControls();
   applyViewport();
   ui.classList.toggle('in-game', showing);
   if (showing) {
@@ -264,7 +277,7 @@ function render(): void {
       ui.querySelector('#leave')?.addEventListener('click',()=>net.shutdown());
       ui.querySelectorAll<HTMLButtonElement>('[data-seat]').forEach(button=>
         button.addEventListener('click',()=>net.selectSoloSeat(Number(button.dataset.seat) as 0|1|2)));
-      if(!controls.childElementCount)bindMobile();
+      ensureMobileControls();
       refreshHud();
       return;
     }
@@ -303,7 +316,7 @@ function render(): void {
     });
     document.querySelector<HTMLButtonElement>('#cabo-next')?.addEventListener('click', () => net.act({kind:'talk'}));
     document.querySelector<HTMLButtonElement>('#leave-win')?.addEventListener('click', () => net.shutdown());
-    if (!controls.childElementCount) bindMobile();
+    ensureMobileControls();
     return;
   }
   exitGame();
@@ -401,7 +414,7 @@ function showJoin(): void {
   });
 }
 gameKeys.bind();
-net.on('solo-seat',()=>{gameKeys.clear();unbindPad?.();unbindPad=null;controls.replaceChildren();clearTouch(touch);});
+net.on('solo-seat',seat=>updateMobileCharacter(seat));
 net.on('change',()=>{if(net.role==='idle')info='';render();});
 net.on('start', () => { info = ''; render(); });
 net.on('phase', () => { info = ''; render(); });

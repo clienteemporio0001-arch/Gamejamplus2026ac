@@ -275,22 +275,6 @@ export class TemporalForestScene extends Phaser.Scene {
     kind:w.supporting[seat]===null?'support':'detach'
   });
  }
- private caption(seat:Seat):string{
-  const w=this.w,p=this.local;
-  if(!w.echo.every(Boolean)){
-   const item=TEMP_ECHO[seat];
-   if(item&&!w.echo[seat]&&Math.abs(p.x-item.x)<170)
-    return seat===0?'E · Investigar marco molhado':seat===1?'J · Alvo na chuva':'SHIFT + E · Tronco alagado';
-  }else if(!w.bridge&&p.x>2250&&p.x<2600){
-   if(seat===0)return !w.stacked?'E · Apoio Nino → Lia → Téo':
-      !w.teoLanded?'ESPAÇO × 2 · Alcance o galho':'E · Solte a amarra';
-   return seat===1?'J · Acertar cipó':'SHIFT → E · Raiz encharcada';
-  }else if(w.bridge&&p.x>3100&&p.x<3920){
-   if(w.layout!==2)return 'A chuva indica esperar o ESTADO C.';
-   return seat===0?'E · Raiz elevada':seat===1?'J · Raiz protegida':'SHIFT → E · Plataforma temporária';
-  }
-  return '';
- }
  private renderRain(time:number):void{
   const budget=rainBudget(this.scale.gameSize.width<760);
   const colors=[0x87afb8,0x96c6d5,0xb7dbe5];

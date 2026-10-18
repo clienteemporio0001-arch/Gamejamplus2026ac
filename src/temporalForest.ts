@@ -67,7 +67,7 @@ export function tempBlocks(w:TemporalWorld){
  {x:4080,width:40,height:530,active:!w.exit}];
 }
 export function temporalObjective(w:TemporalWorld):{title:string;progress:string}{
- if(!w.echo.every(Boolean))return {title:'Reconheçam os marcos sob a chuva.',progress:'Marcos '+w.echo.filter(Boolean).length+'/3'};
+ if(!w.echo.every(Boolean))return {title:'Encontrem os três marcos.',progress:'Marcos '+w.echo.filter(Boolean).length+'/3'};
  if(!w.bridge)return {title:'Derrubem a árvore sobre a correnteza.',progress:'Amarras '+w.tree.filter(Boolean).length+'/3'};
  if(!w.roots.every(Boolean))return {title:'Esperem o estado C e liberem as raízes.',progress:'Raízes '+w.roots.filter(Boolean).length+'/3'};
  return {title:'Reúnam os três na saída da tempestade.',progress:'Passagem aberta'};
