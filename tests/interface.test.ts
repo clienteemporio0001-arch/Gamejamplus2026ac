@@ -95,7 +95,7 @@ w.marks[1]=true;
 ok(loopContext(w,2,markPosition(w,2).x-150,606,1001).includes('SHIFT'),
   'Nino recebe comando depois dos dois marcos anteriores');
 w.marks=[true,true,true];
-expect('TRILHAS LIBERADAS! SIGAM O VENTO.','PEDRA RACHADA · 0/3 AMIGOS');
+expect('TRILHAS LIBERADAS! SIGAM O VENTO.','SIGAM O VENTO · 0/3 AMIGOS');
 w.lastRoute='right';
 expect('Movam juntos a plataforma suspensa.','Mecanismos 0/3');
 w.suspended=[true,true,true];w.suspendedOpen=true;
