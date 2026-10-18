@@ -101,9 +101,13 @@ function button(id: string, label: string, secondary = false, disabled = false):
 }
 function notice(): string { return info ? '<div class="notice" role="status">' + safeText(info) + '</div>' : ''; }
 function banner(): string {
-  return '<span class="kicker">GAME JAM PLUS • BETTER TOGETHER / SOMETHING’S OFF</span>' +
-    '<h1>A FLORESTA<br>MENTE</h1><div class="subtitle">Mas o vento não.</div>' +
-    '<p>Quando chega a boca da noite, a floresta muda de lugar.<br>Três amigos. Uma saída. Ninguém pode ficar para trás.</p>';
+  return '<div class="menu-atmosphere" aria-hidden="true">'+
+    Array.from({length:12},(_,i)=>'<i style="--leaf:'+i+'"></i>').join('')+
+    '</div>'+
+    '<div class="brand-mark" aria-hidden="true"><span>✦</span><b>🌳</b><span>✦</span></div>'+
+    '<span class="kicker">GAME JAM PLUS • BETTER TOGETHER / SOMETHING’S OFF</span>' +
+    '<h1>A FLORESTA<br>MENTE</h1><div class="subtitle">MAS O VENTO NÃO.</div>' +
+    '<p>Quando chega a boca da noite, a floresta muda de lugar.<br>Três amigos. Uma saída. <strong>NINGUÉM FICA PARA TRÁS.</strong></p>';
 }
 /** The menu and the in-game options share one accessible, dismissible overlay. */
 type PanelKind='how'|'settings'|'credits'|'developer';
@@ -325,6 +329,8 @@ function render(): void {
   const showing = net.stage !== 'lobby' && net.role !== 'idle';
   document.body.classList.toggle('playing', net.playing);
   if(!net.playing)unmountMobileControls();
+  audio.setBiome(net.playing&&net.experience==='loop'?(['none','night','rain','treetop','fire'] as const)[net.level]:
+    net.stage==='intro'?'night':'none');
   applyViewport();
   ui.classList.toggle('in-game', showing);
   if (showing) {
@@ -487,14 +493,18 @@ function render(): void {
   exitGame();
   const panelStart = '<main class="panel">';
   if (net.role === 'idle') {
-    ui.innerHTML = panelStart + banner() + notice() +
+    ui.innerHTML = '<main class="panel menu-panel">' + banner() + notice() +
       '<div class="actions primary-play">'+
       button('loop-solo','JOGAR SOZINHO')+
-      button('create','MULTIPLAYER ONLINE')+
-      button('join-menu','ENTRAR COM CÓDIGO',true)+'</div>'+
+      button('create','MULTIPLAYER ONLINE')+'</div>'+ 
+      '<div class="menu-join">'+button('join-menu','ENTRAR COM CÓDIGO',true)+'</div>'+ 
+      '<nav class="menu-secondary" aria-label="Mais opções">'+
+      '<button id="show-how" type="button">COMO JOGAR</button>'+
+      '<button id="show-settings" type="button">CONFIGURAÇÕES</button>'+
+      '<button id="show-credits" type="button">CRÉDITOS</button></nav>'+
       '<details id="dev-tools" class="dev-tools" '+(devToolsOpen?'open':'')+'>'+
       '<summary>FERRAMENTAS DE DESENVOLVIMENTO</summary>'+
-      '<p>Protótipos antigos, separados da aventura principal.</p>'+
+      '<p>Início direto das fases da nova aventura em modo solo. Os protótipos clássicos ficam separados.</p>'+
       '<div class="dev-tools-actions">'+
       button('dev-loop','TESTAR FASE 01 · BOCA DA NOITE',true)+
       button('dev-temporal','TESTAR FASE 02 · FLORESTA TEMPORAL',true)+
@@ -503,19 +513,22 @@ function render(): void {
       ([1,2,3,4] as const).map(level=>button('dev-classic-'+level,'TESTAR FASE CLÁSSICA '+level,true)).join('')+
       button('create-classic','CRIAR SALA CLÁSSICA',true)+'</div></details>'+
       '<p class="menu-footnote">Multiplayer: três pessoas entram na mesma sala pelo código.</p></main>';
+    ui.querySelector('#show-how')?.addEventListener('click',()=>openPanel('how'));
+    ui.querySelector('#show-settings')?.addEventListener('click',()=>openPanel('settings'));
+    ui.querySelector('#show-credits')?.addEventListener('click',()=>openPanel('credits'));
     ui.querySelector('#dev-tools')?.addEventListener('toggle',()=>{
       devToolsOpen=(ui.querySelector<HTMLDetailsElement>('#dev-tools')?.open??false);
     });
-    ui.querySelector('#create')?.addEventListener('click',()=>{info='';void net.createRoom('loop');});
-    ui.querySelector('#create-classic')?.addEventListener('click',()=>{info='';void net.createRoom('classic');});
-    ui.querySelector('#loop-solo')?.addEventListener('click',()=>{info='';net.startLoopSolo();});
-    ui.querySelector('#dev-loop')?.addEventListener('click',()=>{info='';net.startLoopSolo();});
-    ui.querySelector('#dev-temporal')?.addEventListener('click',()=>{info='';net.startTemporalSolo();});
-    ui.querySelector('#dev-treetop')?.addEventListener('click',()=>{info='';net.startTreetopSolo();});
-    ui.querySelector('#dev-fire')?.addEventListener('click',()=>{info='';net.startFireSolo();});
+    ui.querySelector('#create')?.addEventListener('click',()=>{devSession=false;info='';void net.createRoom('loop');});
+    ui.querySelector('#create-classic')?.addEventListener('click',()=>{devSession=false;info='';void net.createRoom('classic');});
+    ui.querySelector('#loop-solo')?.addEventListener('click',()=>{devSession=false;info='';net.startLoopSolo();});
+    ui.querySelector('#dev-loop')?.addEventListener('click',()=>{devSession=true;info='';net.startLoopSolo();});
+    ui.querySelector('#dev-temporal')?.addEventListener('click',()=>{devSession=true;info='';net.startTemporalSolo();});
+    ui.querySelector('#dev-treetop')?.addEventListener('click',()=>{devSession=true;info='';net.startTreetopSolo();});
+    ui.querySelector('#dev-fire')?.addEventListener('click',()=>{devSession=true;info='';net.startFireSolo();});
     ([1,2,3,4] as const).forEach(level=>
-      ui.querySelector('#dev-classic-'+level)?.addEventListener('click',()=>{info='';net.startSolo(level);}));
-    ui.querySelector('#join-menu')?.addEventListener('click',showJoin);
+      ui.querySelector('#dev-classic-'+level)?.addEventListener('click',()=>{devSession=false;info='';net.startSolo(level);}));
+    ui.querySelector('#join-menu')?.addEventListener('click',()=>{devSession=false;showJoin();});
     return;
   }
   if (net.role === 'guest' && net.localSeat === null) {
