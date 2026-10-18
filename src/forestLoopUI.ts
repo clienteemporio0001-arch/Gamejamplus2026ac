@@ -11,7 +11,7 @@ export function loopObjective(w:LoopWorld,poses:readonly Pose[]=[]):LoopObjectiv
   if(w.lastRoute!=='right'){
     const route=correctRoute(w.layout),count=trailOccupants(poses,route).length;
     return {title:'TRILHAS LIBERADAS! SIGAM O VENTO.',
-      progress:(route==='oca'?'ÁRVORE OCA':'PEDRA RACHADA')+' · '+count+'/3 AMIGOS'};
+      progress:'SIGAM O VENTO · '+count+'/3 AMIGOS'};
   }
   if(!w.suspendedOpen)return {title:'Movam juntos a plataforma suspensa.',
     progress:'Mecanismos '+w.suspended.filter(Boolean).length+'/3'};
@@ -22,7 +22,7 @@ export function loopObjective(w:LoopWorld,poses:readonly Pose[]=[]):LoopObjectiv
 }
 export const regionTitle=(x:number):string=>
   x<2050?'BOSQUE DA ÁRVORE OCA':
-  x<3700?'VALE DA PEDRA RACHADA':
+  x<3950?'VALE DA PEDRA RACHADA':
   x<5100?'ARCO DE MADEIRA':
   x<6500?'CLAREIRA CENTRAL':
   x<LOOP_GEOMETRY.gate?'RAÍZES MUTÁVEIS':
