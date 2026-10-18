@@ -36,6 +36,7 @@ export const FIRE_WIND_PERIOD=14000,FIRE_COLLAPSE_PERIOD=21000;
 export type FireWind=-1|1;
 export type FireWorld=Vitals&{
  cycleStart:number;phaseStart:number;resetId:number;deadUntil:number;
+ layout:0|1|2;cycle:number;blackoutUntil:number;
  log:[boolean,boolean,boolean];logOpen:boolean;
  smoke:[boolean,boolean,boolean];smokeOpen:boolean;
  tree:[boolean,boolean,boolean];treeOpen:boolean;treeFallAt:number;
@@ -46,6 +47,7 @@ export type FireWorld=Vitals&{
 };
 export function initFire(now=Date.now()):FireWorld{return {
  cycleStart:now,phaseStart:now,resetId:0,deadUntil:0,
+ layout:0,cycle:0,blackoutUntil:0,
  log:[false,false,false],logOpen:false,
  smoke:[false,false,false],smokeOpen:false,
  tree:[false,false,false],treeOpen:false,treeFallAt:0,
@@ -60,7 +62,9 @@ export function validFire(value:unknown):value is FireWorld{
  const finite=(v:unknown)=>typeof v==='number'&&Number.isFinite(v)&&v>=0;
  const bool=(v:unknown)=>typeof v==='boolean';
  return ['cycleStart','phaseStart','resetId','deadUntil','treeFallAt','flare',
+   'cycle','blackoutUntil','layout',
    'treeWarningUntil','treeImpactUntil'].every(k=>finite(w[k]))
+  &&[0,1,2].includes(Number(w.layout))
   &&typeof w.collapseCycle==='number'&&Number.isInteger(w.collapseCycle)&&w.collapseCycle>=-1
   &&['logOpen','smokeOpen','treeOpen','completed'].every(k=>bool(w[k]))
   &&(w.windDirection===1||w.windDirection===-1)
@@ -234,8 +238,9 @@ export class FireAuthority {
   if(flare!==w.flare){w.flare=flare;changed=true;}
   const cycle=Math.floor(Math.max(0,now-w.cycleStart)/FIRE_COLLAPSE_PERIOD);
   if(cycle!==w.collapseCycle){
-   w.collapseCycle=cycle;changed=true;
+   w.collapseCycle=cycle;w.cycle=cycle;changed=true;
   }
+  if(w.layout!==flare){w.layout=flare as 0|1|2;changed=true;}
   const treePhase=fireTreePhase(w,now);
   const remaining=Math.max(0,now-w.cycleStart)%FIRE_COLLAPSE_PERIOD;
   const warn=treePhase==='warning'?now+(15000-remaining):0;
