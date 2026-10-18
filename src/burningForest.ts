@@ -42,7 +42,8 @@ export type FireWorld=Vitals&{
  tree:[boolean,boolean,boolean];treeOpen:boolean;treeFallAt:number;
  smokeSeconds:[number,number,number];supporting:[Seat|null,Seat|null,Seat|null];
  dashAt:[number,number,number];dashX:[number,number,number];
- flare:number;windDirection:FireWind;treeWarningUntil:number;treeImpactUntil:number;
+ flare:number;windDirection:FireWind;treeStatus:'calm'|'warning'|'impact';
+ treeWarningUntil:number;treeImpactUntil:number;
  collapseCycle:number;completed:boolean;damageCause:'fire'|'smoke'|'tree'|'fall'|'none';
 };
 export function initFire(now=Date.now()):FireWorld{return {
@@ -52,7 +53,7 @@ export function initFire(now=Date.now()):FireWorld{return {
  smoke:[false,false,false],smokeOpen:false,
  tree:[false,false,false],treeOpen:false,treeFallAt:0,
  smokeSeconds:[0,0,0],supporting:[null,null,null],
- dashAt:[0,0,0],dashX:[0,0,0],flare:0,windDirection:1,
+ dashAt:[0,0,0],dashX:[0,0,0],flare:0,windDirection:1,treeStatus:'calm',
  treeWarningUntil:0,treeImpactUntil:0,collapseCycle:-1,
  completed:false,damageCause:'none',...initVitals()
 };}
@@ -68,6 +69,7 @@ export function validFire(value:unknown):value is FireWorld{
   &&typeof w.collapseCycle==='number'&&Number.isInteger(w.collapseCycle)&&w.collapseCycle>=-1
   &&['logOpen','smokeOpen','treeOpen','completed'].every(k=>bool(w[k]))
   &&(w.windDirection===1||w.windDirection===-1)
+  &&['calm','warning','impact'].includes(String(w.treeStatus))
   &&['none','fire','smoke','tree','fall'].includes(String(w.damageCause))
   &&['log','smoke','tree'].every(k=>Array.isArray(w[k])&&(w[k] as unknown[]).length===3
     &&(w[k] as unknown[]).every(bool))
@@ -96,20 +98,23 @@ export function fireWind(now:number,w:FireWorld):FireWind{
  return Math.floor(Math.max(0,now-w.cycleStart)/FIRE_WIND_PERIOD)%2===0?1:-1;
 }
 export function fireFlareActive(w:FireWorld,now:number,x:number):boolean{
- // Entirely host-clock-derived, with broad safe windows for manual solo swapping.
+ // The host broadcasts the active phase; guests must not invent local flame cycles.
+ void now;
  if(x<4210)return false;
- const frame=Math.floor(Math.max(0,now-w.cycleStart)/4400)%3;
+ const frame=w.flare;
  return x<4520?frame!==1:x<4770?frame!==2:x<4930?frame===2:false;
 }
 export function fireDamageZone(w:FireWorld,p:Pick<Pose,'x'|'y'>,now:number):boolean{
  if(p.y<582)return false;
- if(!w.logOpen&&p.x>=1225&&p.x<=1560&&p.y>625)return true;
- if(!w.treeOpen&&p.x>=3875&&p.x<=4240&&p.y>632)return true;
+ if(p.x>=1225&&p.x<=1560&&p.y>(w.logOpen?658:625))return true;
+ if(p.x>=3875&&p.x<=4240&&p.y>(w.treeOpen?661:632))return true;
  return (p.x>4260&&p.x<4520||p.x>4570&&p.x<4770||
    p.x>4800&&p.x<4930)&&fireFlareActive(w,now,p.x);
 }
 export function fireHeavySmoke(w:FireWorld,p:Pick<Pose,'x'|'y'>,now:number):boolean{
- const shift=fireWind(now,w)===1?80:-80;
+ // Smoke drift follows the authoritative windDirection snapshot, not each client's clock.
+ void now;
+ const shift=w.windDirection===1?80:-80;
  const start=FIRE_SMOKE_ZONE.start+shift,end=FIRE_SMOKE_ZONE.end+shift;
  return p.x>=start&&p.x<=end&&p.y>=FIRE_SMOKE_ZONE.yMin&&!w.smokeOpen;
 }
@@ -120,6 +125,9 @@ export function fireTreePhase(w:FireWorld,now:number):'calm'|'warning'|'impact'{
  if(local>=13200&&local<15000)return 'warning';
  if(local>=15000&&local<16600)return 'impact';
  return 'calm';
+}
+export function fireVisualTreePhase(w:FireWorld):'calm'|'warning'|'impact'{
+ return w.treeOpen?'calm':w.treeStatus;
 }
 export function fireCheckpoint(w:FireWorld):Pose[]{
  const x=w.treeOpen?4340:w.smokeOpen?3180:w.logOpen?1720:210;
@@ -242,6 +250,7 @@ export class FireAuthority {
   }
   if(w.layout!==flare){w.layout=flare as 0|1|2;changed=true;}
   const treePhase=fireTreePhase(w,now);
+  if(treePhase!==w.treeStatus){w.treeStatus=treePhase;changed=true;}
   const remaining=Math.max(0,now-w.cycleStart)%FIRE_COLLAPSE_PERIOD;
   const warn=treePhase==='warning'?now+(15000-remaining):0;
   const impact=treePhase==='impact'?now+(16600-remaining):0;
