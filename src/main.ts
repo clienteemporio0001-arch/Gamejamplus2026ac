@@ -6,7 +6,7 @@ import { ForestLoopScene } from './forestLoopScene';
 import { TemporalForestScene } from './temporalForestScene';
 import { TreetopForestScene } from './treetopForestScene';
 import { BurningForestScene } from './burningForestScene';
-import { FIRE_COLLAPSE_PERIOD,fireObjective,fireWind,fireHeavySmoke } from './burningForest';
+import { FIRE_COLLAPSE_PERIOD,fireObjective,fireHeavySmoke } from './burningForest';
 import { TREE_CYCLE,treeObjective,treeWind,treeExposure } from './treetopForest';
 import { TEMP_CYCLE,temporalObjective,tempWind } from './temporalForest';
 import { IntroScene } from './intro';
@@ -383,8 +383,11 @@ function render(): void {
         '<p>Os três chegaram exaustos à margem do rio. Pipo pousou ao lado deles.</p>'+ 
         '<strong>NINGUÉM FICA PARA TRÁS. NEM A FLORESTA.</strong>'+ 
         '<p>A AVENTURA FOI CONCLUÍDA!</p>'+ 
+        button('show-final-credits','VER CRÉDITOS',true)+
         button('leave-final','VOLTAR AO MENU')+'</div>';
-      ui.querySelector('#leave-final')?.addEventListener('click',()=>net.shutdown());return;
+      ui.querySelector('#leave-final')?.addEventListener('click',()=>net.shutdown());
+      ui.querySelector('#show-final-credits')?.addEventListener('click',()=>openPanel('credits'));
+      return;
     }
     if (net.stage === 'final' && net.experience==='loop'&&net.level===3) {
       ui.innerHTML='<div class="victory"><h2>FASE 03 CONCLUÍDA!</h2>'+ 
@@ -418,7 +421,7 @@ function render(): void {
       const selected=CHARACTERS[seat];
       const object=net.level===4?fireObjective(net.fire):net.level===3?treeObjective(net.treetop):net.level===2?temporalObjective(net.temporal):loopObjective(net.loop);
       ui.innerHTML='<div class="loop-top-left" aria-label="Estado da floresta">'+
-        '<span class="loop-state">'+(net.level===4?'FASE 04 · FLORESTA EM CHAMAS':net.level===3?'FASE 03 · CAMINHO DAS ÁRVORES':net.level===2?'FASE 02 · FLORESTA TEMPORAL':'FASE 01 · A BOCA DA NOITE')+' · <strong id="loop-state">'+(net.level===4?'🔥':['A','B','C'][net.level===3?net.treetop.layout:net.level===2?net.temporal.layout:net.loop.layout])+'</strong></span>'+
+        '<span class="loop-state">'+(net.level===4?'FASE 04 · FLORESTA EM CHAMAS':net.level===3?'FASE 03 · CAMINHO DAS ÁRVORES':net.level===2?'FASE 02 · FLORESTA TEMPORAL':'FASE 01 · A BOCA DA NOITE')+' · <strong id="loop-state">'+(['A','B','C'][net.level===4?net.fire.layout:net.level===3?net.treetop.layout:net.level===2?net.temporal.layout:net.loop.layout])+'</strong></span>'+
         '<span id="loop-timer">APAGÃO EM —</span></div>'+
         '<div class="loop-top-right" aria-live="polite"><strong id="loop-objective">'+safeText(object.title)+'</strong>'+
         '<small id="loop-progress">'+safeText(object.progress)+'</small></div>'+
@@ -445,14 +448,21 @@ function render(): void {
         '<div class="loop-menu">'+
         (net.isSolo?'<details id="loop-dev"><summary>⚙ <span>Opções</span></summary>'+
           '<div class="loop-menu-options">'+
+          '<button id="sound-options">CONFIGURAÇÕES</button>'+
           '<button id="solo-restart">'+(net.level===4?'REINICIAR FASE 04':net.level===3?'REINICIAR FASE 03':net.level===2?'REINICIAR FASE 02':'REINICIAR TENTATIVA')+'</button>'+
-          '<button id="solo-cycle">'+(net.level===4?'ADIANTAR QUEDA':'ADIANTAR APAGÃO')+'</button>'+
+          (devSession?'<button id="dev-inspect">PAINEL DE TESTES</button>'+
+            '<button id="solo-cycle">'+(net.level===4?'ADIANTAR CICLO DE FOGO':'ADIANTAR APAGÃO')+'</button>':'')+
           '<button id="solo-leave">VOLTAR AO MENU</button></div></details>':
-          '<button id="leave" class="loop-online-leave" title="Sair da sala">SAIR</button>')+
+          '<details id="loop-options"><summary>⚙ <span>Opções</span></summary>'+
+          '<div class="loop-menu-options">'+
+          '<button id="sound-options">CONFIGURAÇÕES</button>'+
+          '<button id="leave" title="Sair da sala">SAIR DA SALA</button></div></details>')+
         '</div>'+
         (net.players.some(p=>!p.online)?'<div class="loop-offline">Aguardando reconexão da equipe.</div>':'')+
         (info?'<div class="loop-alert" role="status">'+safeText(info)+'</div>':'');
       ui.querySelector('#pipo-help')?.addEventListener('click',()=>window.dispatchEvent(new Event('pipo-help')));
+      ui.querySelector('#sound-options')?.addEventListener('click',()=>openPanel('settings'));
+      ui.querySelector('#dev-inspect')?.addEventListener('click',()=>openPanel('developer'));
       ui.querySelector('#solo-restart')?.addEventListener('click',()=>net.restartSolo());
       ui.querySelector('#solo-cycle')?.addEventListener('click',()=>net.advanceLoopCycle());
       ui.querySelector('#solo-leave')?.addEventListener('click',()=>net.shutdown());
