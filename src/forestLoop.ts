@@ -299,6 +299,38 @@ export function canStack(w:LoopWorld,seat:Seat,poses:readonly Pose[]):boolean{
     ||bottom<=b.y-b.height/2||top>=b.y+b.height/2);
 }
 
+/** Host and local hint UI share the EXACT suspended-lever prerequisites.
+ * This never grants a skill; only LoopAuthority.act changes the world state.
+ */
+export type SuspensionLeverReason=
+ 'ready'|'route'|'finished'|'moving'|'closer'|'tower'|'detach'|'climb'|'branch'|'steady';
+export function suspensionLeverStatus(w:LoopWorld,p:Pose):SuspensionLeverReason{
+ if(w.lastRoute!=='right')return 'route';
+ if(w.suspended[0]||w.suspendedOpen){
+  return w.suspendedX!==w.suspendedTo?'moving':'finished';
+ }
+ if(Math.abs(p.x-SUSPENSION.lever.x)>125)return 'closer';
+ if(!w.suspensionStacked||w.supporting[1]!==2)return 'tower';
+ if(w.supporting[0]!==null)return 'detach';
+ if(!w.suspensionClimbReady)return 'climb';
+ if(Math.abs(p.x-SUSPENSION.lever.x)>42||
+    Math.abs(p.y-SUSPENSION.lever.y)>12)return 'branch';
+ if(Math.abs(p.vx)>=155||Math.abs(p.vy)>=65)return 'steady';
+ return 'ready';
+}
+export const SUSPENSION_LEVER_FEEDBACK:Record<SuspensionLeverReason,string>={
+ ready:'Alavanca acionada! A passarela está se movendo!',
+ route:'Atravessem primeiro a trilha verdadeira!',
+ finished:'Alavanca liberada! Lia precisa soltar a próxima trava.',
+ moving:'Aguarde a plataforma terminar o movimento.',
+ closer:'Chegue mais perto da alavanca.',
+ tower:'Complete o empilhamento: Nino, Lia e Téo.',
+ detach:'Solte o apoio humano e alcance o galho superior.',
+ climb:'Suba na escada humana, salte dela e alcance o galho superior.',
+ branch:'Alcance o galho superior e fique junto à alavanca.',
+ steady:'Pare por um instante no galho para puxar a alavanca.'
+};
+
 type Tick={changed:boolean;poses?:Pose[];reset?:boolean;won?:boolean};
 export class LoopAuthority{
   world=initLoop();
@@ -413,10 +445,7 @@ export class LoopAuthority{
       return false;
     }
     if(action.kind==='lever'&&seat===0){
-      if(w.lastRoute==='right'&&!w.suspended[0]&&w.suspensionStacked&&
-        w.suspensionClimbReady&&w.supporting[0]===null&&
-        near(p,SUSPENSION.lever.x,SUSPENSION.lever.y,42,12)&&
-        Math.abs(p.vx)<155&&Math.abs(p.vy)<65){
+      if(suspensionLeverStatus(w,p)==='ready'){
         w.suspended[0]=true;this.slideSuspension(SUSPENSION.teoX,now);return true;
       }
       if(w.observed&&!w.marks[0]&&near(p,markPosition(w,0).x,markPosition(w,0).y,68,87)){
