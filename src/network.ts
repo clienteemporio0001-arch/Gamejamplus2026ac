@@ -11,6 +11,7 @@ import { type VitalAction } from './loopVitals';
 import {FallTracker,loopFallSurfaces,temporalFallSurfaces} from './fallDamage';
 import {SUMMIT_BRANCH} from './forestLoop';
 import {TemporalAuthority,TEMP_WIDTH,TEMP_START,initTemporal,validTemporal,type TemporalWorld} from './temporalForest';
+import {TreeAuthority,TREE_START,TREE_WIDTH,TREE_HEIGHT,initTree,validTree,type TreeWorld} from './treetopForest';
 
 export type Stage = 'lobby' | 'intro' | 'playing' | 'transition' | 'final';
 export type Experience = 'classic' | 'loop';
@@ -36,6 +37,7 @@ type Wire =
   | { t: 'forest'; world: ForestWorld }
   | { t: 'loop'; world: LoopWorld }
   | { t: 'temporal'; world: TemporalWorld }
+  | { t: 'treetop'; world: TreeWorld }
   | { t: 'respawn'; pose: Pose }
   | { t: 'river'; world: RiverWorld }
   | { t: 'journey'; world: JourneyWorld }
@@ -59,6 +61,7 @@ type Events = {
   forest: ForestWorld;
   loop: LoopWorld;
   temporal: TemporalWorld;
+  treetop: TreeWorld;
   respawn: Pose;
   river: RiverWorld;
   journey: JourneyWorld;
@@ -95,7 +98,7 @@ const validPose = (v: unknown): v is Pose => {
   if (!v || typeof v !== 'object') return false;
   const p = v as Record<string, unknown>;
   return seatValid(p.seat) && finite(p.x) && finite(p.y) && finite(p.vx) && finite(p.vy)
-    && p.x >= 0 && p.x <= FOREST_WIDTH && p.y >= 0 && p.y <= 700
+    && p.x >= 0 && p.x <= Math.max(FOREST_WIDTH,TREE_WIDTH) && p.y >= 0 && p.y <= TREE_HEIGHT
     && Math.abs(p.vx) <= 1200 && Math.abs(p.vy) <= 1500;
 };
 const validSlot = (v: unknown): v is Slot => {
@@ -110,7 +113,7 @@ function parseWire(value: unknown): Wire | null {
     case 'hello': return typeof p.token === 'string' && /^[a-f0-9-]{20,50}$/.test(p.token) ? value as Wire : null;
     case 'ready': return typeof p.value === 'boolean' ? value as Wire : null;
     case 'pose': return finite(p.x) && finite(p.y) && finite(p.vx) && finite(p.vy)
-      && p.x >= 0 && p.x <= FOREST_WIDTH && p.y >= 0 && p.y <= 700
+      && p.x >= 0 && p.x <= Math.max(FOREST_WIDTH,TREE_WIDTH) && p.y >= 0 && p.y <= TREE_HEIGHT
       && Math.abs(p.vx) <= 1200 && Math.abs(p.vy) <= 1500 ? value as Wire : null;
     case 'welcome': return seatValid(p.seat) && typeof p.code === 'string' && /^[A-Z0-9]{6}$/.test(p.code)
       && (p.mode === undefined || p.mode === 'classic' || p.mode === 'loop') ? value as Wire : null;
@@ -130,6 +133,7 @@ function parseWire(value: unknown): Wire | null {
     case 'forest': return validForest(p.world) ? value as Wire : null;
     case 'loop': return validLoop(p.world) ? value as Wire : null;
     case 'temporal': return validTemporal(p.world) ? value as Wire : null;
+    case 'treetop': return validTree(p.world) ? value as Wire : null;
     case 'respawn': return validPose(p.pose) ? value as Wire : null;
     case 'river': return validRiver(p.world) ? value as Wire : null;
     case 'journey': return validJourney(p.world) ? value as Wire : null;
@@ -159,6 +163,9 @@ export class Network {
   private loopAuthority=new LoopAuthority();
   temporal:TemporalWorld=initTemporal();
   private temporalAuthority=new TemporalAuthority();
+  treetop:TreeWorld=initTree();
+  private treetopAuthority=new TreeAuthority();
+  private treetopSafeUntil=0;
   localSeat: Seat | null = null;
   players: Slot[] = slots();
   poses: Pose[] = SPAWNS.map(p => ({ ...p }));
@@ -233,6 +240,7 @@ export class Network {
     this.fallTracker.reset();
     this.loopAuthority.reset();this.loop=this.loopAuthority.world;
     this.temporalAuthority.reset();this.temporal=this.temporalAuthority.world;
+    this.treetopAuthority.reset();this.treetop=this.treetopAuthority.world;this.treetopSafeUntil=Date.now()+1300;
     this.players=([0,1,2] as Seat[]).map(seat=>({seat,online:true,ready:true}));
     this.authority.reset();this.effectGate.reset();
     this.forestAuthority.reset();this.forest=this.forestAuthority.world;
@@ -242,7 +250,7 @@ export class Network {
     this.puzzle=initialWorld();
     this.authority.world.unlocked=[level!==1 || mode==='loop',true,true];
     this.puzzle={...this.authority.world,unlocked:[...this.authority.world.unlocked] as WorldState['unlocked']};
-    this.poses=(mode==='loop'?(level===2?TEMP_START:LOOP_START):level===1?FOREST_SPAWNS:level===2?JOURNEY_SPAWNS:LATE_SPAWNS).map(p=>({...p}));
+    this.poses=(mode==='loop'?(level===3?TREE_START:level===2?TEMP_START:LOOP_START):level===1?FOREST_SPAWNS:level===2?JOURNEY_SPAWNS:LATE_SPAWNS).map(p=>({...p}));
     this.journeyMotion={logs:floatingLogs(Date.now(),this.journey.hazardEpoch),now:Date.now()};
     this.journeyAuthority.solo=true;this.chapterAuthority.solo=true;
     this.heartbeat=setInterval(()=>this.hostTick(),50);
@@ -251,6 +259,7 @@ export class Network {
   }
   startLoopSolo():void{this.startSolo(1,false,'loop');}
   startTemporalSolo():void{this.startSolo(2,false,'loop');}
+  startTreetopSolo():void{this.startSolo(3,false,'loop');}
   selectSoloSeat(seat: Seat): void {
     if(!this.isSolo||!this.playing||this.localSeat===seat)return;
     this.localSeat=seat;
@@ -261,9 +270,9 @@ export class Network {
   reportSoloBodies(poses: Pose[]):void {
     if(!this.isSolo||!this.playing||poses.length!==3)return;
     for(const input of poses) {
-      const p={...input,y:Math.max(0,Math.min(700,input.y))};
+      const p={...input,y:Math.max(0,Math.min(this.experience==='loop'&&this.level===3?TREE_HEIGHT:700,input.y))};
       if(!validPose(p))continue;
-      const supporting=this.experience==='loop'?(this.level===2?this.temporal.supporting:this.loop.supporting):this.level===1?this.forest.supporting:
+      const supporting=this.experience==='loop'?(this.level===3?this.treetop.supporting:this.level===2?this.temporal.supporting:this.loop.supporting):this.level===1?this.forest.supporting:
         this.level===2?this.journey.supporting:null;
       if(supporting?.[p.seat]!==null && supporting?.[p.seat]!==undefined)continue;
       this.poses[p.seat]={...p};
@@ -273,7 +282,11 @@ export class Network {
     if(!this.isSolo||!this.playing)return;
     this.fallTracker.reset();
     if(this.experience==='loop'){
-      if(this.level===2){
+      if(this.level===3){
+        this.treetopAuthority.reset();this.shareTreetop();this.poses=TREE_START.map(p=>({...p}));
+        this.treetopSafeUntil=Date.now()+1300;
+        this.emit('notice','CAMINHO DAS ÁRVORES REINICIADO: OS TRÊS RETORNARAM À COPA INICIAL.');
+      }else if(this.level===2){
         this.temporalAuthority.reset();this.shareTemporal();
         this.poses=TEMP_START.map(p=>({...p}));
         this.emit('notice','FLORESTA TEMPORAL REINICIADA: OS TRÊS RETORNARAM À CLAREIRA.');
@@ -459,6 +472,7 @@ export class Network {
         this.message(conn, { t: 'forest', world: this.forest });
         this.message(conn, { t: 'loop', world: this.loop });
         this.message(conn, {t:'temporal',world:this.temporal});
+        this.message(conn, {t:'treetop',world:this.treetop});
         this.message(conn, { t: 'river', world: this.river });
         this.message(conn, { t: 'journey', world: this.journey });
         this.message(conn, { t: 'journey-motion', motion: this.journeyMotion });
@@ -488,11 +502,11 @@ export class Network {
         const now = performance.now();
         if (now - this.lastReceived[seat] < 35) return; // ~28 Hz no máximo por convidado.
         this.lastReceived[seat] = now;
-        if (msg.x > (this.experience==='loop'&&this.level===2?TEMP_WIDTH:this.level <= 2 ? FOREST_WIDTH : 1200)) return;
+        if (msg.x > (this.experience==='loop'&&this.level===3?TREE_WIDTH:this.experience==='loop'&&this.level===3?TREE_WIDTH:this.experience==='loop'&&this.level===2?TEMP_WIDTH:this.level <= 2 ? FOREST_WIDTH : 1200)) return;
         if (this.experience!=='loop' && this.level === 1 && this.forest.restartAt > 0) return;
-        if(this.experience==='loop'&&(this.level===2?this.temporal.supporting[seat]:this.loop.supporting[seat])!==null)return;
+        if(this.experience==='loop'&&(this.level===3?this.treetop.supporting[seat]:this.level===2?this.temporal.supporting[seat]:this.loop.supporting[seat])!==null)return;
         if (this.experience!=='loop' && this.level === 1 && this.forest.supporting[seat] !== null) return;
-        if (this.level === 2 && (this.journey.restartAt>0 || this.journey.supporting[seat]!==null)) return;
+        if (this.experience!=='loop' && this.level === 2 && (this.journey.restartAt>0 || this.journey.supporting[seat]!==null)) return;
         this.poses[seat] = { seat, x: msg.x, y: msg.y, vx: msg.vx, vy: msg.vy };
       }
     });
@@ -554,7 +568,7 @@ export class Network {
         this.playing = this.stage === 'playing'; this.completed = this.stage === 'final';
         if (this.stage === 'playing') this.pendingRestore = true;
         if (oldLevel !== this.level || (this.experience==='loop'&&oldStage!=='playing'&&this.stage==='playing'))
-          this.poses = (this.experience==='loop'?(this.level===2?TEMP_START:LOOP_START):this.level === 1 ? FOREST_SPAWNS : this.level === 2 ? JOURNEY_SPAWNS : LATE_SPAWNS).map(p => ({ ...p }));
+          this.poses = (this.experience==='loop'?(this.level===3?TREE_START:this.level===2?TEMP_START:LOOP_START):this.level === 1 ? FOREST_SPAWNS : this.level === 2 ? JOURNEY_SPAWNS : LATE_SPAWNS).map(p => ({ ...p }));
         this.emit('phase', this.phaseInfo());
         if (this.playing && (oldStage !== 'playing' || oldLevel !== this.level)) this.emit('start', undefined);
         this.emit('change', undefined);
@@ -610,6 +624,16 @@ export class Network {
         if (this.playing && msg.fx.level === this.level && msg.fx.seat !== this.localSeat) {
           this.emit('effect', msg.fx);
         }
+        break;
+      case 'treetop':
+        this.treetop={...msg.world,bridge:[...msg.world.bridge] as TreeWorld['bridge'],
+          tower:[...msg.world.tower] as TreeWorld['tower'],time:[...msg.world.time] as TreeWorld['time'],
+          supporting:[...msg.world.supporting] as TreeWorld['supporting'],
+          health:[...msg.world.health] as TreeWorld['health'],
+          stamina:[...msg.world.stamina] as TreeWorld['stamina'],
+          safeUntil:[...msg.world.safeUntil] as TreeWorld['safeUntil'],
+          lastSpent:[...msg.world.lastSpent] as TreeWorld['lastSpent']};
+        this.emit('treetop',this.treetop);
         break;
       case 'temporal':
         this.temporal={...msg.world,echo:[...msg.world.echo] as TemporalWorld['echo'],
@@ -721,6 +745,14 @@ export class Network {
   }
   private advanceLevel(): void {
     if (!this.isHost || this.stage !== 'transition' || !this.everyoneConnected) return;
+    if(this.experience==='loop'&&this.level===2){
+      this.fallTracker.reset();this.treetopAuthority.reset();this.treetop=this.treetopAuthority.world;
+      this.treetopSafeUntil=Date.now()+1800;this.poses=TREE_START.map(p=>({...p}));
+      this.shareTreetop();this.setPhase('playing',3);
+      this.broadcast({t:'state',poses:this.poses});
+      for(const pose of this.poses)this.emit('respawn',pose);
+      this.emit('snapshot',this.poses);return;
+    }
     if(this.experience==='loop'&&this.level===1){
       this.fallTracker.reset();
       this.temporalAuthority.reset();this.temporal=this.temporalAuthority.world;
@@ -759,11 +791,11 @@ export class Network {
     if (now - this.lastInput < 50) return;
     this.lastInput = now;
     const msg = { t: 'pose' as const, x: Math.max(0, Math.min(this.experience==='loop'&&this.level===2?TEMP_WIDTH:this.level <= 2 ? FOREST_WIDTH : 1200, x)),
-      y: Math.max(0, Math.min(700, y)), vx, vy };
+      y: Math.max(0, Math.min(this.experience==='loop'&&this.level===3?TREE_HEIGHT:700, y)), vx, vy };
     if (!finite(x) || !finite(y) || !finite(vx) || !finite(vy)) return;
-    if(this.experience==='loop'&&(this.level===2?this.temporal.supporting[this.localSeat]:this.loop.supporting[this.localSeat])!==null)return;
+    if(this.experience==='loop'&&(this.level===3?this.treetop.supporting[this.localSeat]:this.level===2?this.temporal.supporting[this.localSeat]:this.loop.supporting[this.localSeat])!==null)return;
     if (this.experience!=='loop' && this.level === 1 && (this.forest.restartAt > 0 || this.forest.supporting[this.localSeat] !== null)) return;
-    if (this.level === 2 && (this.journey.restartAt > 0 || this.journey.supporting[this.localSeat]!==null)) return;
+    if (this.experience!=='loop' && this.level === 2 && (this.journey.restartAt > 0 || this.journey.supporting[this.localSeat]!==null)) return;
     if (this.isHost) this.poses[this.localSeat] = { seat: this.localSeat, ...msg };
     else this.message(this.hostConn, msg);
   }
@@ -780,7 +812,8 @@ export class Network {
   /** Requests contain a kind, never client-authored life or stamina values. */
   requestVital(kind:VitalAction,facing:-1|1=1):number|null{
     if(this.experience!=='loop'||!this.playing||!this.everyoneConnected||
-      this.localSeat===null||(this.level===2?this.temporal.deadUntil>0||this.temporal.blackoutUntil>Date.now():
+      this.localSeat===null||(this.level===3?this.treetop.deadUntil>0||this.treetop.blackoutUntil>Date.now():
+      this.level===2?this.temporal.deadUntil>0||this.temporal.blackoutUntil>Date.now():
         this.loop.deadUntil>0||blackoutActive(this.loop,Date.now())))return null;
     const id=++this.vitalityRequestId;
     if(this.isHost){
@@ -796,10 +829,11 @@ export class Network {
   private approveVital(seat:Seat,kind:VitalAction,facing:-1|1):{
     ok:boolean;reason:'ok'|'tired'|'cooldown'|'invalid'
   }{
-    const result=this.level===2?this.temporalAuthority.authorizeEnergy(seat,kind,this.poses,Date.now(),facing):
+    const result=this.level===3?this.treetopAuthority.authorizeEnergy(seat,kind,this.poses,Date.now(),facing):
+      this.level===2?this.temporalAuthority.authorizeEnergy(seat,kind,this.poses,Date.now(),facing):
       this.loopAuthority.authorizeEnergy(seat,kind,this.poses,Date.now(),facing);
     if(result.ok){
-      if(this.level===2)this.shareTemporal();else this.shareLoop();
+      if(this.level===3)this.shareTreetop();else if(this.level===2)this.shareTemporal();else this.shareLoop();
       if(kind==='shoot'||kind==='dash')this.emitSkillFx(seat,{kind:kind==='shoot'?'shoot':'dash',facing});
     }
     return result;
@@ -819,7 +853,9 @@ export class Network {
     // O puzzle continua na autoridade original. A animação é um evento leve,
     // independente do acerto (a pedra também precisa aparecer quando erra).
     if(this.experience==='loop'){
-      if(this.level===2){
+      if(this.level===3){
+        if(this.treetopAuthority.interact(seat,action.kind as 'lever'|'switch'|'shoot'|'support'|'detach'|'dash',this.poses,Date.now(),action.facing??1))this.shareTreetop();
+      }else if(this.level===2){
         if(this.temporalAuthority.act(seat,action,this.poses))this.shareTemporal();
       }else if(this.loopAuthority.act(seat,action,this.poses))this.shareLoop();
     }else if (this.level === 1) {
@@ -844,8 +880,16 @@ export class Network {
   }
   advanceLoopCycle():void{
     if(!this.isSolo||this.experience!=='loop'||!this.playing)return;
-    if(this.level===2)this.temporalAuthority.world.cycleStart=Date.now()-60000;
+    if(this.level===3)this.treetopAuthority.world.cycleStart=Date.now()-60000;
+    else if(this.level===2)this.temporalAuthority.world.cycleStart=Date.now()-60000;
     else this.loopAuthority.world.cycleStart=Date.now()-60000;
+  }
+  private shareTreetop():void{
+    const w=this.treetopAuthority.world;
+    this.treetop={...w,bridge:[...w.bridge],tower:[...w.tower],time:[...w.time],
+      supporting:[...w.supporting],health:[...w.health],stamina:[...w.stamina],
+      safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent]};
+    this.broadcast({t:'treetop',world:this.treetop});this.emit('treetop',this.treetop);
   }
   private shareTemporal():void{
     const w=this.temporalAuthority.world;
@@ -907,6 +951,25 @@ export class Network {
       return;
     }
     if (!this.playing || this.completed) return;
+    if(this.experience==='loop'&&this.level===3){
+      const now=Date.now(),w=this.treetopAuthority.world;
+      if(this.treetopAuthority.tickResources(this.poses,now))this.shareTreetop();
+      // Death, blackout and collective resets belong to the host, never to a guest.
+      const falling=this.poses.some(p=>p.y>=TREE_HEIGHT-80&&p.vy>0);
+      if(falling&&now>=this.treetopSafeUntil&&w.deadUntil===0&&w.blackoutUntil<=now){
+        w.deadUntil=now+1500;w.health=[0,0,0];this.shareTreetop();
+      }
+      const result=this.treetopAuthority.tick(this.poses,now);
+      if(result.poses){
+        this.treetopSafeUntil=now+1700;
+        this.poses=result.poses.map(p=>({...p}));
+        for(const pose of this.poses){this.broadcast({t:'respawn',pose});this.emit('respawn',pose);}
+      }
+      if(result.changed)this.shareTreetop();
+      this.broadcast({t:'state',poses:this.poses});this.emit('snapshot',this.poses);
+      if(result.won&&this.treetopAuthority.world.completed)this.setPhase('final',3);
+      return;
+    }
     if(this.experience==='loop'&&this.level===2){
       const now=Date.now();
       const w=this.temporalAuthority.world;
@@ -940,7 +1003,7 @@ export class Network {
       }
       if(state.changed)this.shareTemporal();
       this.broadcast({t:'state',poses:this.poses});this.emit('snapshot',this.poses);
-      if(state.won&&this.temporalAuthority.world.completed)this.setPhase('final',2);
+      if(state.won&&this.temporalAuthority.world.completed)this.setPhase('transition',2,Date.now()+6000);
       return;
     }
     if(this.experience==='loop'){
@@ -1122,6 +1185,8 @@ export class Network {
     this.peer?.destroy(); this.peer = null;
     this.role = 'idle'; this.code = ''; this.localSeat = null;this.experience='classic';
     this.loopAuthority.reset();this.loop=this.loopAuthority.world;
+    this.temporalAuthority.reset();this.temporal=this.temporalAuthority.world;
+    this.treetopAuthority.reset();this.treetop=this.treetopAuthority.world;this.treetopSafeUntil=0;
     this.journeyAuthority.solo=false;this.chapterAuthority.solo=false;
     this.players = slots(); this.poses = SPAWNS.map(p => ({ ...p }));
     this.playing = false; this.completed = false;
