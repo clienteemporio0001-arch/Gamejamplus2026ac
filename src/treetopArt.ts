@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {paintHero} from './sharedCharacterArt';
 import type {TreePlatform,TreeShelter,TreeWindPhase} from './treetopForest';
 import type {Pose,Seat} from './network';
 
@@ -198,49 +199,15 @@ export class TreetopArt {
   target.setFillStyle(0xffffff,.001).setStrokeStyle(1,0xffffff,.001);
   this.actors.push({target,ink,shadow,seat});
  }
- private drawActor(g:Phaser.GameObjects.Graphics,seat:Seat,motion:number,air:boolean):void{
-  g.clear();
-  const swing=air?4:Math.sin(motion)*5;
-  const coats=[0x399d69,0xd78a4b,0x488ec8];
-  const trims=[0x9fe4a1,0xf3be77,0x98d9f6];
-  const hair=[0x1e3628,0x482b2e,0x1b3949];
-  g.fillStyle(0x07151b,.96);
-  g.fillRoundedRect(-18,-21,36,44,7);
-  g.fillStyle(0x253436);g.fillRoundedRect(-15,7,12,16,3);
-  g.fillRoundedRect(4,7,12,16,3);
-  g.lineStyle(6,0x122b30,1);g.lineBetween(-8,8,-9+swing,22);
-  g.lineBetween(9,8,8-swing,22);
-  g.fillStyle(coats[seat],1);g.fillRoundedRect(-13,-12,26,26,5);
-  g.lineStyle(5,coats[seat],1);g.lineBetween(-12,-7,-18-swing,-1);
-  g.lineBetween(12,-7,17+swing,0);
-  g.fillStyle(0xdbaa83);g.fillEllipse(0,-23,26,23);
-  g.fillStyle(hair[seat]);g.fillEllipse(0,-32,29,13);
-  if(seat===0){
-   g.fillStyle(0x275332);g.fillRoundedRect(-19,-35,38,8,3);
-   g.fillRoundedRect(-10,-45,20,14,3);
-   g.fillStyle(0xe0cc77);g.fillRect(-3,-37,7,3);
-  }else if(seat===1){
-   g.fillStyle(0x5f342f);g.fillEllipse(11,-21,14,24);
-   g.fillEllipse(-3,-33,26,14);
-   g.fillStyle(0xe6d389);g.fillEllipse(-4,-8,8,4);
-  }else{
-   g.fillStyle(0x1c4565);g.fillRoundedRect(-18,-37,36,14,7);
-   g.fillStyle(0xa4d8ef);g.fillRoundedRect(-15,-10,30,6,2);
-   g.lineStyle(2,0x7fd0fb);g.strokeRoundedRect(-18,-38,36,29,8);
-  }
-  g.fillStyle(0xffffff);g.fillCircle(5,-24,3.1);
-  g.fillStyle(0x192a30);g.fillCircle(5.7,-24,1.3);
-  g.lineStyle(2,trims[seat]);g.lineBetween(-10,3,10,3);
-  g.lineStyle(2,0x041b1e,.7);g.strokeRoundedRect(-14,-13,28,28,6);
+ private drawActor(g:Phaser.GameObjects.Graphics,seat:Seat,time:number,pose:Pose):void{
+  paintHero(g,seat,time,pose.vx,pose.vy);
  }
  update(time:number,poses:readonly Pose[],phase:TreeWindPhase,direction:-1|1,
   gustCount:number):void{
   const intensity=phase==='gust'?1:phase==='warning'?.45:.16;
   for(const entry of this.actors){
    const actor=entry.target,pose=poses[entry.seat];
-   const moving=Math.abs(pose?.vx??0)>25;
-   this.drawActor(entry.ink,entry.seat,time*(moving?.016:.003)+entry.seat,
-    Math.abs(pose?.vy??0)>125);
+   this.drawActor(entry.ink,entry.seat,time,pose);
    entry.ink.setPosition(actor.x,actor.y);
    entry.shadow.setPosition(actor.x,actor.y+26);
    entry.shadow.setAlpha(Math.abs(pose?.vy??0)>120?.20:.5);
