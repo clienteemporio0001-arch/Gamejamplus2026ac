@@ -1,5 +1,10 @@
 import {AUDIO_CHANGE_EVENT,audioLevel} from './audioSettings';
 import {OriginalSoundtrack,type ScoreCue} from './soundtrack';
+/** All stages share one AudioContext. Never created before a user gesture. */
+let sharedContext:AudioContext|undefined;
+export function getSharedAudioContext():AudioContext{
+ return sharedContext??(sharedContext=new AudioContext());
+}
 export type SoundBiome='none'|'night'|'rain'|'treetop'|'fire';
 export type SoundCue='step'|'jump'|'doubleJump'|'dash'|'shoot'|'hit'|
  'interact'|'blackout'|'puzzle'|'transition'|'victory'|'defeat';
@@ -45,7 +50,7 @@ export class GameAudio {
    return;
   }
   try{
-   const ctx=new AudioContext();
+   const ctx=getSharedAudioContext();
    const music=ctx.createGain(),effects=ctx.createGain(),ambience=ctx.createGain();
    music.gain.value=0;effects.gain.value=0;ambience.gain.value=0;
    music.connect(ctx.destination);effects.connect(ctx.destination);
@@ -123,6 +128,6 @@ export class GameAudio {
   document.removeEventListener('visibilitychange',this.onVisibility);
   this.soundtrack?.destroy();
   try{this.source?.stop();}catch{}
-  void this.context?.close();
+  if(this.context){void this.context.close();if(sharedContext===this.context)sharedContext=undefined;}
  }
 }
