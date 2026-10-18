@@ -616,11 +616,52 @@ function showJoin(): void {
     (event.target as HTMLInputElement).setCustomValidity('');
   });
 }
+/** Shared audio follows authoritative events, never triggers gameplay rules. */
+const soundProgress=new Map<number,{count:number;dead:boolean;blackout:boolean;health:string}>();
+function observeSound(phase:1|2|3|4,
+ health:readonly number[],count:number,deadUntil:number,blackoutUntil:number):void{
+ if(net.experience!=='loop'||net.level!==phase||!net.playing)return;
+ const now=Date.now(),key=health.join(',');
+ const previous=soundProgress.get(phase);
+ const dead=deadUntil>now,blackout=blackoutUntil>now;
+ if(previous){
+  if(health.some((h,i)=>h<Number(previous.health.split(',')[i])))audio.play('hit');
+  if(count>previous.count)audio.play('puzzle');
+  if(!previous.blackout&&blackout)audio.play('blackout');
+  if(!previous.dead&&dead)audio.play('defeat');
+ }
+ soundProgress.set(phase,{health:key,count,dead,blackout});
+}
+net.on('loop',w=>observeSound(1,w.health,
+ w.marks.filter(Boolean).length+w.tree.filter(Boolean).length+
+ w.final.filter(Boolean).length+(w.exit?1:0),w.deadUntil,w.blackoutUntil));
+net.on('temporal',w=>observeSound(2,w.health,
+ w.echo.filter(Boolean).length+w.tree.filter(Boolean).length+
+ w.roots.filter(Boolean).length,w.deadUntil,w.blackoutUntil));
+net.on('treetop',w=>observeSound(3,w.health,
+ w.bridge.filter(Boolean).length+w.tower.filter(Boolean).length+
+ w.time.filter(Boolean).length,w.deadUntil,w.blackoutUntil));
+net.on('fire',w=>observeSound(4,w.health,
+ w.log.filter(Boolean).length+w.smoke.filter(Boolean).length+
+ w.tree.filter(Boolean).length,w.deadUntil,w.blackoutUntil));
+net.on('vital-reply',reply=>{
+ if(!reply.ok)return;
+ audio.play(reply.kind==='doubleJump'?'doubleJump':
+  reply.kind==='jump'?'jump':reply.kind==='shoot'?'shoot':'dash');
+});
 gameKeys.bind();
 net.on('solo-seat',seat=>updateMobileCharacter(seat));
-net.on('change',()=>{if(net.role==='idle')info='';render();});
+net.on('change',()=>{
+ if(net.role==='idle'){info='';devSession=false;closeOverlay();}
+ render();
+});
 net.on('start', () => { info = ''; render(); });
-net.on('phase', () => { info = ''; render(); });
+net.on('phase', data => {
+ info='';closeOverlay();
+ if(data.stage==='transition')audio.play('transition');
+ if(data.stage==='final')audio.play('victory');
+ render();
+});
 net.on('notice', text => {if(net.role==='idle')return;info=text;render();});
 net.on('win', () => { info = ''; render(); });
 window.addEventListener('keydown', event => {
@@ -631,5 +672,5 @@ window.addEventListener('keydown', event => {
   }
   if (net.playing && ['ArrowLeft', 'ArrowRight'].includes(event.code)) event.preventDefault();
 });
-window.addEventListener('beforeunload', () => net.shutdown());
+window.addEventListener('beforeunload', () => {audio.destroy();net.shutdown();});
 render();
