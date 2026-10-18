@@ -1078,7 +1078,7 @@ export class Network {
         this.fallTracker.reset(blackoutActive(l,now)?now+900:0);
       }else{
         const hits=this.fallTracker.sample(this.poses,loopFallSurfaces(l.layout,l.bridge,
-          SUMMIT_BRANCH),now,l.supporting);
+          SUMMIT_BRANCH,l.suspendedOpen),now,l.supporting);
         for(const seat of hits)if(this.loopAuthority.damage(seat,now,false))this.shareLoop();
       }
       if(!blackoutActive(this.loopAuthority.world,now)
@@ -1091,8 +1091,8 @@ export class Network {
         }
         const tree=this.loopAuthority.world;
         if(tree.treeFallAt>0&&!tree.bridge&&now-tree.treeFallAt>=1100
-          &&this.poses.some(p=>p.x>2300&&p.x<2430&&p.y>560)){
-          const hit=this.poses.find(p=>p.x>2300&&p.x<2430&&p.y>560);
+          &&this.poses.some(p=>p.x>9500&&p.x<9630&&p.y>560)){
+          const hit=this.poses.find(p=>p.x>9500&&p.x<9630&&p.y>560);
           if(hit&&this.loopAuthority.damage(hit.seat,now,true))this.shareLoop();
         }
       }
