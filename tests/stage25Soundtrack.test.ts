@@ -41,6 +41,15 @@ assert.ok(audio.includes("this.soundtrack=new OriginalSoundtrack(ctx,music,impor
 assert.ok(audio.includes("this.soundtrack?.setMuted(music===0)"));
 assert.ok(audio.includes("audioLevel('ambient')"));
 assert.ok(audio.includes('this.soundtrack?.destroy()'));
+assert.ok(audio.includes('sharedContext??(sharedContext=new AudioContext())'));
+const treetopAudio=SRC('treetopWindAudio'),fireAudio=SRC('burningForestAudio');
+for(const stageAudio of [treetopAudio,fireAudio]){
+ assert.ok(stageAudio.includes('getSharedAudioContext()'),
+  'music and environmental warning beds must reuse the same mobile AudioContext');
+ assert.ok(!stageAudio.includes('ctx?.close()')&&!stageAudio.includes('context?.close()'),
+  'scene transitions must never close the central music AudioContext');
+ assert.ok(stageAudio.includes("audioLevel('ambient')"));
+}
 assert.ok(audio.includes("g.setTargetAtTime(normal*.48"));
 assert.ok(music.includes("source.loop=true;source.loopStart=0;source.loopEnd=buffer.duration"));
 assert.ok(music.includes("if(this.ended||this.desired===cue)return"),'duplicate stage snapshots do not restart playback');
