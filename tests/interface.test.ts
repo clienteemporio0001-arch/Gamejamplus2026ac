@@ -68,22 +68,22 @@ ok(network.includes("this.poses=(mode==='loop'?(level===4?FIRE_START:level===3?T
 ok(network.includes("this.poses = (this.experience==='loop'?LOOP_START:FOREST_SPAWNS)"),
   'mesmo spawn para host online');
 ok(network.includes("this.broadcast({t:'loop',world:this.loop})"),'A/B/C sincronizados pelo host');
-ok(LOOP_START[0].x===1840&&LOOP_START[1].x===1900&&LOOP_START[2].x===1960,
+ok(LOOP_START[0].x===5600&&LOOP_START[1].x===5660&&LOOP_START[2].x===5720,
   'spawn central inalterado');
-ok(LOOP_CYCLE_MS===60000&&LOOP_GEOMETRY.gate===2070,'tempo e geometria preservados');
+ok(LOOP_CYCLE_MS===60000&&LOOP_GEOMETRY.gate===7200,'tempo e geometria preservados');
 
 const w=initLoop(1000);
 const expect=(name:string,progress:string)=>{
  const obj=loopObjective(w);ok(obj.title===name&&obj.progress===progress,'objetivo: '+name);
 };
 expect('Observe os marcos da floresta.','Memorize os três');
-ok(loopWind(w,0,1900).startsWith('◀'),'vento inicial aponta para a esquerda');
-ok(loopContext(w,0,1900,606,1001)==='','sem legenda ao nascer longe do puzzle');
+ok(loopWind(w,0,5660).startsWith('◀'),'vento inicial aponta para a esquerda');
+ok(loopContext(w,0,5660,606,1001)==='','sem legenda ao nascer longe do puzzle');
 w.observed=true;
 expect('Algo mudou. Sigam o vento.','Marcos 0/3');
 ok(loopContext(w,0,LOOP_MARKS[0].x,480,1001).includes('E'),
   'Téo vê comando próximo da árvore');
-ok(loopContext(w,0,1900,606,1001)==='','sem comandos de puzzle fora de alcance');
+ok(loopContext(w,0,5660,606,1001)==='','sem comandos de puzzle fora de alcance');
 ok(loopContext(w,1,LOOP_MARKS[1].x-160,606,1001)==='',
   'Lia não vê comando de ação bloqueada antes de Téo');
 w.marks[0]=true;
@@ -97,6 +97,8 @@ ok(loopContext(w,2,LOOP_MARKS[2].x-150,606,1001).includes('SHIFT'),
 w.marks=[true,true,true];
 expect('Encontrem a passagem verdadeira.','Três amigos juntos');
 w.lastRoute='right';
+expect('Movam juntos a plataforma suspensa.','Mecanismos 0/3');
+w.suspended=[true,true,true];w.suspendedOpen=true;
 expect('Trabalhem juntos para derrubar a árvore.','Amarras 0/3');
 w.tree=[true,false,true];
 expect('Trabalhem juntos para derrubar a árvore.','Amarras 2/3');
@@ -108,6 +110,6 @@ w.exit=true;
 expect('Reúnam os três na saída.','Equipe 0/3');
 w.completed=true;
 expect('A equipe encontrou a saída.','3 / 3');
-ok(regionTitle(1900)==='CLAREIRA CENTRAL'&&regionTitle(2500)==='ÁRVORE SUSPENSA',
+ok(regionTitle(5660)==='CLAREIRA CENTRAL'&&regionTitle(8150)==='PLATAFORMA SUSPENSA',
   'regiões etiquetadas por entrada, não legendas permanentes');
 console.log('APROVADO: '+count+' verificações da Etapa 10 (HUD, menu, sessões e contexto).');
