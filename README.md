@@ -1,5 +1,17 @@
 # A FLORESTA MENTE — MAS O VENTO NÃO
 
+## Etapa 21 — Missões cooperativas encadeadas
+
+**Fase 01:** os marcos de descoberta agora exigem Téo (árvore oca) → Lia (pedra rachada) → Nino (arco, dash + E). A autoridade do anfitrião valida cada ação. Fora de ordem, o mecanismo não conclui nem aparece como o objetivo atual. Após os três, o grupo deve se reunir na trilha correta indicada pelo vento: **árvore oca no estado B e pedra rachada nos estados A/C**. A travessia é simultânea; rotas falsas e mudanças A/B/C permanecem funcionando. Elementos de raízes e folhagens passam a revelar visualmente a passagem física, em vez de um portal mágico.
+
+**Todas as fases:** `src/missionChapters.ts` deriva sequências de objetivos e falas a partir de `LoopWorld`, `TemporalWorld`, `TreeWorld` e `FireWorld` reais. `src/missionDirector.ts` compara snapshots autorizados, marca a conclusão com reação do personagem perto dele, partículas leves e um destaque discreto no próximo mecanismo. Pipo anuncia a próxima tarefa em fila, depois da reação do personagem, e os avisos urgentes de perigo continuam prioritários. `src/main.ts` mostra o objetivo atual no HUD. Nenhum banco de dados, IA extra, teleporte individual ou autoridade paralela foi criado.
+
+**Multiplayer e reconexão:** o progresso é carregado dos estados já sincronizados pelo anfitrião; ao ingressar ou reconectar, o snapshot inicial é hidratado silenciosamente, sem reapresentar todas as falas antigas. O modo solo conserva os três personagens e a troca manual entre eles.
+
+**Limites:** missões secundárias das fases 2–4 seguem as regras de dificuldade e ordem já estabelecidas; a Etapa 21 adiciona ações/repercussões narrativas, não substitui os mecanismos. Não há confirmação de conclusão por um percurso manual de cada fase ou por partida online com três dispositivos. Testes automatizados e validações de código são executados no GitHub Actions. É necessário testar em navegador e Android antes de considerar todas as fases integralmente jogáveis.
+
+---
+
 ## Etapa 20 — base visual e técnica para revisar as quatro fases
 
 A aventura principal mantém **01 A Boca da Noite → 02 A Floresta Temporal →
