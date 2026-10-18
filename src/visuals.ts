@@ -23,6 +23,8 @@ export class NightArt {
   private fog: { shape: Phaser.GameObjects.Ellipse; x: number; seed: number }[] = [];
   private leaves: { shape: Phaser.GameObjects.Ellipse; originX: number; seed: number }[] = [];
   private lowPower = isLowPower();
+  private parallaxChunks:Array<{ink:Phaser.GameObjects.Graphics;from:number;to:number;scroll:number}>=[];
+  private lastPaint=0;
 
   constructor(private readonly scene: Phaser.Scene, readonly width: number, readonly biome: Biome) {
     this.drawSky();
@@ -61,47 +63,52 @@ export class NightArt {
   }
 
   private drawSilhouettes(): void {
-    // Three parallax layers, consolidated as Graphics: no 100s of live sprites.
+    // Stage 1 is 11,400 px wide. Giant four-layer Graphics caused the GPU
+    // to submit the ENTIRE forest even for a tiny moving camera window.
+    // Split each layer into immutable 1,240px graphics and cull by parallax space.
     const layers = [
       { depth: -50, scroll: .23, spacing: 100, color: 0x0d2934, leaf: 0x112d36, base: 654, size: 1.30 },
       { depth: -42, scroll: .49, spacing: 87, color: 0x123331, leaf: 0x163b37, base: 665, size: 1.12 },
       { depth: -31, scroll: .76, spacing: 68, color: 0x17382f, leaf: 0x20483b, base: 675, size: .92 },
       { depth: -19, scroll: 1, spacing: 69, color: 0x1c3c34, leaf: 0x28533f, base: 650, size: .79 },
     ] as const;
+    const chunkWidth=1240;
     for (const [layerIndex, layer] of layers.entries()) {
-      const ink = this.scene.add.graphics().setDepth(layer.depth).setScrollFactor(layer.scroll);
       const count = Math.ceil(this.width / layer.spacing) + 4;
-      for (let i = 0; i < count; i++) {
-        const seed = i * 43 + layerIndex * 621;
-        const x = i * layer.spacing - 70 + pick(seed + 4, -20, 20);
-        const h = pick(seed + 8, 155, 390) * layer.size;
-        const trunk = pick(seed + 13, 13, 34) * layer.size;
-        const top = layer.base - h;
-        ink.fillStyle(layer.color, .95);
-        ink.fillRect(x - trunk / 2, top + 40, trunk, h - 10);
-        ink.lineStyle(Math.max(2, trunk * .35), layer.color, .9);
-        ink.lineBetween(x, top + 110, x - 43 * layer.size, top + 63);
-        ink.lineBetween(x + 3, top + 136, x + 51 * layer.size, top + 80);
-        // Root buttresses anchor giant trees to the forest floor.
-        ink.fillStyle(layer.color, 1);
-        ink.fillTriangle(x - trunk / 2, layer.base - 26, x - 42 * layer.size,
-          layer.base + 4, x, layer.base - 19);
-        ink.fillTriangle(x + trunk / 2, layer.base - 23, x + 43 * layer.size,
-          layer.base + 5, x, layer.base - 28);
-        ink.fillStyle(layer.leaf, .97);
-        ink.fillEllipse(x - 32 * layer.size, top + 56, 82 * layer.size, 86 * layer.size);
-        ink.fillEllipse(x + 33 * layer.size, top + 48, 84 * layer.size, 102 * layer.size);
-        ink.fillEllipse(x, top + 13, 84 * layer.size, 104 * layer.size);
-        if (layerIndex >= 2 && i % 3 === 1) {
-          // Thin hanging lianas are decorative, not colliders.
-          ink.lineStyle(2, 0x3c6552, .27);
-          const end = top + pick(seed + 27, 130, 215);
-          ink.beginPath();
-          ink.moveTo(x + 24, top + 39);
-          ink.lineTo(x + 29, end - 40);
-          ink.lineTo(x + 20, end);
-          ink.strokePath();
+      for(let from=0;from<this.width;from+=chunkWidth){
+        const to=Math.min(this.width,from+chunkWidth);
+        const ink = this.scene.add.graphics().setDepth(layer.depth)
+          .setScrollFactor(layer.scroll).setPosition(from,0);
+        for (let i = 0; i < count; i++) {
+          const seed = i * 43 + layerIndex * 621;
+          const absoluteX=i*layer.spacing-70+pick(seed+4,-20,20);
+          if(absoluteX<from||absoluteX>=to)continue;
+          const x=absoluteX-from;
+          const h = pick(seed + 8, 155, 390) * layer.size;
+          const trunk = pick(seed + 13, 13, 34) * layer.size;
+          const top = layer.base - h;
+          ink.fillStyle(layer.color, .95);
+          ink.fillRect(x - trunk / 2, top + 40, trunk, h - 10);
+          ink.lineStyle(Math.max(2, trunk * .35), layer.color, .9);
+          ink.lineBetween(x, top + 110, x - 43 * layer.size, top + 63);
+          ink.lineBetween(x + 3, top + 136, x + 51 * layer.size, top + 80);
+          ink.fillStyle(layer.color, 1);
+          ink.fillTriangle(x - trunk / 2, layer.base - 26, x - 42 * layer.size,
+            layer.base + 4, x, layer.base - 19);
+          ink.fillTriangle(x + trunk / 2, layer.base - 23, x + 43 * layer.size,
+            layer.base + 5, x, layer.base - 28);
+          ink.fillStyle(layer.leaf, .97);
+          ink.fillEllipse(x - 32 * layer.size, top + 56, 82 * layer.size, 86 * layer.size);
+          ink.fillEllipse(x + 33 * layer.size, top + 48, 84 * layer.size, 102 * layer.size);
+          ink.fillEllipse(x, top + 13, 84 * layer.size, 104 * layer.size);
+          if (layerIndex >= 2 && i % 3 === 1) {
+            ink.lineStyle(2, 0x3c6552, .27);
+            const tip=top+pick(seed+27,130,215);
+            ink.beginPath();ink.moveTo(x+24,top+39);ink.lineTo(x+29,tip-40);
+            ink.lineTo(x+20,tip);ink.strokePath();
+          }
         }
+        this.parallaxChunks.push({ink,from,to,scroll:layer.scroll});
       }
     }
   }
@@ -251,39 +258,72 @@ export class NightArt {
     this.actors.push({target,ink,shadow,seat,lastX:target.x,lastY:target.y});
   }
 
-  /** Call from each existing scene update. No allocations in the hot path. */
+  /** Same view bounds are used only for decoration, NEVER to disable physics. */
+  private visibleRange():{left:number;right:number}{
+    const cam=this.scene.cameras.main;
+    return {left:cam.scrollX-240,right:cam.scrollX+cam.width/Math.max(.3,cam.zoom)+240};
+  }
+  /** Purely cosmetic culling. Snapshot and authority continue working off camera. */
   update(time: number): void {
-    for (const skin of this.skins) {
-      skin.ink.setPosition(skin.target.x, skin.target.y);
-      skin.ink.setVisible(skin.target.visible && skin.target.active);
-      skin.ink.setAlpha(skin.target.alpha);
-      skin.ink.setAngle(skin.target.angle);
+    const view=this.visibleRange();
+    const cam=this.scene.cameras.main;
+    const width=cam.width/Math.max(.3,cam.zoom);
+    for(const chunk of this.parallaxChunks){
+      const left=cam.scrollX*chunk.scroll-220,right=left+width+440;
+      const visible=chunk.to>=left&&chunk.from<=right;
+      if(chunk.ink.visible!==visible)chunk.ink.setVisible(visible);
     }
-    for (const actor of this.actors) {
-      const dx=(actor.target.x-actor.lastX)*16,dy=(actor.target.y-actor.lastY)*16;
-      const body=actor.target.body as Phaser.Physics.Arcade.Body|undefined;
-      paintHero(actor.ink,actor.seat,time,body?.velocity.x??dx,body?.velocity.y??dy);
-      actor.lastX=actor.target.x;actor.lastY=actor.target.y;
-      actor.ink.setPosition(actor.target.x, actor.target.y);
-      actor.ink.setVisible(actor.target.visible && actor.target.active);
-      actor.ink.setAlpha(actor.target.alpha);
-      actor.shadow.setPosition(actor.target.x, actor.target.y + 27);
-      actor.shadow.setVisible(actor.target.visible && actor.target.active);
+    for(const skin of this.skins){
+      const t=skin.target;
+      const visible=t.visible&&t.active&&t.x+t.width/2>=view.left&&t.x-t.width/2<=view.right;
+      if(skin.ink.visible!==visible)skin.ink.setVisible(visible);
+      if(visible){
+        if(skin.ink.x!==t.x||skin.ink.y!==t.y)skin.ink.setPosition(t.x,t.y);
+        if(skin.ink.alpha!==t.alpha)skin.ink.setAlpha(t.alpha);
+        if(skin.ink.angle!==t.angle)skin.ink.setAngle(t.angle);
+      }
     }
-    for (const entry of this.fog) {
-      entry.shape.x = entry.x + Math.sin(time / 4800 + entry.seed) * 31;
-      entry.shape.alpha = .025 + Math.sin(time / 2200 + entry.seed) * .007;
+    const paint=time-this.lastPaint>=(this.lowPower?38:25);
+    if(paint)this.lastPaint=time;
+    for(const actor of this.actors){
+      const target=actor.target;
+      const visible=target.visible&&target.active&&target.x>=view.left&&target.x<=view.right;
+      if(actor.ink.visible!==visible)actor.ink.setVisible(visible);
+      if(actor.shadow.visible!==visible)actor.shadow.setVisible(visible);
+      if(!visible)continue;
+      if(paint){
+        const dx=(target.x-actor.lastX)*16,dy=(target.y-actor.lastY)*16;
+        const body=target.body as Phaser.Physics.Arcade.Body|undefined;
+        paintHero(actor.ink,actor.seat,time,body?.velocity.x??dx,body?.velocity.y??dy);
+        actor.lastX=target.x;actor.lastY=target.y;
+      }
+      actor.ink.setPosition(target.x,target.y);
+      actor.ink.setAlpha(target.alpha);
+      actor.shadow.setPosition(target.x,target.y+27);
     }
-    for (const leaf of this.leaves) {
-      const phase = ((time / 14500 + visualNoise(leaf.seed)) % 1);
-      leaf.shape.x = leaf.originX + Math.sin(time / 2100 + leaf.seed) * 26;
-      leaf.shape.y = 65 + phase * 545;
-      leaf.shape.rotation = time / 3200 + leaf.seed;
+    for(const entry of this.fog){
+      const visible=entry.x>=view.left-300&&entry.x<=view.right+300;
+      if(entry.shape.visible!==visible)entry.shape.setVisible(visible);
+      if(!visible)continue;
+      entry.shape.x=entry.x+Math.sin(time/4800+entry.seed)*31;
+      entry.shape.alpha=.025+Math.sin(time/2200+entry.seed)*.007;
     }
-    for (const entry of this.lights) {
-      entry.dot.setPosition(entry.originX + Math.sin(time / 1250 + entry.seed) * 7,
-        entry.originY + Math.cos(time / 1600 + entry.seed) * 9);
-      entry.dot.setAlpha(.14 + (.5 + .5 * Math.sin(time / 1000 + entry.seed)) * .47);
+    for(const leaf of this.leaves){
+      const visible=leaf.originX>=view.left-100&&leaf.originX<=view.right+100;
+      if(leaf.shape.visible!==visible)leaf.shape.setVisible(visible);
+      if(!visible)continue;
+      const phase=((time/14500+visualNoise(leaf.seed))%1);
+      leaf.shape.x=leaf.originX+Math.sin(time/2100+leaf.seed)*26;
+      leaf.shape.y=65+phase*545;
+      leaf.shape.rotation=time/3200+leaf.seed;
+    }
+    for(const entry of this.lights){
+      const visible=entry.originX>=view.left-40&&entry.originX<=view.right+40;
+      if(entry.dot.visible!==visible)entry.dot.setVisible(visible);
+      if(!visible)continue;
+      entry.dot.setPosition(entry.originX+Math.sin(time/1250+entry.seed)*7,
+        entry.originY+Math.cos(time/1600+entry.seed)*9);
+      entry.dot.setAlpha(.14+(.5+.5*Math.sin(time/1000+entry.seed))*.47);
     }
   }
 }
