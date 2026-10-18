@@ -201,13 +201,31 @@ export function layoutReachable(w:LoopWorld):boolean{
       &&p.x<LOOP_GEOMETRY.chasm.start-120);
 }
 export function safeReposition(poses:Pose[],w:LoopWorld):Pose[]|undefined{
-  const obstacles=barriers(w).filter(b=>b.enabled);
-  const unsafe=poses.some(p=>obstacles.some(b=>Math.abs(p.x-b.x)<(b.height>200?40:44)
-    &&p.y>LOOP_GEOMETRY.clearing.groundY-b.height-33));
-  if(!unsafe)return undefined;
-  // Safest common rendezvous point preserves identity but eliminates collider traps.
-  return LOOP_START.map(p=>({...p}));
+ // Do not teleport the entire team to spawn when one root changes position.
+ // Resolve only the individual body overlapping a newly enabled static collision.
+ const obstacles=[
+  ...barriers(w).filter(b=>b.enabled).map(b=>({x:b.x,width:b.height>200?40:45,height:b.height})),
+  {x:markPosition(w,1).x,width:120,height:91}
+ ];
+ const onGround=(x:number)=>LOOP_TERRAIN.some(t=>x>=t.from+31&&x<=t.to-31);
+ let any=false;
+ const moved=poses.map(p=>{
+  const dangerous=obstacles.filter(b=>Math.abs(p.x-b.x)<b.width/2+18
+    &&p.y>LOOP_GEOMETRY.clearing.groundY-b.height-33);
+  if(!dangerous.length)return {...p};
+  const candidates=dangerous.flatMap(b=>[
+   b.x-b.width/2-36,b.x+b.width/2+36
+  ]).filter(x=>x>=35&&x<=LOOP_WIDTH-35&&onGround(x)
+   &&obstacles.every(b=>Math.abs(x-b.x)>=b.width/2+18))
+   .sort((a,b)=>Math.abs(a-p.x)-Math.abs(b-p.x));
+  // Rare enclosed configuration: return the trapped seat alone to a safe clearing.
+  const safeX=candidates[0]??LOOP_START[p.seat].x;
+  any=true;
+  return {...p,x:safeX,vx:0,vy:0};
+ });
+ return any?moved:undefined;
 }
+
 type Tick={changed:boolean;poses?:Pose[];reset?:boolean;won?:boolean};
 export class LoopAuthority{
   world=initLoop();
