@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {
-  LOOP_START,LOOP_MARKS,LOOP_TREE,LOOP_PHYSICS,UPPER_BRANCH,SUMMIT_BRANCH,
+  LOOP_START,LOOP_MARKS,LOOP_TREE,LOOP_WIDTH,LOOP_PHYSICS,UPPER_BRANCH,SUMMIT_BRANCH,
   upperLandingY,summitLandingY,soloJumpRise,hasBranchFooting,hasSummitFooting,LoopAuthority,initLoop,
   validLoop,windGuide,LOOP_CYCLE_MS,LOOP_GEOMETRY,markerBaseY,
 } from '../src/forestLoop';
@@ -37,7 +37,7 @@ ok(182-2*44>44,'arco com abertura maior que o personagem');
 ok(LOOP_MARKS[0].y>markerBaseY-320&&LOOP_MARKS[0].y<markerBaseY,
   'cavidade da árvore desenhada acima das raízes');
 ok(scene.includes("this.ground(LOOP_MARKS[0].x,546"),'galho inicial com colisão real');
-ok(scene.includes('this.add.image(2200,353'),'árvore gigante tem raízes no terreno');
+ok(scene.includes('this.add.image(9400,353'),'árvore gigante tem raízes no terreno');
 ok(scene.includes('UPPER_BRANCH.centerY')&&scene.includes('UPPER_BRANCH.width'),
   'galho superior desenhado e físico usam a mesma geometria');
 ok(scene.includes('ledgeBody.checkCollision.down=false')&&
@@ -90,18 +90,18 @@ const game=new LoopAuthority();
 game.reset(0);
 const players:Pose[]=LOOP_START.map(v=>({...v}));
 game.world.observed=true;
-game.world.marks=[true,true,true];
+game.world.marks=[true,true,true];game.world.suspendedOpen=true;
 game.world.lastRoute='right';
-game.world.stackMilestone=true;
+game.world.stackMilestone=true;game.world.suspendedOpen=true;
 players[0]=pose(upperLandingY);
 ok(!game.act(0,{kind:'lever'},players,10000),
   'stackMilestone sem desprendimento e pouso não solta amarra');
 ok(!game.world.tree[0]&&!game.world.teoUpperReached,
   'atalho da etapa anterior está fechado');
 game.world.stackMilestone=false;
-players[0]=pose(518,2160);
-players[1]={...players[1],x:2160,y:562,vx:0,vy:0};
-players[2]={...players[2],x:2160,y:606,vx:0,vy:0};
+players[0]=pose(518,UPPER_BRANCH.x);
+players[1]={...players[1],x:UPPER_BRANCH.x,y:562,vx:0,vy:0};
+players[2]={...players[2],x:UPPER_BRANCH.x,y:606,vx:0,vy:0};
 ok(!game.act(0,{kind:'support'},players,11000),'Téo espera por Lia');
 ok(game.act(1,{kind:'support'},players,11100),'Lia se apoia no Nino');
 game.tick(players,11200);
@@ -129,7 +129,7 @@ ok(!game.world.tree[1]&&!game.world.tree[2],'Téo não conclui outras duas amarr
 
 const w=initLoop(0);
 const leaf=leafAt(w,8,10500);
-ok(Number.isFinite(leaf.x)&&leaf.x>=0&&leaf.x<=3800,'vento ancorado no mundo');
+ok(Number.isFinite(leaf.x)&&leaf.x>=0&&leaf.x<=LOOP_WIDTH,'vento ancorado no mundo');
 ok(leafAt(w,8,10500).x===leaf.x,'partícula determinística no mesmo tempo');
 ok(leafAt(w,8,11500).x!==leaf.x,'folha move mesmo com todos parados');
 ok(WIND_LEAVES>=20&&WIND_LEAVES<=40,'efeito leve no navegador');
