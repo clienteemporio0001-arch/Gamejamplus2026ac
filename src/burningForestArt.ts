@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type {Seat,Pose} from './network';
 import {FIRE_WIDTH,FIRE_HEIGHT,FIRE_SMOKE_ZONE,FIRE_TREE_DANGER,FIRE_TARGETS,
- FIRE_PLATFORMS,fireFlareActive,fireTreePhase,type FirePlatform,type FireWorld} from './burningForest';
+ FIRE_PLATFORMS,fireFlareActive,fireVisualTreePhase,type FirePlatform,type FireWorld} from './burningForest';
 
 const hash=(a:number)=>{const n=Math.sin(a*127.1+14.58)*43758.5453;return n-Math.floor(n)};
 type Figure={target:Phaser.GameObjects.Rectangle;ink:Phaser.GameObjects.Graphics;seat:Seat};
@@ -219,7 +219,7 @@ export class BurningForestArt {
    this.smokeInk.fillEllipse(x,y,140+(i%3)*40,115);
   }
   // The falling tree is telegraphed by shaking, then becomes a bridge.
-  const phase=fireTreePhase(w,now);
+  const phase=fireVisualTreePhase(w);
   if(w.treeOpen){
    this.tree.setRotation(-1.54).setPosition(4050,687).setAlpha(.55);
   }else{
