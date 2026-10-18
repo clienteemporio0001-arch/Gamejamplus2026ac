@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import {PipoGuide} from './pipoGuide';
 import {MissionDirector} from './missionDirector';
+import {animateForestProps} from './forestTransformFX';
 import {CHARACTERS,type Network,type Seat,type Pose} from './network';
 import type {TouchInput} from './game';
 import {SoloBodies} from './soloBodies';
@@ -306,6 +307,17 @@ export class TemporalForestScene extends Phaser.Scene {
   }
 
   const layoutChanged=this.w.layout!==w.layout;
+  const transforming=w.blackoutUntil>0&&w.blackoutUntil!==this.w.blackoutUntil;
+  if(transforming){
+   const from=TEMP_LAYOUTS[w.layout],to=TEMP_LAYOUTS[((w.layout+1)%3) as 0|1|2];
+   animateForestProps(this,from.obstacles.map((x,i)=>({
+    from:{x,y:586,width:54,height:99},
+    to:{x:to.obstacles[i],y:586,width:54,height:99},
+    kind:'roots' as const
+   })));
+   this.pools.forEach((pool,i)=>this.tweens.add({targets:pool,
+    x:to.puddles[i],duration:1900,ease:'Sine.easeInOut'}));
+  }
    if(layoutChanged)this.pipo?.warnDanger('As raízes e as trilhas mudaram! Sigam o vento!');
     this.w={...w,echo:[...w.echo],tree:[...w.tree],roots:[...w.roots],
    supporting:[...w.supporting],health:[...w.health],stamina:[...w.stamina],
