@@ -277,6 +277,7 @@ function render(): void {
           ([0,1,2] as const).map(i=>'<button data-seat="'+i+'" '+(i===seat?'class="active" ':'')+
             'aria-label="Controlar '+CHARACTERS[i].name+'">'+(i+1)+' · '+CHARACTERS[i].name+'</button>').join('')+
           '</nav>':'')+
+        '<button id="pipo-help" type="button" aria-label="Pedir uma dica ao Pipo">🦜 DICA <small>H</small></button>'+ 
         '<div class="loop-menu">'+
         (net.isSolo?'<details id="loop-dev"><summary>⚙ <span>Opções</span></summary>'+
           '<div class="loop-menu-options">'+
@@ -287,6 +288,7 @@ function render(): void {
         '</div>'+
         (net.players.some(p=>!p.online)?'<div class="loop-offline">Aguardando reconexão da equipe.</div>':'')+
         (info?'<div class="loop-alert" role="status">'+safeText(info)+'</div>':'');
+      ui.querySelector('#pipo-help')?.addEventListener('click',()=>window.dispatchEvent(new Event('pipo-help')));
       ui.querySelector('#solo-restart')?.addEventListener('click',()=>net.restartSolo());
       ui.querySelector('#solo-cycle')?.addEventListener('click',()=>net.advanceLoopCycle());
       ui.querySelector('#solo-leave')?.addEventListener('click',()=>net.shutdown());
