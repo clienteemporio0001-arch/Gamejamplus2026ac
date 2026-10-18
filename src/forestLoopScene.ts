@@ -539,7 +539,7 @@ export class ForestLoopScene extends Phaser.Scene {
       this.routeNames[i].setVisible(unlocked);
       this.routeLabels[i].setVisible(unlocked);
       if(unlocked){
-        if(plant.scaleX>.45)this.tweens.add({targets:plant,scaleX:.12,
+        if(plant.scaleX>.45&&!this.tweens.isTweening(plant))this.tweens.add({targets:plant,scaleX:.12,
           alpha:.28,duration:850,ease:'Sine.easeInOut'});
         curtain.setAlpha(right?1:.82);
       }else{plant.setScale(1);plant.setAlpha(1);curtain.setAlpha(.88);}
