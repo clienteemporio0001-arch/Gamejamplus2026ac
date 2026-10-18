@@ -18,7 +18,7 @@ assert.equal(pipoHint({phase:2,world:temporal}).objective,'subida na chuva');
 temporal.stacked=true;temporal.teoSummitReached=true;
 assert.equal(pipoHint({phase:2,world:temporal}).objective,'árvore sobre a correnteza');
 assert.equal(pipoHint({phase:3,world:tree}).objective,'ponte dos três');
-tree.bridgeOpen=true;assert.equal(pipoHint({phase:3,world:tree}).objective,'escada humana das copas');
+tree.bridgeOpen=true;assert.equal(pipoHint({phase:3,world:tree}).objective,'cipó superior');
 tree.ropeOpen=true;assert.equal(pipoHint({phase:3,world:tree}).objective,'galhos do tempo');
 tree.finalOpen=true;assert.equal(pipoHint({phase:3,world:tree}).objective,'última copa');
 for(const source of [{phase:1,world:loop},{phase:2,world:temporal},{phase:3,world:tree}] as const){
