@@ -8,6 +8,7 @@ import {gameKeys} from './keyboard';
 import {NightArt} from './visuals';
 import type {VitalAction} from './loopVitals';
 import {temporalDrop,rainBudget,rippleAt} from './temporalRain';
+import {temporalHint,TEMP_MARK_NAMES} from './temporalGuidance';
 import {
  TEMP_WIDTH,TEMP_START,TEMP_CHANNEL,TEMP_UPPER,TEMP_ECHO,TEMP_TREE,TEMP_ROOTS,
  TEMP_LAYOUTS,tempBlocks,tempSurface,tempWind,temporalObjective,tempNear,tempLanding,
@@ -38,6 +39,9 @@ export class TemporalForestScene extends Phaser.Scene {
  private branches:Phaser.GameObjects.Container[]=[];
  private tree!:Phaser.GameObjects.Container;
  private roots:Phaser.GameObjects.Graphics[]=[];
+ private echoVisuals:Phaser.GameObjects.Container[]=[];
+ private echoLabels:Phaser.GameObjects.Text[]=[];
+ private echoChecks:Phaser.GameObjects.Text[]=[];
  private stormShade!:Phaser.GameObjects.Rectangle;
  private dark!:Phaser.GameObjects.Rectangle;
  private darkText!:Phaser.GameObjects.Text;
@@ -113,13 +117,52 @@ export class TemporalForestScene extends Phaser.Scene {
    sign.lineStyle(3,0x4b4937);sign.lineBetween(x+16,524,x+41,524);
    sign.lineBetween(x+30,513,x+42,524);sign.lineBetween(x+42,524,x+30,535);
   }
-  // Real marks integrate with the same points used by host authority.
+  // Three distinguishable environmental landmarks, visibly anchored to the soil.
+  // Targets and highlights reuse precisely the coordinates of TemporalAuthority.
   const markColor=[0x8fd9a3,0xf4c293,0x9accea];
-  for(const [i,p] of TEMP_ECHO.entries()){
-   const detail=this.add.graphics().setDepth(12);
-   detail.fillStyle(0x465d4c,.85);detail.fillEllipse(p.x,638,96,25);
-   detail.fillStyle(markColor[i],.42);detail.fillCircle(p.x,p.y,12);
-   detail.lineStyle(2,markColor[i],.72);detail.strokeCircle(p.x,p.y,15);
+  for(const [i,point] of TEMP_ECHO.entries()){
+   const art=this.add.graphics();
+   art.fillStyle(0x203c36,.65);art.fillEllipse(0,0,144,17);
+   if(i===0){
+    // Thick waterlogged hollow tree: the action point sits within its trunk.
+    art.fillStyle(0x4e493d);art.fillRoundedRect(-28,-195,57,192,17);
+    art.lineStyle(7,0x3e5d4b,.96);
+    art.lineBetween(-18,-22,-70,-3);art.lineBetween(18,-24,74,-5);
+    art.fillStyle(0x31594c,.95);
+    art.fillEllipse(-41,-185,112,91);art.fillEllipse(42,-181,107,95);
+    art.fillStyle(0x132a2d);art.fillEllipse(0,-122,27,41);
+    art.lineStyle(3,0x86a995,.6);art.strokeEllipse(0,-122,29,43);
+   }else if(i===1){
+    // Stone with a clear amber fracture, at the height of Lia's J projectile.
+    art.fillStyle(0x4e6570,.98);
+    art.fillPoints([new Phaser.Geom.Point(-67,-7),new Phaser.Geom.Point(-63,-55),
+      new Phaser.Geom.Point(-26,-100),new Phaser.Geom.Point(35,-91),
+      new Phaser.Geom.Point(69,-44),new Phaser.Geom.Point(56,-5)],true);
+    art.lineStyle(3,0x9bb2ad,.6);
+    art.strokePoints([new Phaser.Geom.Point(-63,-55),new Phaser.Geom.Point(-26,-100),
+      new Phaser.Geom.Point(35,-91),new Phaser.Geom.Point(69,-44)],false);
+    art.lineStyle(5,0x1b3135,.94);
+    art.lineBetween(0,-85,-12,-56);art.lineBetween(-12,-56,2,-40);
+    art.lineBetween(2,-40,-16,-17);
+    art.lineStyle(2,0xf3cf9b,.91);art.lineBetween(0,-85,-12,-56);
+    art.lineBetween(-12,-56,2,-40);art.lineBetween(2,-40,-16,-17);
+   }else{
+    // Interwoven root arch: readable opening and blue trigger beside Nino.
+    art.lineStyle(27,0x534c39,1);
+    art.beginPath();art.moveTo(-84,-4);art.lineTo(-77,-112);
+    art.lineTo(-42,-158);art.lineTo(43,-158);art.lineTo(75,-108);art.lineTo(83,-4);
+    art.strokePath();
+    art.lineStyle(9,0x71947a,.78);art.strokePath();
+    art.lineStyle(6,0x29493e,.85);art.lineBetween(-80,-6,-130,-14);
+    art.lineBetween(84,-6,137,-18);
+   }
+   const halo=this.add.circle(0,point.y-638,15,markColor[i],.43)
+    .setStrokeStyle(3,markColor[i],.85);
+   const container=this.add.container(point.x,638,[art,halo]).setDepth(12);
+   this.echoVisuals.push(container);
+   this.echoLabels.push(this.text(point.x,point.y-113,TEMP_MARK_NAMES[i],11,
+     i===1?'#f5d7a6':'#d7f3d9').setVisible(false));
+   this.echoChecks.push(this.text(point.x,point.y-28,'✓',17,'#a8f5aa').setVisible(false));
   }
   for(const [i,p] of TEMP_ROOTS.entries()){
    this.add.circle(p.x,p.y,12,markColor[i],.52).setDepth(14)
@@ -256,6 +299,10 @@ export class TemporalForestScene extends Phaser.Scene {
     p.x=TEMP_LAYOUTS[w.layout].puddles[i];
     p.setScale(w.layout===2?1.2:w.layout===1?1.1:1,1);
   });
+  this.echoVisuals.forEach((visual,i)=>{
+    visual.setAlpha(w.echo[i]?.5:1);
+    this.echoChecks[i]?.setVisible(w.echo[i]);
+  });
  }
  private request(kind:VitalAction,seat:Seat){
   const id=this.net.requestVital(kind,this.facing);
@@ -357,9 +404,19 @@ export class TemporalForestScene extends Phaser.Scene {
    this.names[seatIndex].setColor(seatIndex===seat?'#fff':CHARACTERS[seatIndex].hex);
    actor.setAlpha(w.safeUntil[seatIndex]>now&&Math.floor(now/125)%2===0?.45:1);
   }
-  this.hint.setText(time<this.tiredUntil?'SEM ESTAMINA':this.caption(seat))
+  const guidance=temporalHint(w,seat,{
+    seat,x:this.local.x,y:this.local.y,
+    vx:this.body.velocity.x,vy:this.body.velocity.y
+  },now);
+  this.hint.setText(time<this.tiredUntil?'SEM ESTAMINA':guidance?.action??'')
    .setColor(time<this.tiredUntil?'#f8cb86':'#c6e9e0');
   this.hint.setVisible(Boolean(this.hint.text)).setPosition(this.local.x,this.local.y-81);
+  this.echoLabels.forEach((label,i)=>{
+    const marker=TEMP_ECHO[i];
+    const nearby=!w.echo[i]&&seat===i&&
+      Math.abs(this.local.x-marker.x)<230&&Math.abs(this.local.y-marker.y)<135;
+    label.setVisible(nearby&&!pause);
+  });
   const regionIndex=this.local.x<700?0:this.local.x<1580?1:
     this.local.x<2560?2:this.local.x<3030?3:4;
   if(regionIndex!==this.regionId){
