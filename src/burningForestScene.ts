@@ -11,7 +11,7 @@ import {MissionDirector} from './missionDirector';
 import {BurningForestArt} from './burningForestArt';
 import {BurningForestAudio} from './burningForestAudio';
 import {
- FIRE_WIDTH,FIRE_HEIGHT,FIRE_START,FIRE_PLATFORMS,FIRE_TARGETS,
+ FIRE_WIDTH,FIRE_HEIGHT,FIRE_START,FIRE_PLATFORMS,FIRE_TARGETS,FIRE_SHIFT_ROOTS,
  firePlatforms,fireVisualTreePhase,fireHeavySmoke,fireDamageZone,fireFlareActive,
  type FireWorld
 } from './burningForest';
@@ -24,6 +24,8 @@ export class BurningForestScene extends Phaser.Scene {
  private audio!:BurningForestAudio;
  private platforms:Phaser.GameObjects.Rectangle[]=[];
  private skins:Phaser.GameObjects.Graphics[]=[];
+ private shiftingRoots:Phaser.GameObjects.Rectangle[]=[];
+ private rootArt:Phaser.GameObjects.Graphics[]=[];
  private gate!:Phaser.GameObjects.Rectangle;
  private gateArt!:Phaser.GameObjects.Graphics;
  private avatars:Phaser.GameObjects.Rectangle[]=[];
@@ -64,6 +66,18 @@ export class BurningForestScene extends Phaser.Scene {
    body.checkCollision.right=false;body.checkCollision.up=true;
    this.platforms.push(rect);this.skins.push(this.art.platform(p));
   }
+  // Stable ids; moving root collision is disabled while scenery changes.
+  for(let i=0;i<3;i++){
+   const place=FIRE_SHIFT_ROOTS[this.world.layout][i];
+   const root=this.add.rectangle(place.x,place.y,58,58,0x321d1c,.001).setDepth(16);
+   this.physics.add.existing(root,true);
+   this.shiftingRoots.push(root);
+   const ink=this.add.graphics().setDepth(17);
+   ink.fillStyle(0x37251f,.95);ink.fillRoundedRect(-28,-28,56,56,7);
+   ink.lineStyle(3,0xa96339,.8);ink.lineBetween(-25,-16,20,17);
+   ink.lineBetween(-8,-25,12,24);ink.setPosition(place.x,place.y);
+   this.rootArt.push(ink);
+  }
   // Collidable smoke gate, opened only after all three vents are unlatched.
   this.gate=this.add.rectangle(3134,607,36,135,0x211e1c,.001).setDepth(28);
   this.physics.add.existing(this.gate,true);
@@ -94,11 +108,11 @@ export class BurningForestScene extends Phaser.Scene {
     this.local=actor;this.physics.add.existing(actor);
     this.body=actor.body as Phaser.Physics.Arcade.Body;
     this.body.setGravityY(850).setMaxVelocity(410,1050).setCollideWorldBounds(true);
-    for(const b of [...this.platforms,this.gate])this.physics.add.collider(actor,b);
+    for(const b of [...this.platforms,this.gate,...this.shiftingRoots])this.physics.add.collider(actor,b);
    }
   }
   if(this.net.isSolo){
-   this.solo=new SoloBodies(this,this.net,this.avatars,[...this.platforms,this.gate],410,1050);
+   this.solo=new SoloBodies(this,this.net,this.avatars,[...this.platforms,this.gate,...this.shiftingRoots],410,1050);
    this.solo.select(this.net.localSeat??0);
    this.off.push(this.net.on('solo-seat',seat=>{
     this.solo?.select(seat);this.local=this.avatars[seat];
@@ -175,10 +189,31 @@ export class BurningForestScene extends Phaser.Scene {
  }
  private sync(w:FireWorld):void{
   const old=this.world;
+  const shiftingStarts=w.blackoutUntil>0&&old.blackoutUntil!==w.blackoutUntil;
+  if(shiftingStarts&&this.shiftingRoots.length){
+   const next=((w.layout+1)%3) as 0|1|2;
+   this.rootArt.forEach((ink,i)=>{
+    const target=FIRE_SHIFT_ROOTS[next][i];
+    this.tweens.add({targets:ink,x:target.x,y:target.y,
+     duration:1900,ease:'Sine.easeInOut'});
+   });
+   this.pipo?.warnDanger('As árvores queimadas estão se mexendo! Sigam o vento!');
+  }
   this.world={...w,log:[...w.log],smoke:[...w.smoke],tree:[...w.tree],
    supporting:[...w.supporting],dashAt:[...w.dashAt],dashX:[...w.dashX],
    smokeSeconds:[...w.smokeSeconds],health:[...w.health],stamina:[...w.stamina],
    safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent]};
+  if(this.shiftingRoots.length){
+   this.shiftingRoots.forEach((root,i)=>{
+    const target=FIRE_SHIFT_ROOTS[w.layout][i];
+    const body=root.body as Phaser.Physics.Arcade.StaticBody;
+    body.enable=w.blackoutUntil===0;
+    if(w.blackoutUntil===0){
+     root.setPosition(target.x,target.y);body.updateFromGameObject();
+     this.rootArt[i].setPosition(target.x,target.y);
+    }
+   });
+  }
   const active=new Set(firePlatforms(w));
   FIRE_PLATFORMS.forEach((p,i)=>{
    const visible=active.has(p);
