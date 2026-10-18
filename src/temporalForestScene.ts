@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import {CHARACTERS,type Network,type Seat,type Pose} from './network';
 import type {TouchInput} from './game';
 import {SoloBodies} from './soloBodies';
+import {consumeTouch,clearTouch} from './mobileControls';
+import {cameraZoomFor,isCoarseDevice} from './mobileViewport';
 import {gameKeys} from './keyboard';
 import {NightArt} from './visuals';
 import type {VitalAction} from './loopVitals';
@@ -175,7 +177,7 @@ export class TemporalForestScene extends Phaser.Scene {
    }));
   }
   this.cameras.main.setBounds(0,0,TEMP_WIDTH,700);
-  this.cameras.main.setZoom(this.scale.gameSize.width<900?1:1.12);
+  this.cameras.main.setZoom(cameraZoomFor({width:this.scale.gameSize.width,height:this.scale.gameSize.height},isCoarseDevice()));
   this.cameras.main.startFollow(this.local,false,.09,.10);
   this.cameras.main.centerOn(2010,430);
   this.cursors=this.input.keyboard?.createCursorKeys();
@@ -226,7 +228,19 @@ export class TemporalForestScene extends Phaser.Scene {
       onComplete:()=>stone.destroy()});
    }
   }));
-  this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>this.off.forEach(off=>off()));
+  const onResize=(size:Phaser.Structs.Size)=>{
+    this.cameras.main.setZoom(cameraZoomFor({width:size.width,height:size.height},isCoarseDevice()));
+    this.cameras.main.setBounds(0,0,TEMP_WIDTH,700);
+    this.region.setX(size.width/2).setY(Math.min(108,size.height*.22));
+    this.dark.setPosition(size.width/2,size.height/2).setSize(size.width+160,size.height+120);
+    this.darkText.setPosition(size.width/2,size.height/2);
+  };
+  this.scale.on(Phaser.Scale.Events.RESIZE,onResize);
+  onResize(this.scale.gameSize);
+  this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{
+    this.scale.off(Phaser.Scale.Events.RESIZE,onResize);
+    this.off.forEach(off=>off());
+  });
  }
  private sync(w:TemporalWorld):void{
   this.w={...w,echo:[...w.echo],tree:[...w.tree],roots:[...w.roots],
@@ -301,8 +315,7 @@ export class TemporalForestScene extends Phaser.Scene {
   const pause=(w.blackoutUntil>now||w.deadUntil>0||!this.net.everyoneConnected);
   if(pause!==this.paused){
    this.paused=pause;
-   if(pause){this.physics.pause();this.pending.clear();gameKeys.clear();
-     this.touch.jump=false;this.touch.ability=false;this.touch.interact=false;}
+   if(pause){this.physics.pause();this.pending.clear();gameKeys.clear();clearTouch(this.touch);}
    else this.physics.resume();
   }
   this.dark.setAlpha(pause?(w.deadUntil>0?.91:.93):0);
@@ -329,9 +342,9 @@ export class TemporalForestScene extends Phaser.Scene {
    if(dir)this.facing=dir>0?1:-1;
    const grounded=this.body.blocked.down||this.body.touching.down;
    if(grounded)this.jumps=0;
-   const jumping=gameKeys.consumeJump()||this.touch.jump;
-   const action=Boolean((this.keys?.E&&Phaser.Input.Keyboard.JustDown(this.keys.E))||this.touch.interact);
-   const ability=gameKeys.consumeSkill(seat)||this.touch.ability;
+   const jumping=gameKeys.consumeJump()||consumeTouch(this.touch,'jump');
+   const action=Boolean((this.keys?.E&&Phaser.Input.Keyboard.JustDown(this.keys.E))||consumeTouch(this.touch,'interact'));
+   const ability=gameKeys.consumeSkill(seat)||consumeTouch(this.touch,'ability');
    this.touch.jump=false;this.touch.interact=false;this.touch.ability=false;
    if(base===null){
     const surface=tempSurface(w,this.local.x);

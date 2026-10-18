@@ -1,5 +1,20 @@
 # A FLORESTA MENTE — MAS O VENTO NÃO
 
+## Etapa 13 — mobile responsivo (Fases 01 e 02)
+
+O Phaser agora utiliza `Phaser.Scale.RESIZE` com o viewport real (por exemplo 844×390, 915×412 ou 740×360). O canvas ocupa a tela inteira em vez de encaixar uma renderização fixa de 1200×700 com faixas laterais. A câmera ajusta SOMENTE o zoom e suas legendas fixas ao resize; os mundos, gravidade (850), salto (-465), velocidade, colisões, poses e puzzles permanecem nas coordenadas originais. O mesmo ajuste atua na Boca da Noite e na Floresta Temporal.
+
+O novo componente compartilhado `src/mobileControls.ts` desenha direção esquerda/direita no canto inferior esquerdo e E/PULAR/habilidade contextual no canto inferior direito; não há botão de habilidade separado para Téo. Para Lia aparece TIRO; para Nino aparece DASH. IDs de pointer independentes permitem segurar uma direção enquanto outro dedo pula/atira/dá dash. Eventos pointerup, pointercancel, lostpointercapture e pointerleave, além de blur, orientação e perda de visibilidade, limpam os dedos presos; pulos rápidos são armazenados até consumo da próxima atualização física. Troca solo pelos pequenos botões T/L/N junto à borda inferior; no multiplayer esses botões não existem.
+
+No celular paisagem, os três mini-cards de vida/estamina ficam no topo entre estado/relógio e objetivo; o personagem ativo fica destacado. Vento/chuva e avisos continuam disponíveis, mas o centro da tela fica livre de interface permanente. O menu mantém rolagem vertical; a gameplay bloqueia gestos de scroll somente na superfície jogável. Posicionamento considera safe-area do aparelho.
+
+O botão TELA CHEIA faz a solicitação nativa somente mediante toque. A trava de orientação paisagem é solicitada de forma opcional, quando compatível; o browser pode negar fullscreen/orientation lock. A tela permanece responsiva mesmo nessa situação e o aviso GIRE O CELULAR PARA JOGAR aparece em retrato sem desconectar a sessão. A barra do navegador não pode ser escondida forçadamente em todos os aparelhos.
+
+Valide com `npm run build` e `npm run test:logic`. A suíte `tests/mobile13.test.ts` verifica as dimensões, isolamento de ponteiros, ações simultâneas, HUD, câmera, fullscreen e regressão de rede em código. A aprovação dessa suíte não equivale a verificar screenshots ou FPS em um aparelho real.
+
+---
+
+
 ## Etapa 12 — Fase 02: A Floresta Temporal
 
 **Aventura principal:** Fase 01 — A Boca da Noite → transição cinematográfica de 5 segundos → Fase 02 — A Floresta Temporal. Ao entrar todos os três na saída do mapa 1, o anfitrião sincroniza a transição e carrega o segundo mundo em vez de encerrar a partida. Os jogadores mantêm as personagens e habilidades; no início da Fase 2, todos recebem três corações e 100 de estamina. Morrer na tempestade reinicia só o novo mapa, não a Boca da Noite.

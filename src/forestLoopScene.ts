@@ -7,6 +7,8 @@ import { NightArt } from './visuals';
 import { loopContext, regionTitle } from './forestLoopUI';
 import { leafAt, swayAt, WIND_LEAVES } from './loopWind';
 import { SoloBodies } from './soloBodies';
+import {consumeTouch,clearTouch} from './mobileControls';
+import {cameraZoomFor,isCoarseDevice} from './mobileViewport';
 import { gameKeys } from './keyboard';
 import type { TouchInput } from './game';
 import type { VitalAction } from './loopVitals';
@@ -217,7 +219,7 @@ export class ForestLoopScene extends Phaser.Scene {
       }));
     }
     this.cameras.main.setBounds(0,0,LOOP_WIDTH,700);
-    this.cameras.main.setZoom(this.scale.gameSize.width<900?1:1.13);
+    this.cameras.main.setZoom(cameraZoomFor({width:this.scale.gameSize.width,height:this.scale.gameSize.height},isCoarseDevice()));
     this.cameras.main.startFollow(this.local,false,.09,.1);
     this.cameras.main.centerOn(1900,420);
     this.cameras.main.setDeadzone(80,90);
@@ -293,7 +295,19 @@ export class ForestLoopScene extends Phaser.Scene {
         this.jumps=0;this.dashUntil=0;this.pendingJump=false;this.pendingVitals.clear();
       }
     }));
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>this.off.forEach(off=>off()));
+    const onResize=(size:Phaser.Structs.Size)=>{
+      this.cameras.main.setZoom(cameraZoomFor({width:size.width,height:size.height},isCoarseDevice()));
+      this.cameras.main.setBounds(0,0,LOOP_WIDTH,700);
+      this.regionToast.setX(size.width/2).setY(Math.min(108,size.height*.22));
+      this.blackout.setPosition(size.width/2,size.height/2).setSize(size.width+200,size.height+120);
+      this.blackoutText.setPosition(size.width/2,size.height/2);
+    };
+    this.scale.on(Phaser.Scale.Events.RESIZE,onResize);
+    onResize(this.scale.gameSize);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{
+      this.scale.off(Phaser.Scale.Events.RESIZE,onResize);
+      this.off.forEach(off=>off());
+    });
   }
   private sync(w:LoopWorld):void{
     this.w={...w,marks:[...w.marks],tree:[...w.tree],final:[...w.final],supporting:[...w.supporting]};
@@ -347,7 +361,7 @@ export class ForestLoopScene extends Phaser.Scene {
     const pause=blackoutActive(w,now)||w.deadUntil>0||!this.net.everyoneConnected;
     if(pause!==this.paused){
       this.paused=pause;
-      if(pause){this.physics.pause();this.pendingVitals.clear();gameKeys.clear();this.touch.jump=false;this.touch.ability=false;this.touch.interact=false;}
+      if(pause){this.physics.pause();this.pendingVitals.clear();gameKeys.clear();clearTouch(this.touch);}
       else this.physics.resume();
     }
     const fade=pause&&w.deadUntil===0?(w.blackoutUntil-now>1000?.94:.86):w.deadUntil>0?.89:0;
@@ -375,9 +389,9 @@ export class ForestLoopScene extends Phaser.Scene {
       if(dir)this.facing=dir>0?1:-1;
       const grounded=this.body.blocked.down||this.body.touching.down;
       if(grounded)this.jumps=0;
-      const jumping=gameKeys.consumeJump()||this.touch.jump;
-      const using=Boolean((this.keys?.E&&Phaser.Input.Keyboard.JustDown(this.keys.E))||this.touch.interact);
-      const special=gameKeys.consumeSkill(seat)||this.touch.ability;
+      const jumping=gameKeys.consumeJump()||consumeTouch(this.touch,'jump');
+      const using=Boolean((this.keys?.E&&Phaser.Input.Keyboard.JustDown(this.keys.E))||consumeTouch(this.touch,'interact'));
+      const special=gameKeys.consumeSkill(seat)||consumeTouch(this.touch,'ability');
       this.touch.jump=false;this.touch.interact=false;this.touch.ability=false;
       if(base===null){
         const dashing=seat===2&&time<this.dashUntil;

@@ -11,6 +11,8 @@ import { JourneyScene } from './journeyScene';
 import { LateScene } from './lateScene';
 import './style.css';
 import { gameKeys } from './keyboard';
+import {mountMobilePad,clearTouch} from './mobileControls';
+import {viewportSize,isCoarseDevice,isMobilePortrait} from './mobileViewport';
 import { GUIDE_DIALOGUES } from './forestPresentation';
 import { loopObjective, loopWind } from './forestLoopUI';
 import { LOOP_CYCLE_MS } from './forestLoop';
@@ -23,6 +25,42 @@ let game: Phaser.Game | null = null;
 let activeMode: 'none' | 'intro' | 'level1' | 'level2' | 'level3' | 'level4' | 'loop' | 'temporal' = 'none';
 let info = '';
 let devToolsOpen=false;
+let unbindPad:(()=>void)|null=null;
+const fullscreen=document.querySelector<HTMLButtonElement>('#mobile-fullscreen')!;
+const rotate=document.querySelector<HTMLDivElement>('#rotate')!;
+function applyViewport():void{
+  const view=viewportSize(window),coarse=isCoarseDevice();
+  document.body.classList.toggle('mobile-landscape',coarse&&view.width>view.height);
+  document.body.classList.toggle('mobile-portrait',isMobilePortrait(view,coarse));
+  rotate.setAttribute('aria-hidden',String(!isMobilePortrait(view,coarse)||!net.playing));
+  if(game){
+    const canvas=game.scale.gameSize;
+    if(canvas.width!==view.width||canvas.height!==view.height)
+      game.scale.resize(view.width,view.height);
+  }
+}
+async function requestFullscreen():Promise<void>{
+  const root=document.documentElement;
+  const notify=(text:string)=>{fullscreen.setAttribute('title',text);fullscreen.setAttribute('aria-label',text);};
+  if(!root.requestFullscreen){notify('Tela cheia indisponível; usando layout responsivo.');return;}
+  try{
+    if(document.fullscreenElement)await document.exitFullscreen();
+    else{
+      await root.requestFullscreen();
+      // Orientation locking is optional; Chrome/WebView may reject it.
+      try{
+        const orientation=screen.orientation as ScreenOrientation&{lock?:(value:'landscape')=>Promise<void>};
+        await orientation.lock?.('landscape');
+      }catch{/* Layout handles rotation independently. */}
+    }
+    applyViewport();
+  }catch{notify('Este navegador não permite tela cheia. O jogo continua responsivo.');}
+}
+fullscreen.addEventListener('click',()=>{void requestFullscreen();});
+window.addEventListener('resize',applyViewport,{passive:true});
+window.addEventListener('orientationchange',()=>{clearTouch(touch);applyViewport();},{passive:true});
+window.visualViewport?.addEventListener('resize',applyViewport,{passive:true});
+document.addEventListener('fullscreenchange',applyViewport);
 
 function safeText(value: string): string {
   return value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] ?? c));
@@ -46,18 +84,16 @@ function enterGame(): void {
     mode === 'temporal' ? new TemporalForestScene(net,touch,refreshHud) :
     mode === 'level2' ? new JourneyScene(net, touch, refreshHud) :
     net.level >= 3 ? new LateScene(net, touch, refreshHud) : new ForestScene(net, touch, refreshHud);
-  // Aspecto variável no canvas: nas janelas altas o mundo é recortado pela câmera,
-  // em vez de ficar minúsculo como na captura com três janelas lado a lado.
-  const ratio = window.innerWidth / Math.max(1, window.innerHeight);
-  const viewWidth = mode === 'intro' ? 1200 : ratio < 1.25 ? Math.max(350, Math.round(700 * ratio)) : 1200;
+  // Render at the actual CSS viewport dimensions. World physics remains unchanged.
+  const view=viewportSize(window);
   game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: 'game',
-    width: viewWidth,
-    height: 700,
+    width: view.width,
+    height: view.height,
     backgroundColor: '#091c23',
     render: { antialias: true, pixelArt: false },
-    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+    scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.NO_CENTER },
     physics: { default: 'arcade', arcade: { debug: false, gravity: { x: 0, y: 0 } } },
     scene: [scene],
   });
@@ -67,7 +103,8 @@ function exitGame(): void {
   game.destroy(true);
   game = null;
   activeMode = 'none';
-  touch.left = false; touch.right = false; touch.jump = false; touch.interact = false; touch.ability = false;
+  unbindPad?.();unbindPad=null;
+  clearTouch(touch);
   controls.replaceChildren();
 }
 function refreshHud(): void {
@@ -125,41 +162,15 @@ function refreshHud(): void {
 }
 setInterval(refreshHud, 150);
 function bindMobile(): void {
-  const skillLabel = net.localSeat === 1 ? 'J' : net.localSeat === 2 ? 'SHIFT' : '—';
-  const skillAria = net.localSeat === 1 ? 'Disparar baladeira' : net.localSeat === 2 ? 'Ativar dash' : 'Sem habilidade nesta tecla';
-  controls.innerHTML = (net.isSolo
-    ? '<div class="solo-touch-switch"><button data-seat="0">1 TÉO</button><button data-seat="1">2 LIA</button><button data-seat="2">3 NINO</button></div>'
-    : '') + '<div class="control-group"><button class="touch-btn" id="left" aria-label="Esquerda">◀</button>' +
-    '<button class="touch-btn" id="right" aria-label="Direita">▶</button></div>' +
-    '<div class="control-group"><button class="touch-btn" id="interact" aria-label="Interagir">E</button>' +
-    '<button class="touch-btn" id="ability" aria-label="' + skillAria + '"' +
-    (net.localSeat === 0 ? ' disabled' : '') + '>' + skillLabel + '</button>' +
-    '<button class="touch-btn jump" id="jump" aria-label="Pular">PULAR</button></div>';
-  if(net.isSolo)controls.querySelectorAll<HTMLButtonElement>('[data-seat]').forEach(button=>{
-    button.addEventListener('click',()=>net.selectSoloSeat(Number(button.dataset.seat) as 0|1|2));
-  });
-  for (const key of ['left', 'right', 'jump', 'interact', 'ability'] as const) {
-    const el = controls.querySelector<HTMLButtonElement>('#' + key)!;
-    if (el.disabled) continue;
-    el.addEventListener('pointerdown', event => {
-      event.preventDefault();
-      el.setPointerCapture(event.pointerId);
-      el.classList.add('pressed');
-      touch[key] = true;
-    });
-    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
-      el.addEventListener(type, event => {
-        event.preventDefault();
-        el.classList.remove('pressed');
-        if (key === 'left' || key === 'right') touch[key] = false;
-      });
-    }
-  }
+  unbindPad?.();
+  unbindPad=mountMobilePad(controls,touch,net.isSolo,net.localSeat,
+    seat=>net.selectSoloSeat(seat));
 }
 function render(): void {
   gameKeys.setEnabled(net.playing);
   const showing = net.stage !== 'lobby' && net.role !== 'idle';
   document.body.classList.toggle('playing', net.playing);
+  applyViewport();
   ui.classList.toggle('in-game', showing);
   if (showing) {
     if (net.stage === 'intro' || net.playing) enterGame();
@@ -386,7 +397,7 @@ function showJoin(): void {
   });
 }
 gameKeys.bind();
-net.on('solo-seat',()=>{gameKeys.clear();controls.replaceChildren();});
+net.on('solo-seat',()=>{gameKeys.clear();unbindPad?.();unbindPad=null;controls.replaceChildren();clearTouch(touch);});
 net.on('change',()=>{if(net.role==='idle')info='';render();});
 net.on('start', () => { info = ''; render(); });
 net.on('phase', () => { info = ''; render(); });
