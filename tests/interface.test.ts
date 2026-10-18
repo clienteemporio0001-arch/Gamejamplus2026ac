@@ -26,7 +26,9 @@ ok(main.includes("class=\"loop-top-right\""),'objetivo no canto direito');
 ok(main.includes("class=\"loop-bottom-left\""),'personagem e habilidade no rodapé');
 ok(main.includes('class="loop-wind"'),'orientação do vento separada do objetivo');
 ok(main.includes("net.isSolo?'<nav class=\"loop-seat-switch\""),'seletor solo de personagens');
-ok(main.includes("if(!controls.childElementCount)bindMobile()"),'touch é mantido');
+ok(main.includes('ensureMobileControls();')&&
+   main.includes("net.on('solo-seat',seat=>updateMobileCharacter(seat))"),
+   'touch permanece montado e é atualizado na troca de personagem');
 ok(main.includes("net.on('change',()=>{if(net.role==='idle')info=''"),
   'notices eliminados quando retorna ao menu');
 ok(main.includes("if(net.role==='idle')return;info=text;render()"),
