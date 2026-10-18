@@ -75,7 +75,7 @@ export class TreetopForestScene extends Phaser.Scene {
     .setStrokeStyle(2,0xe1d59e,.82).setDepth(24);
    const names=stage==='tower'?'TÉO: E • CIPÓ':
     stage==='bridge'&&owner===2?'NINO: APERTE E':
-    owner===1?'LIA: DISPARO • A':owner===0?'TÉO: E • B':'NINO: DASH + E • C';
+    owner===1?'LIA: J • ACERTE O ALVO':owner===0?'TÉO: APERTE E':'NINO: DASH → E';
    const label=stage==='tower'||stage==='time'||stage==='bridge'&&owner===2?
     this.caption(target.x,target.y-49,names,12,'#f7e5aa').setDepth(57):undefined;
    label?.setVisible(false);
@@ -347,14 +347,12 @@ export class TreetopForestScene extends Phaser.Scene {
    const pending=stage==='bridge'?!w.bridgeOpen&&!w.bridge[owner]:
     stage==='tower'?w.bridgeOpen&&!w.ropeOpen:
     w.ropeOpen&&!w.finalOpen&&!w.time[owner];
-   // Never hide the target behind another secret action. Wrong-cycle targets
-   // remain visible, but show their required A/B/C state.
+   // Final targets stay actionable regardless of the current A/B/C cycle.
    ring.setVisible(pending);
    label?.setVisible(pending);
    if(stage==='time'&&pending){
-    const ready=owner===1?w.layout===0:owner===0?w.layout===1:w.layout===2;
-    ring.setStrokeStyle(ready?3:2,ready?0x9df6c2:0xe1d59e,ready?1:.58);
-    label?.setColor(ready?'#b3ffdb':'#dfd6ab');
+    ring.setStrokeStyle(3,0x9df6c2,1);
+    label?.setColor('#b3ffdb');
    }
   });
   const byTower=w.bridgeOpen&&!w.ropeOpen&&

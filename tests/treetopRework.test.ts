@@ -193,3 +193,27 @@ console.log('APROVADO: Etapa 18 — geometria, rajada, abrigos, multiplayer stat
  assert.equal(solo.interact(2,'switch',party,base+35600),true);
  assert.equal(solo.world.time[2],true);
 }
+
+// Endgame regression: Lia and Nino must not be silently blocked by A/B/C.
+{
+ const final=new TreeAuthority();final.reset(base+70000);
+ final.world.bridgeOpen=true;final.world.ropeOpen=true;
+ const party:Tee[]=TREE_START.map(p=>({...p}));
+ final.world.layout=1;
+ party[1]={seat:1,x:TREE_TARGETS.time.lia.x+23,y:TREE_TARGETS.time.lia.y+39,vx:0,vy:0};
+ assert.equal(final.authorizeEnergy(1,'shoot',party,base+71000,1).ok,true);
+ assert.equal(final.world.time[1],true,'Lia shot succeeds despite state B / close facing');
+ assert.ok(treePlatforms(final.world).some(p=>p.x===TREE_TARGETS.time.teo.x));
+ final.world.layout=0;
+ party[0]={seat:0,x:TREE_TARGETS.time.teo.x,y:TREE_TARGETS.time.teo.y+30,vx:0,vy:0};
+ assert.equal(final.interact(0,'lever',party,base+71300),true);
+ assert.equal(final.world.time[0],true);
+ assert.ok(treePlatforms(final.world).some(p=>p.x===5085));
+ party[2]={seat:2,x:TREE_TARGETS.time.nino.x-48,y:TREE_TARGETS.time.nino.y+25,vx:0,vy:0};
+ assert.equal(final.interact(2,'switch',party,base+71400),false,'dash still mandatory');
+ assert.equal(final.authorizeEnergy(2,'dash',party,base+73000,1).ok,true);
+ party[2]={seat:2,x:TREE_TARGETS.time.nino.x,y:TREE_TARGETS.time.nino.y+25,vx:0,vy:0};
+ assert.equal(final.interact(2,'switch',party,base+77000),true,'dash then E accepted');
+ assert.deepEqual(final.world.time,[true,true,true]);
+ assert.equal(final.world.finalOpen,true,'last crossing opens immediately');
+}

@@ -33,9 +33,9 @@ export const TREE_PLATFORMS:readonly TreePlatform[]=[
  p(4195,215,135),p(4260,167,180,'branch'),
  {...p(4440,314,300,'bridge'),puzzle:'rope'},
  p(4660,308,205,'canopy'),p(4810,265,196,'root'),
- { ...p(4865,203,134),state:1},
+ p(4865,203,134),
  { ...p(4980,259,169),state:2},
- { ...p(5085,226,146),state:2},
+ p(5085,226,146),
  {...p(4980,246,260,'bridge'),puzzle:'final'},
  p(5142,191,173,'canopy'),
  // Rotating side branches offer alternate approaches without blocking the spine.
@@ -334,14 +334,22 @@ export class TreeAuthority{
     changed=!w.tower[2];w.tower[2]=true;w.ropeOpen=true;
    }
   }else if(!w.finalOpen){
-   if(w.layout===0&&!w.time[1]&&shot(TREE_TARGETS.time.lia))changed=w.time[1]=true;
-   if(w.layout===1&&seat===0&&kind==='lever'&&!windy
-     &&close(p,TREE_TARGETS.time.teo.x,TREE_TARGETS.time.teo.y,68,48)
-     &&Math.abs(p.vy)<180)changed=w.time[0]=true;
-   if(w.layout===2&&seat===2&&kind==='switch'&&!windy&&w.dashAt>0
-     &&now-w.dashAt<=3500&&Math.abs(p.x-w.dashX)>=65
-     &&close(p,TREE_TARGETS.time.nino.x,TREE_TARGETS.time.nino.y,78,79))
-     changed=w.time[2]=true;
+   // Final three mechanisms can be activated in EVERY forest state; the
+   // 60-second shifts remain dangerous, not invisible interaction locks.
+   // Lia's short-range shot recognizes a target even when standing beside it.
+   const lia=TREE_TARGETS.time.lia;
+   if(seat===1&&kind==='shoot'&&!w.time[1]&&
+     Math.abs(p.x-lia.x)<=185&&Math.abs(p.y-18-lia.y)<=83&&
+     (Math.abs(p.x-lia.x)<=85||(lia.x-p.x)*facing>=0))
+    changed=w.time[1]=true;
+   if(seat===0&&kind==='lever'&&!w.time[0]
+     &&close(p,TREE_TARGETS.time.teo.x,TREE_TARGETS.time.teo.y,82,70)
+     &&Math.abs(p.vy)<210)changed=w.time[0]=true;
+   // Require a genuine dash followed by E, but respect the short ledge.
+   if(seat===2&&kind==='switch'&&!w.time[2]&&w.dashAt>0
+     &&now-w.dashAt<=5000&&Math.abs(p.x-w.dashX)>=35
+     &&close(p,TREE_TARGETS.time.nino.x,TREE_TARGETS.time.nino.y,105,95))
+    changed=w.time[2]=true;
    if(w.time.every(Boolean))w.finalOpen=true;
   }
   return changed;

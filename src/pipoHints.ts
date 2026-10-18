@@ -168,8 +168,8 @@ export function pipoHint(source:HintSource):PipoHint{
  ]);
  if(!w.finalOpen)return guidance('galhos do tempo',[
   'Os galhos mudaram! O vento ainda sabe o caminho.',
-  'Os três alvos permanecem visíveis, com a letra do estado necessário.',
-  'Lia atira no A, Téo usa E no B e Nino usa dash + E no C. Procurem os círculos nos galhos.'
+  'Os três alvos ficam sempre ativos: não precisam esperar a floresta mudar.',
+  'Lia atira no círculo da pedra; Téo usa E no seu galho; Nino faz dash e depois aperta E.'
  ]);
  return guidance('última copa',[
   'Muito bem! Só falta a última copa!',
