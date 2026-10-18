@@ -776,7 +776,8 @@ export class ForestLoopScene extends Phaser.Scene {
       const end=performance.now();
       this.frameProfiler.record({now:end,updateMs:end-perfStart,
         cameraX:camera.scrollX,velocityX:this.body.velocity.x,velocityY:this.body.velocity.y,
-        x:this.local.x,transforming:blackoutActive(w,now)});
+        x:this.local.x,transforming:blackoutActive(w,now),
+        playersOnline:this.net.players.filter(p=>p.online).length});
       if(time-this.lastPerformanceDraw>=380){
         this.lastPerformanceDraw=time;
         const snap=this.frameProfiler.snapshot();
