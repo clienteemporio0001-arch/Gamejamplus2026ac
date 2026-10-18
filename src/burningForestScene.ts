@@ -117,8 +117,8 @@ export class BurningForestScene extends Phaser.Scene {
    this.solo=new SoloBodies(this,this.net,this.avatars,[...this.platforms,this.gate,...this.shiftingRoots],410,1050);
    this.solo.select(this.net.localSeat??0);
    this.off.push(this.net.on('solo-seat',seat=>{
-    this.solo?.select(seat);this.local=this.avatars[seat];
-    this.body=this.solo!.body(seat);this.pending.clear();
+    this.solo?.select(seat);const active=this.solo!.active(seat);
+    this.local=active.actor;this.body=active.body;this.pending.clear();
     this.jumps=0;this.pendingJump=false;this.dashUntil=0;this.hud?.();
    }));
   }
@@ -248,6 +248,12 @@ export class BurningForestScene extends Phaser.Scene {
  }
  update(time:number,dt:number):void{
   if(!this.body||!this.net.playing||this.net.localSeat===null)return;
+  // Reconcile physical ownership every frame, including rapid mobile switches.
+  // Only the selected actor gets movement/jump/dash input; no teleport occurs.
+  if(this.solo){
+   const active=this.solo.active(this.net.localSeat);
+   this.local=active.actor;this.body=active.body;
+  }
   const seat=this.net.localSeat,w=this.world,now=Date.now();
   const pause=w.deadUntil>0||!this.net.everyoneConnected;
   if(pause!==this.paused){
