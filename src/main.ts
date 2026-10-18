@@ -22,6 +22,8 @@ import { loopObjective, loopWind } from './forestLoopUI';
 import { LOOP_CYCLE_MS } from './forestLoop';
 import {getAudioSettings,setAudioSettings} from './audioSettings';
 import {GameAudio,type SoundBiome} from './sharedAudio';
+import {scoreForStage} from './soundtrack';
+import {fireVisualTreePhase} from './burningForest';
 import {missionSnapshot} from './missionChapters';
 
 const net = new Network();
@@ -169,20 +171,24 @@ function openPanel(kind:PanelKind):void{
    '<p>Observe vento, estados da floresta, estamina, corações e objetivos. Os três precisam chegar juntos à saída.</p>'+
    '</div>':
   kind==='settings'?
-   '<p>Áudio gerado no navegador. Os ajustes são aplicados sem reiniciar a partida.</p>'+
+   '<p>Trilhas sonoras originais em MP3, carregadas conforme a fase. Ajustes aplicados sem reiniciar.</p>'+
    '<div class="settings-control"><label for="fm-music">Música ambiente <output id="fm-music-value">'+prefs.music+'%</output></label>'+
    '<input id="fm-music" type="range" min="0" max="100" step="1" value="'+prefs.music+'"></div>'+
-   '<div class="settings-control"><label for="fm-sfx">Efeitos e ambiente <output id="fm-sfx-value">'+prefs.sfx+'%</output></label>'+
+   '<div class="settings-control"><label for="fm-sfx">Efeitos sonoros <output id="fm-sfx-value">'+prefs.sfx+'%</output></label>'+
    '<input id="fm-sfx" type="range" min="0" max="100" step="1" value="'+prefs.sfx+'"></div>'+
+   '<div class="settings-control"><label for="fm-ambient">Ambiente · vento, chuva e fogo <output id="fm-ambient-value">'+prefs.ambient+'%</output></label>'+
+   '<input id="fm-ambient" type="range" min="0" max="100" step="1" value="'+prefs.ambient+'"></div>'+
+   '<label class="settings-mute"><input id="fm-musicMuted" type="checkbox" '+(prefs.musicMuted?'checked':'')+'>'+
+   ' Silenciar somente música</label>'+
    '<label class="settings-mute"><input id="fm-muted" type="checkbox" '+(prefs.muted?'checked':'')+'>'+
    ' Silenciar tudo</label>'+
-   '<p class="overlay-footnote">O navegador só ativa o som após interação. Não há faixas de terceiros nem trilha sonora completa.</p>':
+   '<p class="overlay-footnote">Toque ou pressione uma tecla para liberar o áudio. As músicas são originais; controles locais por jogador.</p>':
   kind==='credits'?
    '<p><strong>A FLORESTA MENTE</strong><br>MAS O VENTO NÃO.<br>NINGUÉM FICA PARA TRÁS.</p>'+
    '<div class="overlay-guide">'+
    '<p><b>Desenvolvimento:</b> projeto independente A Floresta Mente, com assistência de inteligência artificial na programação e na criação de recursos.</p>'+
    '<p><b>Tecnologias:</b> Phaser 3 (licença MIT), PeerJS (MIT), TypeScript, Vite e Web Audio API.</p>'+
-   '<p><b>Arte e áudio:</b> formas vetoriais e síntese procedural produzidas para o jogo. Fontes externas: Nunito, disponível pelo Google Fonts sob licença aberta.</p>'+
+   '<p><b>Arte e áudio:</b> formas vetoriais, efeitos sintetizados e cinco músicas instrumentais originais criadas para o jogo (licença de distribuição com o projeto). Consulte docs/CREDITOS_E_LICENCAS.md.</p>'+
    '<p><b>Licenças:</b> consulte as licenças e avisos de copyright de cada dependência distribuída no projeto.</p>'+
    '<p>Obrigado por jogar. A floresta sobrevive quando cuidamos dela.</p>'+
    '</div>':
@@ -204,7 +210,7 @@ function openPanel(kind:PanelKind):void{
  wrapper.querySelectorAll('[data-close-overlay],#fm-close,#fm-back')
   .forEach(element=>element.addEventListener('click',closeOverlay));
  document.addEventListener('keydown',overlayKey);
- const slider=(id:'music'|'sfx')=>{
+ const slider=(id:'music'|'sfx'|'ambient')=>{
   wrapper.querySelector<HTMLInputElement>('#fm-'+id)?.addEventListener('input',e=>{
    const n=Number((e.currentTarget as HTMLInputElement).value);
    setAudioSettings({[id]:n});
@@ -212,7 +218,9 @@ function openPanel(kind:PanelKind):void{
    if(output)output.textContent=n+'%';
   });
  };
- slider('music');slider('sfx');
+ slider('music');slider('sfx');slider('ambient');
+ wrapper.querySelector<HTMLInputElement>('#fm-musicMuted')?.addEventListener('change',e=>
+  setAudioSettings({musicMuted:(e.currentTarget as HTMLInputElement).checked}));
  wrapper.querySelector<HTMLInputElement>('#fm-muted')?.addEventListener('change',e=>
   setAudioSettings({muted:(e.currentTarget as HTMLInputElement).checked}));
  wrapper.querySelector('#dev-restart')?.addEventListener('click',()=>{
@@ -320,6 +328,18 @@ function refreshHud(): void {
     }
     const inspector=document.getElementById('dev-inspector');
     if(inspector&&devSession&&net.isSolo)inspector.textContent=devSnapshot();
+    // Local musical dynamics depend only on authoritative chapter world.
+    // Never send music through PeerJS and never restart a loop on pose packets.
+    if(net.experience==='loop'){
+      const tension=net.level===4?(
+        fireVisualTreePhase(net.fire)==='impact'?1:
+        fireVisualTreePhase(net.fire)==='warning'?.85:.55):
+        net.level===3?(net.treetop.windPhase==='gust'?1:
+          net.treetop.windPhase==='warning'?.66:.28):
+        net.level===2?.26:
+        net.loop.lastRoute==='right'?.62:net.loop.marks.every(Boolean)?.42:.14;
+      audio.setIntensity(tension);
+    }
     const local=net.poses[net.localSeat];
     const now=Date.now();
     if(Math.abs(local?.vx??0)>75&&Math.abs(local?.vy??0)<65&&now-lastStepAt>390){
@@ -350,6 +370,7 @@ function render(): void {
   if(!net.playing)unmountMobileControls();
   audio.setBiome(net.playing&&net.experience==='loop'?(['none','night','rain','treetop','fire'] as const)[net.level]:
     net.stage==='intro'?'night':'none');
+  audio.setScore(scoreForStage(net.stage,net.level,net.experience));
   applyViewport();
   ui.classList.toggle('in-game', showing);
   if (showing) {
