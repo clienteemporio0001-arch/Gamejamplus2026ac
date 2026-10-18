@@ -3,6 +3,8 @@ import { CHARACTERS, Network } from './network';
 import { DemoScene, type TouchInput } from './game';
 import { ForestScene } from './forestScene';
 import { ForestLoopScene } from './forestLoopScene';
+import { TemporalForestScene } from './temporalForestScene';
+import { TEMP_CYCLE,temporalObjective,tempWind } from './temporalForest';
 import { IntroScene } from './intro';
 import { RiverScene } from './riverScene';
 import { JourneyScene } from './journeyScene';
@@ -18,7 +20,7 @@ const ui = document.querySelector<HTMLDivElement>('#ui')!;
 const controls = document.querySelector<HTMLDivElement>('#mobile-controls')!;
 const touch: TouchInput = { left: false, right: false, jump: false, interact: false, ability: false };
 let game: Phaser.Game | null = null;
-let activeMode: 'none' | 'intro' | 'level1' | 'level2' | 'level3' | 'level4' | 'loop' = 'none';
+let activeMode: 'none' | 'intro' | 'level1' | 'level2' | 'level3' | 'level4' | 'loop' | 'temporal' = 'none';
 let info = '';
 let devToolsOpen=false;
 
@@ -35,12 +37,13 @@ function banner(): string {
     '<p>Quando chega a boca da noite, a floresta muda de lugar.<br>Três amigos. Uma saída. Ninguém pode ficar para trás.</p>';
 }
 function enterGame(): void {
-  const mode = net.stage === 'intro' ? 'intro' : net.experience==='loop'?'loop':('level' + net.level) as 'level1' | 'level2' | 'level3' | 'level4';
+  const mode = net.stage === 'intro' ? 'intro' : net.experience==='loop'?(net.level===2?'temporal':'loop'):('level' + net.level) as 'level1' | 'level2' | 'level3' | 'level4';
   if (game && activeMode === mode) return;
   exitGame();
   activeMode = mode;
   const scene = mode === 'intro' ? new IntroScene() :
     mode === 'loop' ? new ForestLoopScene(net,touch,refreshHud) :
+    mode === 'temporal' ? new TemporalForestScene(net,touch,refreshHud) :
     mode === 'level2' ? new JourneyScene(net, touch, refreshHud) :
     net.level >= 3 ? new LateScene(net, touch, refreshHud) : new ForestScene(net, touch, refreshHud);
   // Aspecto variável no canvas: nas janelas altas o mundo é recortado pela câmera,
@@ -69,20 +72,23 @@ function exitGame(): void {
 }
 function refreshHud(): void {
   if(net.playing&&net.experience==='loop'&&net.localSeat!==null){
-    const world=net.loop;
+    const world=net.level===2?net.temporal:net.loop;
     const update=(id:string,value:string)=>{
       const el=document.getElementById(id);
       if(el&&el.textContent!==value)el.textContent=value;
     };
-    const objective=loopObjective(world);
+    const objective=net.level===2?temporalObjective(net.temporal):loopObjective(net.loop);
     const remaining=world.blackoutUntil>Date.now()
       ?Math.max(0,Math.ceil((world.blackoutUntil-Date.now())/1000))
-      :Math.max(0,Math.ceil((LOOP_CYCLE_MS-Math.max(0,Date.now()-world.cycleStart))/1000));
+      :Math.max(0,Math.ceil(((net.level===2?TEMP_CYCLE:LOOP_CYCLE_MS)-Math.max(0,Date.now()-world.cycleStart))/1000));
     update('loop-state',['A','B','C'][world.layout]);
     update('loop-timer',(world.blackoutUntil>Date.now()?'MUDANDO ':'APAGÃO EM ')+remaining+'s');
     update('loop-objective',objective.title);
     update('loop-progress',objective.progress);
-    update('loop-wind',loopWind(world,net.localSeat,net.poses[net.localSeat].x));
+    update('loop-wind',net.level===2?
+      (tempWind(net.temporal,net.poses[net.localSeat].x)<0?'CHUVA ◀':
+       tempWind(net.temporal,net.poses[net.localSeat].x)>0?'CHUVA ▶':'CHUVA ↓'):
+      loopWind(net.loop,net.localSeat,net.poses[net.localSeat].x));
     update('loop-character',CHARACTERS[net.localSeat].name.toUpperCase());
     update('loop-skill',net.localSeat===0?'SALTO DUPLO':net.localSeat===1?'J · BALADEIRA':'SHIFT · DASH');
     for(const seat of [0,1,2] as const){
@@ -102,7 +108,7 @@ function refreshHud(): void {
         seat===net.localSeat);
     }
   }
-  const scene = game?.scene.keys[net.experience==='loop'?'ForestLoopScene':net.level >= 3 ? 'LateScene' : net.level === 2 ? 'JourneyScene' : 'ForestScene'] as DemoScene | ForestScene | RiverScene | JourneyScene | LateScene | ForestLoopScene | undefined;
+  const scene = game?.scene.keys[net.experience==='loop'?(net.level===2?'TemporalForestScene':'ForestLoopScene'):net.level >= 3 ? 'LateScene' : net.level === 2 ? 'JourneyScene' : 'ForestScene'] as DemoScene | ForestScene | RiverScene | JourneyScene | LateScene | ForestLoopScene | TemporalForestScene | undefined;
   const skill = document.querySelector<HTMLElement>('#skill-status');
   if (skill && scene?.getCooldown) skill.textContent = scene.getCooldown();
   const team=document.querySelector<HTMLElement>('#team-status');
@@ -165,11 +171,24 @@ function render(): void {
       ui.querySelector('#skip-intro')?.addEventListener('click', () => net.skipIntro());
       return;
     }
+    if (net.stage === 'transition'&&net.experience==='loop') {
+      ui.innerHTML='<div class="interlevel"><h2>FASE 01 CONCLUÍDA</h2>'+
+        '<p>Os três entram na névoa. A chuva se aproxima...</p>'+
+        '<strong>FASE 02 — A FLORESTA TEMPORAL</strong></div>';
+      return;
+    }
     if (net.stage === 'transition') {
       const titles=['','A BOCA DA NOITE','A PONTE QUEBRADA','OLHOS NA MATA','A TRILHA QUE MENTE'];
       ui.innerHTML = '<div class="interlevel"><h2>🌿 FASE CONCLUÍDA!</h2><p>' +
         (net.level===1?'VOCÊS CONSEGUIRAM ATRAVESSAR!':net.level===2?'VOCÊS VENCERAM A CORRENTEZA!':'VOCÊS SOBREVIVERAM À ESCURIDÃO!') +
         '</p><p>'+(net.level===2?'Mas a noite ainda esconde perigos...':'Os três amigos seguem juntos...')+'</p><strong>FASE 0'+(net.level+1)+' · '+titles[net.level+1]+'</strong></div>';
+      return;
+    }
+    if (net.stage === 'final' && net.experience==='loop'&&net.level===2) {
+      ui.innerHTML='<div class="victory"><h2>VOCÊS VENCERAM A TEMPESTADE!</h2>'+
+        '<p>Mas a floresta ainda não revelou todos os seus caminhos...</p>'+
+        button('leave-final','VOLTAR AO MENU')+'</div>';
+      ui.querySelector('#leave-final')?.addEventListener('click',()=>net.shutdown());
       return;
     }
     if (net.stage === 'final' && net.experience==='loop') {
@@ -189,9 +208,9 @@ function render(): void {
     if(net.playing&&net.experience==='loop'){
       const seat=net.localSeat??0;
       const selected=CHARACTERS[seat];
-      const object=loopObjective(net.loop);
+      const object=net.level===2?temporalObjective(net.temporal):loopObjective(net.loop);
       ui.innerHTML='<div class="loop-top-left" aria-label="Estado da floresta">'+
-        '<span class="loop-state">FLORESTA <strong id="loop-state">'+['A','B','C'][net.loop.layout]+'</strong></span>'+
+        '<span class="loop-state">'+(net.level===2?'FASE 02 · FLORESTA TEMPORAL':'FASE 01 · A BOCA DA NOITE')+' · <strong id="loop-state">'+['A','B','C'][net.level===2?net.temporal.layout:net.loop.layout]+'</strong></span>'+
         '<span id="loop-timer">APAGÃO EM —</span></div>'+
         '<div class="loop-top-right" aria-live="polite"><strong id="loop-objective">'+safeText(object.title)+'</strong>'+
         '<small id="loop-progress">'+safeText(object.progress)+'</small></div>'+
@@ -217,7 +236,7 @@ function render(): void {
         '<div class="loop-menu">'+
         (net.isSolo?'<details id="loop-dev"><summary>⚙ <span>Opções</span></summary>'+
           '<div class="loop-menu-options">'+
-          '<button id="solo-restart">REINICIAR TENTATIVA</button>'+
+          '<button id="solo-restart">'+(net.level===2?'REINICIAR FASE 02':'REINICIAR TENTATIVA')+'</button>'+
           '<button id="solo-cycle">ADIANTAR APAGÃO</button>'+
           '<button id="solo-leave">VOLTAR AO MENU</button></div></details>':
           '<button id="leave" class="loop-online-leave" title="Sair da sala">SAIR</button>')+
@@ -284,7 +303,8 @@ function render(): void {
       '<summary>FERRAMENTAS DE DESENVOLVIMENTO</summary>'+
       '<p>Protótipos antigos, separados da aventura principal.</p>'+
       '<div class="dev-tools-actions">'+
-      button('dev-loop','TESTAR FLORESTA MUTÁVEL',true)+
+      button('dev-loop','TESTAR FASE 01 · BOCA DA NOITE',true)+
+      button('dev-temporal','TESTAR FASE 02 · FLORESTA TEMPORAL',true)+
       ([1,2,3,4] as const).map(level=>button('dev-classic-'+level,'TESTAR FASE CLÁSSICA '+level,true)).join('')+
       button('create-classic','CRIAR SALA CLÁSSICA',true)+'</div></details>'+
       '<p class="menu-footnote">Multiplayer: três pessoas entram na mesma sala pelo código.</p></main>';
@@ -295,6 +315,7 @@ function render(): void {
     ui.querySelector('#create-classic')?.addEventListener('click',()=>{info='';void net.createRoom('classic');});
     ui.querySelector('#loop-solo')?.addEventListener('click',()=>{info='';net.startLoopSolo();});
     ui.querySelector('#dev-loop')?.addEventListener('click',()=>{info='';net.startLoopSolo();});
+    ui.querySelector('#dev-temporal')?.addEventListener('click',()=>{info='';net.startTemporalSolo();});
     ([1,2,3,4] as const).forEach(level=>
       ui.querySelector('#dev-classic-'+level)?.addEventListener('click',()=>{info='';net.startSolo(level);}));
     ui.querySelector('#join-menu')?.addEventListener('click',showJoin);

@@ -1,5 +1,28 @@
 # A FLORESTA MENTE — MAS O VENTO NÃO
 
+## Etapa 12 — Fase 02: A Floresta Temporal
+
+**Aventura principal:** Fase 01 — A Boca da Noite → transição cinematográfica de 5 segundos → Fase 02 — A Floresta Temporal. Ao entrar todos os três na saída do mapa 1, o anfitrião sincroniza a transição e carrega o segundo mundo em vez de encerrar a partida. Os jogadores mantêm as personagens e habilidades; no início da Fase 2, todos recebem três corações e 100 de estamina. Morrer na tempestade reinicia só o novo mapa, não a Boca da Noite.
+
+**Início direto para testes:** menu principal → Ferramentas de desenvolvimento → **TESTAR FASE 02 · FLORESTA TEMPORAL**. As fases clássicas continuam listadas em separado como protótipos antigos. Em solo: 1=Téo, 2=Lia, 3=Nino; Espaço/↑ para pular, E para interação/apoio, J para baladeira, Shift para dash. Sob ⚙ Opções: reiniciar Fase 2, adiantar apagão e voltar. Multiplayer entra pela sala padrão, iniciando na Boca da Noite e avançando com os três jogadores.
+
+**Mapa independente:** `src/temporalForest.ts` contém autoridades e geometria de 4200px, e `src/temporalForestScene.ts` contém uma nova cena Phaser. Região A: Clareira Encharcada; B: Mata Alagada; C: Bosque dos Troncos; D: Grande Correnteza; E: Passagem da Tempestade. Os três começam no centro do terreno inicial, com exploração nos dois sentidos. A direita, uma barreira só libera o caminho depois das três leituras de marcos na esquerda.
+
+**Chuva e vento:** `src/temporalRain.ts` define chuva permanente em três camadas, respingos e ondulações. As gotas são calculadas em coordenadas do mundo, não com x/facing do personagem; `tempWind` orienta a inclinação a partir da próxima ação cooperativa e do estado A/B/C. Objetos gráficos são desenhados em lote, com orçamento reduzido quando a tela é estreita. Chuva mais forte no estado C; ilustrações Phaser originais de troncos gigantes, névoa azulada, canais, raízes, madeira molhada e reflexos. Visual e colisão são componentes separados.
+
+**Transformação:** layout A → B → C a cada 60 segundos, seguido de apagão de 2 segundos. Obstáculos saltáveis e portões de colisão realmente se alteram por layout; algumas poças aumentam/deslocam-se, uma plataforma temporária fica acessível em C e os três não ficam dentro de uma parede recém-ativada. Progresso dos marcos, amarras e raízes persiste depois de cada transformação. Lama desacelera para 145px/s; chão molhado tem desaceleração gradual, enquanto chão normal mantém o deslocamento padrão. Poças rasas não dão dano; a correnteza profunda (x2610–2970) é fatal abaixo da margem segura.
+
+**Primeiro puzzle:** três marcos entre x870 e x1630, usando Téo/E em patamar, Lia/J em alvo e Nino/Shift+E após dash. A região seguinte libera a árvore encharcada sobre o canal profundo. Lia sobe em Nino e Téo sobe em Lia (E). Téo usa salto duplo da torre para pousar no galho alto em (2440,325) e soltar a amarra; Lia dispara num cipó distante; Nino usa dash para soltar a raiz. Após as três ações, a árvore cai durante 1,9 segundo, cria uma ponte com colisão e libera a travessia real.
+
+**Raízes da Tempestade:** na margem leste há três travas distintas em x3240, 3530 e 3800. Só podem ser ativadas no estado C: Téo alcança um patamar elevado, Lia dispara na segunda raiz e Nino executa dash antes de acionar a terceira. Uma passagem enganosa no estado A/B retorna os três à clareira segura; a chuva indica recuar. A última porta abre depois de todas as travas em C, e só então a equipe inteira pode alcançar a saída da Fase 2. Tela de conclusão: “VOCÊS VENCERAM A TEMPESTADE! Mas a floresta ainda não revelou todos os seus caminhos...”. Não há Fase 3 automática.
+
+**Multiplayer:** `Network` mantém `experience='loop'`, agora usando `level=1|2` dentro da mesma aventura. O anfitrião controla timer, layouts, barreiras, puzzles, dano fatal, estamina, vidas e conclusão. Os convidados recebem snapshots tipados `temporal` e a fase/poses no login ou reconexão. O modo solo mantém três corpos físicos sem IA.
+
+**Testes:** `npm run build` e `npm run test:logic`. A nova suíte `tests/temporalForest.test.ts` cobre os três layouts, danos, timing, portões, água, lama, vento, chuva, habilidades, escada humana, pontes, passagem falsa, restart na Fase 2, vitória, cena e protocolos. Testes automáticos não demonstram um percurso inteiro concluído manualmente, FPS de celular nem latência de WebRTC em três dispositivos; essas validações ainda requerem playtests. Alguns efeitos de tempestade e as indicações visuais de puzzle podem precisar de refinamento.
+
+---
+
+
 ## Etapa 11-B — Vida, estamina e sobrevivência na floresta mutável
 
 Os três personagens da **nova aventura** possuem três corações e 100 pontos de estamina individual. As vidas, os gastos, a recuperação e o reinício são controlados por LoopAuthority no anfitrião (ou na autoridade local do Modo Solo). Os protótipos clássicos continuam usando suas próprias regras anteriores.

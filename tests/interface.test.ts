@@ -15,7 +15,7 @@ for(const [id,name] of [['loop-solo','JOGAR SOZINHO'],['create','MULTIPLAYER ONL
 }
 ok(main.includes("void net.createRoom('loop')"),'multiplayer abre a floresta mutável');
 ok(main.includes("net.startLoopSolo()"),'solo abre a mesma aventura');
-ok(main.includes("button('dev-loop','TESTAR FLORESTA MUTÁVEL'"),'teste da mutável isolado');
+ok(main.includes("button('dev-loop','TESTAR FASE 01 · BOCA DA NOITE'"),'teste da mutável isolado');
 ok(main.includes("([1,2,3,4] as const).map(level=>button('dev-classic-'"),'quatro fases clássicas em desenvolvimento');
 ok(main.includes('net.startSolo(level)'),'fase clássica iniciada pela mesma API');
 ok(main.includes("net.createRoom('classic')"),'sala clássica mantida como ferramenta');
