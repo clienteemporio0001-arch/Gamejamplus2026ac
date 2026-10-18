@@ -92,12 +92,12 @@ party[0]={seat:0,x:TREE_TARGETS.tower.base.x,y:TREE_TARGETS.tower.base.y,vx:0,vy
 assert.equal(treeTowerNearBase(party[1]),true);
 assert.equal(treeTowerNearBase({...party[1],x:TREE_TARGETS.tower.base.x-700}),false);
 assert.equal(authority.interact(1,'support',party,base+2100),true);
-assert.equal(treeObjective(w).progress,'1/3');
+assert.equal(treeObjective(w).progress,'0/1');
 party[1].y=party[2].y-44;
 party[0].y=party[1].y;
 assert.equal(authority.interact(0,'support',party,base+2300),true);
 assert.deepEqual(w.tower.slice(0,2),[true,true]);
-assert.equal(treeObjective(w).progress,'2/3');
+assert.equal(treeObjective(w).progress,'0/1');
 assert.equal(authority.interact(0,'detach',party,base+2500),true);
 const upperBranch=TREE_PLATFORMS.find(p=>p.x===TREE_TARGETS.tower.top.x)!;
 const landingY=upperBranch.y-upperBranch.height/2-22;
@@ -106,7 +106,7 @@ party[0]={seat:0,x:TREE_TARGETS.tower.top.x,y:landingY,vx:0,vy:0};
 assert.equal(authority.interact(0,'lever',party,base+2600),true);
 assert.ok(w.ropeOpen);
 assert.equal(w.tower.filter(Boolean).length,3);
-// Lia must leave the human ladder before walking to the next puzzle.
+// Optional human ladder participants must detach before walking to the next puzzle.
 assert.equal(authority.interact(1,'detach',party,base+2750),true);
 party[1]={seat:1,x:4660,y:275,vx:0,vy:0};
 assert.equal(authority.authorizeEnergy(1,'shoot',party,base+3000,1).ok,true);
@@ -157,4 +157,36 @@ console.log('APROVADO: Etapa 18 — geometria, rajada, abrigos, multiplayer stat
  assert.equal(poses[0].x,poses[2].x);
  assert.equal(poses[0].y,poses[2].y-88);
  assert.equal(climb.world.tower.filter(Boolean).length,2);
+}
+
+// Shipping regression: Téo may free the rope WITHOUT stacking the team.
+{
+ const solo=new TreeAuthority();solo.reset(base+30000);
+ solo.world.bridgeOpen=true;
+ const party= TREE_START.map(p=>({...p}));
+ const first=TREE_PLATFORMS.find(p=>p.x===4195)!;
+ const baseBranch=TREE_PLATFORMS.find(p=>p.x===4090)!;
+ const rise=baseBranch.y-first.y;
+ assert.ok(rise>TREE_JUMP_RISE,'revised first upper branch requires double jump');
+ const top=TREE_PLATFORMS.find(p=>p.x===TREE_TARGETS.tower.top.x)!;
+ const y=top.y-top.height/2-22;
+ party[0]={seat:0,x:TREE_TARGETS.tower.top.x,y,vx:0,vy:0};
+ assert.equal(solo.world.tower[0],false);
+ assert.equal(solo.world.tower[1],false);
+ assert.equal(solo.interact(0,'lever',party,base+32000),true);
+ assert.equal(solo.world.ropeOpen,true);
+ assert.equal(treeObjective(solo.world).title.includes('Galhos do Tempo'),true);
+ // Final controls must remain reachable at the actual branch body heights.
+ const teoBranch=TREE_PLATFORMS.find(p=>p.x===TREE_TARGETS.time.teo.x)!;
+ solo.world.layout=1;
+ party[0]={seat:0,x:TREE_TARGETS.time.teo.x,y:teoBranch.y-33,vx:0,vy:0};
+ assert.equal(solo.interact(0,'lever',party,base+32300),true);
+ assert.equal(solo.world.time[0],true);
+ const ninoBranch=TREE_PLATFORMS.find(p=>p.x===5085)!;
+ solo.world.layout=2;
+ party[2]={seat:2,x:TREE_TARGETS.time.nino.x-100,y:ninoBranch.y-33,vx:0,vy:0};
+ assert.equal(solo.authorizeEnergy(2,'dash',party,base+35000,1).ok,true);
+ party[2]={seat:2,x:TREE_TARGETS.time.nino.x,y:ninoBranch.y-33,vx:0,vy:0};
+ assert.equal(solo.interact(2,'switch',party,base+35600),true);
+ assert.equal(solo.world.time[2],true);
 }

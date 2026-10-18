@@ -30,7 +30,7 @@ export const TREE_PLATFORMS:readonly TreePlatform[]=[
  // Gap impossible for a normal jump, opened by the actual cooperative bridge.
  {...p(3455,462,393,'bridge'),puzzle:'bridge'},
  p(3730,458,205,'canopy'),p(3905,415,170),p(4090,385,220,'root'),
- p(4195,265,135),p(4260,167,180,'branch'),
+ p(4195,215,135),p(4260,167,180,'branch'),
  {...p(4440,314,300,'bridge'),puzzle:'rope'},
  p(4660,308,205,'canopy'),p(4810,265,196,'root'),
  { ...p(4865,203,134),state:1},
@@ -63,7 +63,7 @@ export const TREE_START:Pose[]=([0,1,2] as Seat[]).map(seat=>({seat,x:1580+seat*
 export const TREE_TARGETS={
  bridge:{teo:{x:3255,y:282},lia:{x:3320,y:436},nino:{x:3220,y:426}},
  tower:{base:{x:4090,y:351},top:{x:4260,y:133}},
- time:{lia:{x:4840,y:241},teo:{x:4865,y:169},nino:{x:5050,y:193}},
+ time:{lia:{x:4840,y:215},teo:{x:4865,y:153},nino:{x:5050,y:171}},
  exit:{x:5142,y:157}
 } as const;
 /** Shared scene/authority interaction bounds. */
@@ -167,12 +167,12 @@ export function treeWindVelocity(w:TreeWorld,pose:Pick<Pose,'x'|'y'>,
 }
 export function treeObjective(w:TreeWorld):{title:string;progress:string}{
  if(!w.bridgeOpen)return {title:'A Ponte dos Três: unam suas habilidades.',progress:w.bridge.filter(Boolean).length+'/3'};
- if(!w.ropeOpen)return {title:'A Escada Humana: alcancem o cipó.',progress:w.tower.filter(Boolean).length+'/3'};
+ if(!w.ropeOpen)return {title:'Téo: use salto duplo para soltar o cipó.',progress:(w.tower[2]?'1':'0')+'/1'};
  if(!w.finalOpen)return {title:'Os Galhos do Tempo: sigam o vento.',progress:w.time.filter(Boolean).length+'/3'};
  return {title:'A Última Copa: reúnam os três na saída.',progress:'Saída liberada'};
 }
 export function treeWind(w:TreeWorld,x:number):-1|0|1{
- const target=!w.bridgeOpen?TREE_TARGETS.bridge.nino.x:!w.ropeOpen?TREE_TARGETS.tower.base.x:
+ const target=!w.bridgeOpen?TREE_TARGETS.bridge.nino.x:!w.ropeOpen?TREE_TARGETS.tower.top.x:
   !w.finalOpen?TREE_TARGETS.time.lia.x:TREE_TARGETS.exit.x;
  return target>x+40?1:target<x-40?-1:0;
 }
@@ -326,19 +326,20 @@ export class TreeAuthority{
      &&Math.abs(p.vy)<115)changed=w.bridge[0]=true;
    if(w.bridge.every(Boolean))w.bridgeOpen=true;
   }else if(!w.ropeOpen){
-   if(seat===0&&kind==='lever'&&w.tower[0]&&w.tower[1]
-     &&w.supporting[0]===null&&!windy
-     &&treeTowerNearTop(p)
-     &&Math.abs(p.vy)<110)changed=w.tower[2]=true;
-   if(w.tower.every(Boolean))w.ropeOpen=true;
+   // Téo can reach the upper rope via the two branches and double jump.
+   // Human stacking stays optional, never a hidden prerequisite for this puzzle.
+   if(seat===0&&kind==='lever'&&w.supporting[0]===null&&!windy
+     &&treeTowerNearTop(p)&&Math.abs(p.vy)<170){
+    changed=!w.tower[2];w.tower[2]=true;w.ropeOpen=true;
+   }
   }else if(!w.finalOpen){
    if(w.layout===0&&!w.time[1]&&shot(TREE_TARGETS.time.lia))changed=w.time[1]=true;
    if(w.layout===1&&seat===0&&kind==='lever'&&!windy
-     &&close(p,TREE_TARGETS.time.teo.x,TREE_TARGETS.time.teo.y,53,20)
-     &&Math.abs(p.vy)<110)changed=w.time[0]=true;
+     &&close(p,TREE_TARGETS.time.teo.x,TREE_TARGETS.time.teo.y,68,48)
+     &&Math.abs(p.vy)<180)changed=w.time[0]=true;
    if(w.layout===2&&seat===2&&kind==='switch'&&!windy&&w.dashAt>0
-     &&now-w.dashAt<=2800&&p.x-w.dashX>=105
-     &&close(p,TREE_TARGETS.time.nino.x,TREE_TARGETS.time.nino.y,62,62))
+     &&now-w.dashAt<=3500&&Math.abs(p.x-w.dashX)>=65
+     &&close(p,TREE_TARGETS.time.nino.x,TREE_TARGETS.time.nino.y,78,79))
      changed=w.time[2]=true;
    if(w.time.every(Boolean))w.finalOpen=true;
   }

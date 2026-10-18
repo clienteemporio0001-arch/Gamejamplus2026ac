@@ -22,7 +22,7 @@ import {TREE_WIDTH,TREE_HEIGHT,TREE_START,TREE_PLATFORMS,TREE_SHELTERS,TREE_TARG
 export class TreetopForestScene extends Phaser.Scene {
  private net:Network;private touch:TouchInput;private hud?:()=>void;
  private w:TreeWorld;
- private markers:Array<{ring:Phaser.GameObjects.Arc;stage:'bridge'|'tower'|'time';seat:Seat}>=[];
+ private markers:Array<{ring:Phaser.GameObjects.Arc;label?:Phaser.GameObjects.Text;stage:'bridge'|'tower'|'time';seat:Seat}>=[];
  private platforms:Phaser.GameObjects.Rectangle[]=[];
  private skins:Phaser.GameObjects.Graphics[]=[];
  private art!:TreetopArt;
@@ -67,13 +67,18 @@ export class TreetopForestScene extends Phaser.Scene {
     TREE_TARGETS.time.nino.y,.57);
   for(const [target,stage,owner] of [
    [TREE_TARGETS.bridge.teo,'bridge',0],[TREE_TARGETS.bridge.lia,'bridge',1],
-   [TREE_TARGETS.bridge.nino,'bridge',2],[TREE_TARGETS.tower.base,'tower',1],
+   [TREE_TARGETS.bridge.nino,'bridge',2],
    [TREE_TARGETS.tower.top,'tower',0],[TREE_TARGETS.time.lia,'time',1],
    [TREE_TARGETS.time.teo,'time',0],[TREE_TARGETS.time.nino,'time',2]
   ] as const){
    const ring=this.add.circle(target.x,target.y-12,11,0xf2d899,.2)
     .setStrokeStyle(2,0xe1d59e,.82).setDepth(24);
-   this.markers.push({ring,stage,seat:owner});
+   const names=stage==='tower'?'TÉO: E • CIPÓ':
+    owner===1?'LIA: DISPARO • A':owner===0?'TÉO: E • B':'NINO: DASH + E • C';
+   const label=stage==='tower'||stage==='time'?
+    this.caption(target.x,target.y-45,names,12,'#f7e5aa').setDepth(57):undefined;
+   label?.setVisible(false);
+   this.markers.push({ring,label,stage,seat:owner});
    this.tweens.add({targets:ring,alpha:.32,scale:1.16,duration:1450,yoyo:true,repeat:-1});
   }
  }
@@ -225,6 +230,8 @@ export class TreetopForestScene extends Phaser.Scene {
     this.net.act({kind:'lever'});return;
    }
    if(w.supporting[0]!==null){this.net.act({kind:'detach'});return;}
+   // Optional human stacking remains available through other systems,
+   // but Téo never needs it to activate the upper rope.
    if(w.bridgeOpen&&!w.ropeOpen&&nearBase&&w.supporting[1]===2
      &&Math.abs(p.x-this.avatars[1].x)<=65
      &&Math.abs(p.y-this.avatars[1].y)<=86){
@@ -335,23 +342,25 @@ export class TreetopForestScene extends Phaser.Scene {
       (w.windDirection===1?'🌪 RAJADA FORTE ▶':'◀ RAJADA FORTE 🌪'):'');
   this.windStatus.setVisible(w.windPhase!=='calm'&&!pause);
   this.windStatus.setColor(w.windPhase==='gust'?'#ffe4a0':'#dff5bd');
-  this.markers.forEach(({ring,stage,seat:owner})=>{
-   const active=stage==='bridge'?!w.bridgeOpen&&!w.bridge[owner]:
-    stage==='tower'?w.bridgeOpen&&!w.ropeOpen&&
-     (owner===1?!w.tower[1]:w.tower[0]&&w.tower[1]&&!w.tower[2]):
-     w.ropeOpen&&!w.finalOpen&&!w.time[owner]&&
-     (owner===1?w.layout===0:owner===0?w.layout===1:w.layout===2);
-   ring.setVisible(active);
+  this.markers.forEach(({ring,label,stage,seat:owner})=>{
+   const pending=stage==='bridge'?!w.bridgeOpen&&!w.bridge[owner]:
+    stage==='tower'?w.bridgeOpen&&!w.ropeOpen:
+    w.ropeOpen&&!w.finalOpen&&!w.time[owner];
+   // Never hide the target behind another secret action. Wrong-cycle targets
+   // remain visible, but show their required A/B/C state.
+   ring.setVisible(pending);
+   label?.setVisible(pending);
+   if(stage==='time'&&pending){
+    const ready=owner===1?w.layout===0:owner===0?w.layout===1:w.layout===2;
+    ring.setStrokeStyle(ready?3:2,ready?0x9df6c2:0xe1d59e,ready?1:.58);
+    label?.setColor(ready?'#b3ffdb':'#dfd6ab');
+   }
   });
-  // The human ladder is formed on the right-hand shelter, not the previous one.
   const byTower=w.bridgeOpen&&!w.ropeOpen&&
-   Math.abs(this.local.x-TREE_TARGETS.tower.base.x)<300;
+   Math.abs(this.local.x-TREE_TARGETS.tower.top.x)<300;
   if(byTower){
-   const instruction=!w.tower[1]?'NINO NA BASE • LIA: E PARA SUBIR':
-    !w.tower[0]?'TÉO: APROXIME-SE DE LIA E USE E':
-    'TÉO: ALCANCE O GALHO SUPERIOR E USE E';
-   this.hint.setText(instruction)
-    .setPosition(TREE_TARGETS.tower.base.x,TREE_TARGETS.tower.base.y-136)
+   this.hint.setText('TÉO: SUBA OS GALHOS COM SALTO DUPLO E USE E NO CIPÓ')
+    .setPosition(TREE_TARGETS.tower.top.x,TREE_TARGETS.tower.top.y-86)
     .setVisible(true);
   }else this.hint.setVisible(false);
   this.missions.update(time,pause);

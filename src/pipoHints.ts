@@ -161,27 +161,15 @@ export function pipoHint(source:HintSource):PipoHint{
    who+'use E no galho alto; Lia atira na amarra; Nino usa dash e E na trava.'
   ]);
  }
- if(!w.ropeOpen){
-  if(!w.tower[1])return guidance('escada humana das copas',[
-   'PIPO: Nino fica na base! Lia precisa subir sobre ele!',
-   'Leve Nino à plataforma do abrigo à direita da ponte e aproxime Lia.',
-   'Com Lia pressione E para formar o primeiro apoio.'
-  ]);
-  if(!w.tower[0])return guidance('escada humana das copas',[
-   'PIPO: Boa! Agora Téo precisa subir sobre Lia!',
-   'Com Lia apoiada em Nino, leve Téo aos dois nessa mesma plataforma.',
-   'Com Téo pressione E para formar o segundo apoio.'
-  ]);
-  return guidance('cipó superior',[
-   'PIPO: Téo, alcance aquele galho e solte o cipó!',
-   'Solte Téo, use salto duplo e pouse na plataforma superior.',
-   'Pressione E perto do círculo superior para liberar o cipó.'
-  ]);
- }
+ if(!w.ropeOpen)return guidance('cipó superior',[
+  'Téo deve subir os dois galhos da direita e soltar o cipó.',
+  'Não é preciso empilhar os amigos: use o salto duplo para o galho elevado.',
+  'O círculo do cipó fica sempre visível. Chegue nele e pressione E.'
+ ]);
  if(!w.finalOpen)return guidance('galhos do tempo',[
   'Os galhos mudaram! O vento ainda sabe o caminho.',
-  'Cada amigo tem um mecanismo em um estado diferente da floresta.',
-  'Lia dispara no estado A; Téo usa E no B; Nino usa dash e E no C.'
+  'Os três alvos permanecem visíveis, com a letra do estado necessário.',
+  'Lia atira no A, Téo usa E no B e Nino usa dash + E no C. Procurem os círculos nos galhos.'
  ]);
  return guidance('última copa',[
   'Muito bem! Só falta a última copa!',
