@@ -112,6 +112,6 @@ assert.ok(main.includes("button('show-final-credits'"));
 assert.ok(credits.includes('Phaser')&&credits.includes('PeerJS')&&credits.includes('inteligência artificial'));
 for(let i=1;i<=4;i++)assert.ok(guide.includes('0'+i+' —'));
 assert.ok(guide.includes('backup/etapa19-estavel-20261018'));
-assert.ok(workflow.includes('npm run build')&&workflow.includes('npm run test:logic'));
+assert.ok(workflow.includes('npm run build')&&workflow.includes('npm run test'));
 assert.ok(workflow.includes('actions/deploy-pages@v4'));
 console.log('APROVADO: etapa 20 — menu, HUD, personagens, controles, Pipo, configurações, áudio e regressões');
