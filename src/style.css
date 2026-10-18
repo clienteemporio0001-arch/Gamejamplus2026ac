@@ -349,7 +349,7 @@ body.playing{overflow:hidden;touch-action:none;overscroll-behavior:none}
   #ui.in-game .solo-hud{top:calc(7px + env(safe-area-inset-top));bottom:auto;left:max(8px,env(safe-area-inset-left))}
   #ui.in-game .solo-hud .solo-switch{display:none}
   .solo-touch-switch{display:none!important}
-  #mobile-fullscreen{top:calc(61px + env(safe-area-inset-top))}
+  #mobile-fullscreen{top:calc(61px + env(safe-area-inset-top));right:calc(86px + env(safe-area-inset-right))}
   .mobile-seat-picker{bottom:calc(9px + env(safe-area-inset-bottom));}
 }
 @media (pointer:coarse) and (orientation:landscape) and (max-height:390px){

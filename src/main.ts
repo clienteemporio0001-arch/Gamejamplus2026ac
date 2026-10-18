@@ -41,7 +41,7 @@ function applyViewport():void{
 }
 async function requestFullscreen():Promise<void>{
   const root=document.documentElement;
-  const notify=(text:string)=>{fullscreen.setAttribute('title',text);fullscreen.setAttribute('aria-label',text);};
+  const notify=(text:string)=>{fullscreen.setAttribute('title',text);fullscreen.setAttribute('aria-label',text);const span=fullscreen.querySelector('span');if(span)span.textContent='INDISPONÍVEL';};
   if(!root.requestFullscreen){notify('Tela cheia indisponível; usando layout responsivo.');return;}
   try{
     if(document.fullscreenElement)await document.exitFullscreen();
@@ -60,7 +60,11 @@ fullscreen.addEventListener('click',()=>{void requestFullscreen();});
 window.addEventListener('resize',applyViewport,{passive:true});
 window.addEventListener('orientationchange',()=>{clearTouch(touch);applyViewport();},{passive:true});
 window.visualViewport?.addEventListener('resize',applyViewport,{passive:true});
-document.addEventListener('fullscreenchange',applyViewport);
+document.addEventListener('fullscreenchange',()=>{
+  const label=fullscreen.querySelector('span');
+  if(label)label.textContent=document.fullscreenElement?'SAIR DA TELA CHEIA':'TELA CHEIA';
+  applyViewport();
+});
 
 function safeText(value: string): string {
   return value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] ?? c));
