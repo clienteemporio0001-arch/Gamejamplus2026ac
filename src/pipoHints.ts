@@ -81,7 +81,7 @@ export function pipoHint(source:HintSource):PipoHint{
    'Téo usa E, Lia atira no alvo e Nino usa dash e E nas suas travas.'
   ]);
   return guidance('saída',[
-   'Boa! As três travas foram liberadas! O caminho está aberto!'
+   'Boa! As três travas foram liberadas! O caminho está aberto!',
    'A saída verdadeira está aberta. Não deixem ninguém para trás.',
    'Levem os três amigos juntos à saída da floresta!'
   ]);
