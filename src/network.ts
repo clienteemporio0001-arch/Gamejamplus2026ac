@@ -926,7 +926,7 @@ export class Network {
   }
   advanceLoopCycle():void{
     if(!this.isSolo||this.experience!=='loop'||!this.playing)return;
-    if(this.level===4)this.fireAuthority.world.cycleStart=Date.now()-21000;
+    if(this.level===4)this.fireAuthority.world.cycleStart=Date.now()-13500; // developer only: trigger warning before impact
     else if(this.level===3)this.treetopAuthority.world.cycleStart=Date.now()-60000;
     else if(this.level===2)this.temporalAuthority.world.cycleStart=Date.now()-60000;
     else this.loopAuthority.world.cycleStart=Date.now()-60000;
