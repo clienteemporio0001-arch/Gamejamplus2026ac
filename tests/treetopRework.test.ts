@@ -3,7 +3,8 @@ import {
  TREE_WIDTH,TREE_HEIGHT,TREE_VOID_Y,TREE_PLATFORMS,TREE_START,TREE_TARGETS,TREE_SHELTERS,
  TREE_GRAVITY,TREE_JUMP,TREE_SPEED,TREE_JUMP_RISE,TREE_JUMP_RANGE,TREE_WIND_PERIOD,
  TREE_GUST_WARNING,TREE_GUST_DURATION,TREE_GUST_OFFSET,TreeAuthority,treeWindSchedule,
- treeWindVelocity,treeExposure,treeFatal,treePlatforms,initTree,validTree,treeCameraZoom
+ treeWindVelocity,treeExposure,treeFatal,treePlatforms,initTree,validTree,treeCameraZoom,
+ treeTowerNearBase,treeTowerNearTop,treeObjective
 } from '../src/treetopForest';
 import type {Pose} from '../src/network';
 const base=100000,authority=new TreeAuthority();
@@ -88,15 +89,23 @@ assert.ok(treePlatforms(w).some(p=>p.puzzle==='bridge'));
 party[2]={seat:2,x:TREE_TARGETS.tower.base.x,y:TREE_TARGETS.tower.base.y,vx:0,vy:0};
 party[1]={seat:1,x:TREE_TARGETS.tower.base.x,y:TREE_TARGETS.tower.base.y,vx:0,vy:0};
 party[0]={seat:0,x:TREE_TARGETS.tower.base.x,y:TREE_TARGETS.tower.base.y,vx:0,vy:0};
+assert.equal(treeTowerNearBase(party[1]),true);
+assert.equal(treeTowerNearBase({...party[1],x:TREE_TARGETS.tower.base.x-700}),false);
 assert.equal(authority.interact(1,'support',party,base+2100),true);
+assert.equal(treeObjective(w).progress,'1/3');
 party[1].y=party[2].y-44;
 party[0].y=party[1].y;
 assert.equal(authority.interact(0,'support',party,base+2300),true);
 assert.deepEqual(w.tower.slice(0,2),[true,true]);
+assert.equal(treeObjective(w).progress,'2/3');
 assert.equal(authority.interact(0,'detach',party,base+2500),true);
-party[0]={seat:0,x:TREE_TARGETS.tower.top.x,y:TREE_TARGETS.tower.top.y,vx:0,vy:0};
+const upperBranch=TREE_PLATFORMS.find(p=>p.x===TREE_TARGETS.tower.top.x)!;
+const landingY=upperBranch.y-upperBranch.height/2-22;
+assert.equal(treeTowerNearTop({x:TREE_TARGETS.tower.top.x,y:landingY}),true);
+party[0]={seat:0,x:TREE_TARGETS.tower.top.x,y:landingY,vx:0,vy:0};
 assert.equal(authority.interact(0,'lever',party,base+2600),true);
 assert.ok(w.ropeOpen);
+assert.equal(w.tower.filter(Boolean).length,3);
 party[1]={seat:1,x:4660,y:275,vx:0,vy:0};
 assert.equal(authority.authorizeEnergy(1,'shoot',party,base+3000,1).ok,true);
 assert.equal(w.time[1],true);
