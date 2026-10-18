@@ -13,7 +13,7 @@ const make=()=>new LoopAuthority();
 const setPosition=(poses:Pose[],seat:Seat,x:number,y=606)=>{
  poses[seat]={seat,x,y,vx:0,vy:0};
 };
-const group=(x:number):Pose[]=LOOP_START.map((p,i)=>({
+const partyAt=(x:number):Pose[]=LOOP_START.map((p,i)=>({
  ...p,x:x+(i-1)*56,y:606,vx:0,vy:0
 }));
 assert.equal(TRAIL_MEET_RADIUS_X,142);
@@ -44,9 +44,9 @@ for(const layout of [0,1,2] as const){
  assert.ok(guide.hint.includes(correct==='oca'?'ÁRVORE OCA':'PEDRA RACHADA'));
  assert.equal(windGuide(w,0,LOOP_GEOMETRY.portal[correct]).direction,0);
  assert.equal(windGuide(w,0,LOOP_GEOMETRY.portal[wrong]).target,LOOP_GEOMETRY.portal[correct]);
- assert.equal(trailAssembly(w,group(LOOP_GEOMETRY.portal[correct]),correct).ready,true);
- assert.ok(loopObjective(w,group(LOOP_GEOMETRY.portal[correct])).title.includes('TRILHAS LIBERADAS'));
- assert.ok(loopObjective(w,group(LOOP_GEOMETRY.portal[correct])).progress.includes('3/3 AMIGOS'));
+ assert.equal(trailAssembly(w,partyAt(LOOP_GEOMETRY.portal[correct]),correct).ready,true);
+ assert.ok(loopObjective(w,partyAt(LOOP_GEOMETRY.portal[correct])).title.includes('TRILHAS LIBERADAS'));
+ assert.ok(loopObjective(w,partyAt(LOOP_GEOMETRY.portal[correct])).progress.includes('3/3 AMIGOS'));
  assert.ok(missionSnapshot(1,w).objective.includes('TRILHAS LIBERADAS!'));
  const info=pipoHint({phase:1,world:w});
  assert.equal(info.objective,'rota verdadeira');
@@ -55,7 +55,7 @@ for(const layout of [0,1,2] as const){
  assert.ok(info.lines[2].includes('Os três'));
  for(const [label,route] of [['falsa',wrong],['verdadeira',correct]] as const){
   const target=LOOP_GEOMETRY.portal[route];
-  const actors=group(target);
+  const actors=partyAt(target);
   assert.equal(trailOccupants(actors,route).length,3);
   actors[2].x=LOOP_START[2].x;
   assert.equal(trailOccupants(actors,route).length,2);
@@ -85,7 +85,7 @@ for(const layout of [0,1,2] as const){
    const falseHint=pipoHint({phase:1,world:w});
    assert.equal(falseHint.objective,'trilha enganosa');
    assert.ok(falseHint.lines[0].includes('vento'));
-   assert.equal(auth.tick(group(target),13000).poses,undefined,'no loop before cooldown');
+   assert.equal(auth.tick(partyAt(target),13000).poses,undefined,'no loop before cooldown');
    assert.equal(windGuide(w,0,LOOP_START[0].x).target,LOOP_GEOMETRY.portal[correct]);
   }else{
    const before=[...w.health],energy=[...w.stamina];
