@@ -135,8 +135,9 @@ ok(!mobilePadMarkup(false,2).includes('data-seat='),
 
 ok(scene.includes('TEMP_MARK_NAMES')&&scene.includes('this.echoVisuals.push(container)'),
   'marcos da Fase 2 são objetos distintos desenhados no mundo');
-ok(scene.includes('this.echoLabels.push(')&&scene.includes('setVisible(nearby&&!pause)'),
-  'nome do mecanismo aparece somente próximo ao personagem correto');
+ok(scene.includes('this.echoLabels.push(')&&scene.includes('label.setVisible(false)')&&
+   scene.includes('this.pipo.update(time,this.local.x,this.local.y,pause)'),
+  'Pipo substitui nomes repetidos de mecanismos e mantém feedback visual');
 ok(scene.includes('this.echoChecks.push(')&&scene.includes('setVisible(w.echo[i])'),
   'feedback visual marca mecanismo concluído');
 ok(scene.includes('temporalHint(w,seat,')&&scene.includes('guidance?.action'),
