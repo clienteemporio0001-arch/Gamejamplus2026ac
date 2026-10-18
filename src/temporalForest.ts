@@ -200,9 +200,22 @@ export class TemporalAuthority{
    w.blackoutUntil=0;w.layout=((w.layout+1)%3) as 0|1|2;w.cycle++;w.cycleStart=now;
    w.supporting=[null,null,null];w.climbReady=false;
    this.maybeExit();
-   const trapped=poses.some(p=>tempBlocks(w).some(b=>b.active&&Math.abs(p.x-b.x)<b.width/2+28
-      &&p.y>638-b.height-18));
-   return{changed:true,poses:trapped?TEMP_START.map(p=>({...p})):undefined};
+   // Resolve only endangered players; never send the whole team back to spawn.
+   const blockers=tempBlocks(w).filter(b=>b.active);
+   let rescued=false;
+   const corrected=poses.map(p=>{
+    const overlap=blockers.find(b=>Math.abs(p.x-b.x)<b.width/2+24&&p.y>638-b.height-18);
+    if(!overlap)return {...p};
+    rescued=true;
+    const left=overlap.x-overlap.width/2-33,right=overlap.x+overlap.width/2+33;
+    const candidates=[left,right].filter(x=>x>50&&x<TEMP_WIDTH-50
+      &&!(x>=TEMP_CHANNEL.start-22&&x<=TEMP_CHANNEL.end+22)
+      &&blockers.every(b=>Math.abs(x-b.x)>=b.width/2+22));
+    const x=candidates.sort((a,b)=>Math.abs(a-p.x)-Math.abs(b-p.x))[0]
+      ??TEMP_START[p.seat].x;
+    return {...p,x,vx:0,vy:0};
+   });
+   return{changed:true,poses:rescued?corrected:undefined};
   }
   if(now-w.cycleStart>=TEMP_CYCLE){w.blackoutUntil=now+TEMP_BLACKOUT;return{changed:true};}
   if(w.climbReady&&!w.teoLanded&&w.supporting[0]===null&&tempLanding(poses[0])){
