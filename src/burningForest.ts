@@ -33,6 +33,16 @@ export const FIRE_BRIDGE_GAPS=[{start:1250,end:1550},{start:3890,end:4220}] as c
 export const FIRE_SMOKE_ZONE={start:2260,end:3090,yMin:490};
 export const FIRE_TREE_DANGER={x:3655,radius:124,yMin:515};
 export const FIRE_WIND_PERIOD=14000,FIRE_COLLAPSE_PERIOD=21000;
+export const FIRE_SHIFT_PERIOD=60000,FIRE_SHIFT_DURATION=2000;
+/** Three low, jumpable burnt roots in each 60s forest layout. */
+export const FIRE_SHIFT_ROOTS=[
+ [{x:740,y:648},{x:1990,y:648},{x:3280,y:648}],
+ [{x:875,y:648},{x:2150,y:648},{x:3400,y:648}],
+ [{x:1000,y:648},{x:2320,y:648},{x:3550,y:648}]
+] as const;
+export function fireShiftLayout(w:FireWorld,now:number):0|1|2{
+ return Math.floor(Math.max(0,now-w.phaseStart)/(FIRE_SHIFT_PERIOD+FIRE_SHIFT_DURATION))%3 as 0|1|2;
+}
 export type FireWind=-1|1;
 export type FireWorld=Vitals&{
  cycleStart:number;phaseStart:number;resetId:number;deadUntil:number;
@@ -245,10 +255,28 @@ export class FireAuthority {
   const flare=Math.floor(Math.max(0,now-w.cycleStart)/4400)%3;
   if(flare!==w.flare){w.flare=flare;changed=true;}
   const cycle=Math.floor(Math.max(0,now-w.cycleStart)/FIRE_COLLAPSE_PERIOD);
-  if(cycle!==w.collapseCycle){
-   w.collapseCycle=cycle;w.cycle=cycle;changed=true;
+  if(cycle!==w.collapseCycle){w.collapseCycle=cycle;changed=true;}
+  // The hazard cycle stays at 21s; landscape layout changes every 60s.
+  const phaseElapsed=Math.max(0,now-w.phaseStart);
+  if(w.blackoutUntil===0&&phaseElapsed>=FIRE_SHIFT_PERIOD){
+   w.blackoutUntil=now+FIRE_SHIFT_DURATION;
+   w.safeUntil=[now+FIRE_SHIFT_DURATION+1200,now+FIRE_SHIFT_DURATION+1200,
+     now+FIRE_SHIFT_DURATION+1200];
+   changed=true;
   }
-  if(w.layout!==flare){w.layout=flare as 0|1|2;changed=true;}
+  if(w.blackoutUntil>0&&now>=w.blackoutUntil){
+   w.blackoutUntil=0;
+   w.phaseStart=now;w.layout=((w.layout+1)%3) as 0|1|2;w.cycle++;
+   const roots=FIRE_SHIFT_ROOTS[w.layout];
+   const adjusted=poses.map(p=>{
+    const overlap=roots.find(root=>Math.abs(p.x-root.x)<59&&p.y>578);
+    if(!overlap)return {...p};
+    const x=p.x<overlap.x?overlap.x-83:overlap.x+83;
+    return {...p,x,vx:0,vy:0};
+   });
+   changed=true;
+   if(adjusted.some((p,i)=>p.x!==poses[i].x))return {changed:true,poses:adjusted};
+  }
   const treePhase=fireTreePhase(w,now);
   if(treePhase!==w.treeStatus){w.treeStatus=treePhase;changed=true;}
   const remaining=Math.max(0,now-w.cycleStart)%FIRE_COLLAPSE_PERIOD;
