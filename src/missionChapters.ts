@@ -78,7 +78,7 @@ export function missionSnapshot(phase:MissionPhase,world:MissionWorld):MissionSn
     !w.marks[0]?'TÉO: INVESTIGUE A ÁRVORE OCA.':
     !w.marks[1]?'LIA: INVESTIGUE A PEDRA RACHADA.':
     !w.marks[2]?'NINO: ATIVE O ARCO DE MADEIRA.':
-    w.lastRoute!=='right'?'TRILHAS LIBERADAS! REÚNAM OS TRÊS NA PASSAGEM '+(route==='oca'?'DA ÁRVORE OCA.':'DA PEDRA RACHADA.') :
+    w.lastRoute!=='right'?'TRILHAS LIBERADAS! REÚNAM OS TRÊS NA PASSAGEM INDICADA PELO VENTO.' :
     !w.suspendedOpen?
       (!w.suspended[0]?'TÉO: COM A ESCADA HUMANA, ALCANCE A ALAVANCA ELEVADA.':
         !w.suspended[1]?'LIA: ACERTE A TRAVA DA PLATAFORMA SUSPENSA.':
