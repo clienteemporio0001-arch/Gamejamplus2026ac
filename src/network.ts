@@ -6,7 +6,7 @@ import { ChapterAuthority, initialEyes, initialTrail, defaultJaguar, validChapte
 import { nextPlayableLevel } from './levels';
 import { JourneyAuthority, initialJourney, validJourney, floatingLogs, validMotion, journeyDanger, JOURNEY_SPAWNS, JOURNEY_CHECKPOINTS, RIVER_WIDTH, type JourneyWorld, type JourneyMotion } from './riverJourney';
 import { ForestAuthority, FOREST_WIDTH, FOREST_SPAWNS, FOREST_CHECKPOINTS, forestDanger, validForest, initialForest, type ForestWorld } from './forest';
-import { LoopAuthority, LOOP_START, LOOP_WIDTH, validLoop, initLoop, blackoutActive, type LoopWorld } from './forestLoop';
+import { LoopAuthority, LOOP_START, LOOP_WIDTH, SUSPENSION, validLoop, initLoop, blackoutActive, suspensionLeverStatus, type SuspensionLeverReason, type LoopWorld } from './forestLoop';
 import { type VitalAction } from './loopVitals';
 import {FallTracker,loopFallSurfaces,temporalFallSurfaces} from './fallDamage';
 import {SUMMIT_BRANCH} from './forestLoop';
@@ -31,6 +31,7 @@ type Wire =
   | { t: 'begin' }
   | { t: 'state'; poses: Pose[] }
   | { t: 'act'; action: PuzzleAction }
+  | { t: 'loop-lever-reply'; ok:boolean;reason:SuspensionLeverReason }
   | { t: 'vital-action'; id:number; kind:VitalAction; facing:-1|1 }
   | { t: 'vital-reply'; id:number; kind:VitalAction; ok:boolean; reason:'ok'|'tired'|'cooldown'|'invalid' }
   | { t: 'fx'; fx: SkillFx }
@@ -59,6 +60,7 @@ type Events = {
   snapshot: Pose[];
   effect: SkillFx;
   'vital-reply': { id:number;kind:VitalAction;ok:boolean;reason:'ok'|'tired'|'cooldown'|'invalid' };
+  'loop-lever-reply': {ok:boolean;reason:SuspensionLeverReason};
   puzzle: WorldState;
   forest: ForestWorld;
   loop: LoopWorld;
@@ -125,6 +127,8 @@ function parseWire(value: unknown): Wire | null {
     case 'state': return Array.isArray(p.poses) && p.poses.length === 3 && p.poses.every(validPose)
       && p.poses.every((pose: Pose, i: number) => pose.seat === i) ? value as Wire : null;
     case 'act': return validAction(p.action) ? value as Wire : null;
+    case 'loop-lever-reply':return typeof p.ok==='boolean'&&
+      ['ready','route','finished','moving','closer','tower','detach','climb','branch','steady'].includes(String(p.reason))?value as Wire:null;
     case 'vital-action':return Number.isInteger(p.id)&&Number(p.id)>0&&Number(p.id)<1000000000
       &&['jump','doubleJump','shoot','dash'].includes(String(p.kind))&&[1,-1].includes(Number(p.facing))
       ?value as Wire:null;
@@ -629,6 +633,10 @@ export class Network {
         this.emit('river', this.river);
         this.emit('change', undefined);
         break;
+      case 'loop-lever-reply':
+        if(this.playing&&this.experience==='loop'&&this.level===1&&this.localSeat===0)
+          this.emit('loop-lever-reply',{ok:msg.ok,reason:msg.reason});
+        break;
       case 'vital-reply':
         if(this.playing&&this.experience==='loop')this.emit('vital-reply',{
           id:msg.id,kind:msg.kind,ok:msg.ok,reason:msg.reason
@@ -903,7 +911,25 @@ export class Network {
         if(this.treetopAuthority.interact(seat,action.kind as 'lever'|'switch'|'shoot'|'support'|'detach'|'dash',this.poses,Date.now(),action.facing??1))this.shareTreetop();
       }else if(this.level===2){
         if(this.temporalAuthority.act(seat,action,this.poses))this.shareTemporal();
-      }else if(this.loopAuthority.act(seat,action,this.poses))this.shareLoop();
+      }else{
+        const world=this.loopAuthority.world,pose=this.poses[seat];
+        // Only the host determines outcome. Only real Téo near the high
+        // lever receives an acknowledgement; clients cannot claim success.
+        const isLeverAttempt=seat===0&&action.kind==='lever'&&
+          world.lastRoute==='right'&&!world.suspended[0]&&
+          Math.abs(pose.x-SUSPENSION.lever.x)<=190;
+        const reason=isLeverAttempt?suspensionLeverStatus(world,pose):null;
+        const accepted=this.loopAuthority.act(seat,action,this.poses);
+        if(accepted)this.shareLoop();
+        if(isLeverAttempt&&reason){
+          const reply={ok:accepted,reason:accepted?'ready' as const:reason};
+          if(this.isSolo||seat===0)this.emit('loop-lever-reply',reply);
+          else {
+            const connection=this.conns.get(seat);
+            if(connection)this.message(connection,{t:'loop-lever-reply',...reply});
+          }
+        }
+      }
     }else if (this.level === 1) {
       if (this.forestAuthority.act(seat, action, this.poses)) {
         this.shareForest();
