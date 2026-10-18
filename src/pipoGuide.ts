@@ -221,15 +221,18 @@ export class PipoGuide {
     .fillRoundedRect(-width/2,-height/2,width,height,13)
     .lineStyle(2,0x9bdc91,.94)
     .strokeRoundedRect(-width/2,-height/2,width,height,13);
-   // Physical speech-tail points from Pipo's bubble to his visible head.
+   // The pointer follows the visible head above OR below the text,
+   // depending on mobile safe area and the current flying height.
+   const edge=layout.tailSide==='top'?-height/2:height/2;
+   const inside=layout.tailSide==='top'?edge+2:edge-2;
    this.panel.fillStyle(0x061d20,.96);
-   this.panel.fillTriangle(layout.tailX-10,height/2-2,
-    layout.tailX+10,height/2-2,layout.tailX,layout.tailY);
+   this.panel.fillTriangle(layout.tailX-10,inside,
+    layout.tailX+10,inside,layout.tailX,layout.tailY);
    this.panel.lineStyle(2,0x9bdc91,.94);
-   this.panel.lineBetween(layout.tailX-10,height/2,
+   this.panel.lineBetween(layout.tailX-10,edge,
     layout.tailX,layout.tailY);
    this.panel.lineBetween(layout.tailX,layout.tailY,
-    layout.tailX+10,height/2);
+    layout.tailX+10,edge);
   }
   const fixed=pipoHudCoords(layout.x,layout.y,
    {width:view.width,height:view.height},cam.zoom);
