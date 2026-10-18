@@ -76,14 +76,19 @@ export class PipoGuide {
   this.lastAsk=now;this.depth=Math.min(2,this.depth+1) as 0|1|2;
   this.speak(now);
  }
- private speak(now:number):void{
+ /** Warnings are high-priority, short and do not change hint progression. */
+ warnWind(message:string):void{
+  if(this.net.experience!=='loop'||this.net.level!==3||!this.net.playing)return;
+  this.speak(Date.now(),message,3400);
+ }
+ private speak(now:number,urgent?:string,duration=6100):void{
   const hint=pipoHint(this.source());
-  this.label.setText('PIPO  •  '+hint.lines[this.depth]);
+  this.label.setText('PIPO  •  '+(urgent??hint.lines[this.depth]));
   const width=290,height=Math.max(76,this.label.height+31);
   this.panel.clear().fillStyle(0x061d20,.95).fillRoundedRect(-width/2,-height/2,width,height,14)
    .lineStyle(2,0x9bdc91,.92).strokeRoundedRect(-width/2,-height/2,width,height,14);
   this.bubble.setVisible(true).setAlpha(1);
-  this.talkingUntil=now+6100;this.fadingUntil=this.talkingUntil+500;
+  this.talkingUntil=now+duration;this.fadingUntil=this.talkingUntil+500;
  }
  update(time:number,focusX:number,focusY:number,paused=false):void{
   if(!this.net.playing)return;
