@@ -4,7 +4,7 @@ import {LoopAuthority,LOOP_MARKS,LOOP_START,LOOP_WIDTH,LOOP_CYCLE_MS,
  markPosition,MARK_OFFSETS,safeReposition,barriers,initLoop,validLoop,
  LOOP_GEOMETRY} from '../src/forestLoop';
 import {TemporalAuthority,TEMP_START,TEMP_LAYOUTS,tempBlocks} from '../src/temporalForest';
-import {TreeAuthority,TREE_START,TREE_CYCLE} from '../src/treetopForest';
+import {TreeAuthority,TREE_START,TREE_CYCLE,TREE_PLATFORMS,TREE_BLACKOUT} from '../src/treetopForest';
 import {FireAuthority,FIRE_START,FIRE_SHIFT_ROOTS,FIRE_SHIFT_PERIOD,
  FIRE_SHIFT_DURATION,FIRE_COLLAPSE_PERIOD,validFire} from '../src/burningForest';
 import type {Seat,Pose} from '../src/network';
@@ -73,6 +73,22 @@ trees.tick(climbers,TREE_CYCLE+2100);
 assert.equal(trees.world.layout,1);
 assert.equal(trees.world.windPhase,'calm');
 assert.equal(trees.world.bridgeOpen,false);
+// A player standing on a state-specific branch rides to the matching next branch.
+const transport=new TreeAuthority();transport.reset(0);
+const branch=TREE_PLATFORMS.find(p=>p.state===0&&p.x<3000)!;
+const passengers=TREE_START.map(p=>({...p}));
+passengers[0]={...passengers[0],x:branch.x,y:branch.y-branch.height/2-22,vx:0,vy:0};
+transport.tick(passengers,TREE_CYCLE);
+const mid=transport.tick(passengers,TREE_CYCLE+TREE_BLACKOUT/2);
+assert.ok(mid.poses&&mid.poses[0].x!==passengers[0].x,
+ 'branch visibly transports its standing passenger at halfway');
+assert.equal(mid.poses?.[1].x,passengers[1].x);
+assert.equal(mid.poses?.[2].x,passengers[2].x);
+const landed=transport.tick(mid.poses!,TREE_CYCLE+TREE_BLACKOUT+50);
+assert.equal(transport.world.layout,1);
+assert.ok(landed.poses&&landed.poses[0].x>branch.x,
+ 'rider reaches the incoming B branch without falling');
+
 // The fire has TWO independent clocks: 60-second woodland and 21-second hazards.
 const flames=new FireAuthority();flames.reset(0);
 const escaping=FIRE_START.map(p=>({...p}));
