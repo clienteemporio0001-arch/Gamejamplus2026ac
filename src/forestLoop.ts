@@ -18,7 +18,6 @@ export const LOOP_NATURAL_LEDGES=[
  {x:2100,y:625,width:105},{x:4210,y:622,width:98},
  {x:6580,y:625,width:115},{x:2570,y:590,width:155},
  {x:3800,y:587,width:140},{x:6000,y:587,width:125},
- {x:7200,y:585,width:112},{x:7480,y:586,width:110},
  {x:8950,y:590,width:144},{x:10220,y:597,width:155}
 ] as const;
 /** Extra alternate tree branches change with the three 60-second layouts.
@@ -243,6 +242,59 @@ export function safeReposition(poses:Pose[],w:LoopWorld):Pose[]|undefined{
  return any?moved:undefined;
 }
 
+/** Reusable safety rules for the co-operative human ladder. Physical access to
+ * switches/branches is STILL checked independently by the puzzle authority. */
+export function stackFooting(w:LoopWorld,p:Pose):boolean{
+ const foot=p.y+LOOP_PHYSICS.characterHeight/2;
+ if(Math.abs(p.vy)>80||Math.abs(p.vx)>135)return false;
+ const top=(x:number,width:number,y:number)=>Math.abs(p.x-x)<=width/2-18&&
+   Math.abs(foot-y)<=16;
+ return LOOP_TERRAIN.some(t=>p.x>=t.from+19&&p.x<=t.to-19&&Math.abs(foot-638)<=16)
+   ||LOOP_NATURAL_LEDGES.some(l=>top(l.x,l.width,l.y-11))
+   ||LOOP_LAYOUT_BRANCHES.some(l=>l.layout===w.layout&&top(l.x,l.width,l.y-9))
+   ||top(SUSPENSION.branch.x,SUSPENSION.branch.width,SUSPENSION.branch.y-SUSPENSION.branch.height/2)
+   ||top(UPPER_BRANCH.x,UPPER_BRANCH.width,UPPER_BRANCH.centerY-UPPER_BRANCH.height/2)
+   ||top(SUMMIT_BRANCH.x,SUMMIT_BRANCH.width,SUMMIT_BRANCH.centerY-SUMMIT_BRANCH.height/2)
+   ||(w.suspendedOpen&&top(SUSPENSION.finalX,SUSPENSION.width,656-SUSPENSION.height/2))
+   ||(w.bridge&&top(LOOP_GEOMETRY.bridge.x,LOOP_GEOMETRY.bridge.width,
+      LOOP_GEOMETRY.bridge.y-LOOP_GEOMETRY.bridge.height/2));
+}
+/** AABBs of stage-one SOLID actors and rigid props, never magical puzzles. */
+export function stackBlockers(w:LoopWorld):ReadonlyArray<{x:number;y:number;width:number;height:number}>{
+ return [
+   ...barriers(w).filter(b=>b.enabled).map(b=>({
+     x:b.x,y:b.height>200?363:LOOP_GEOMETRY.clearing.groundY-48,
+     width:b.height>200?40:45,height:b.height
+   })),
+   {x:markPosition(w,1).x,y:592,width:120,height:91},
+   ...LOOP_NATURAL_LEDGES.map(l=>({...l,height:22})),
+   ...LOOP_LAYOUT_BRANCHES.filter(l=>l.layout===w.layout).map(l=>({...l,height:18})),
+   {x:SUSPENSION.branch.x,y:SUSPENSION.branch.y,
+    width:SUSPENSION.branch.width,height:SUSPENSION.branch.height},
+   {x:UPPER_BRANCH.x,y:UPPER_BRANCH.centerY,width:UPPER_BRANCH.width,height:UPPER_BRANCH.height},
+   {x:SUMMIT_BRANCH.x,y:SUMMIT_BRANCH.centerY,width:SUMMIT_BRANCH.width,height:SUMMIT_BRANCH.height},
+   ...(w.suspendedOpen?[{x:SUSPENSION.finalX,y:656,width:SUSPENSION.width,height:SUSPENSION.height}]:[]),
+   ...(w.bridge?[{x:LOOP_GEOMETRY.bridge.x,y:LOOP_GEOMETRY.bridge.y,
+     width:LOOP_GEOMETRY.bridge.width,height:LOOP_GEOMETRY.bridge.height}]:[])
+ ];
+}
+/** Works at any solid, safe surface; the host checks every seat before mounting. */
+export function canStack(w:LoopWorld,seat:Seat,poses:readonly Pose[]):boolean{
+ if(seat!==0&&seat!==1)return false;
+ const base:Seat=seat===0?1:2,p=poses[seat],other=poses[base],nino=poses[2];
+ if(!p||!other||!nino||w.health[seat]<=0||w.health[base]<=0||w.health[2]<=0
+    ||w.completed||w.deadUntil>0||w.blackoutUntil>0||w.supporting[seat]!==null)
+   return false;
+ if(seat===0&&w.supporting[1]!==2 || seat===1&&w.supporting[1]!==null)return false;
+ if(!stackFooting(w,nino)||Math.abs(p.vy)>95||Math.abs(other.vy)>95
+    ||Math.abs(p.vx)>135||Math.abs(other.vx)>135
+    ||Math.abs(p.x-other.x)>45||Math.abs(p.y-other.y)>75)return false;
+ const y=other.y-44,x=other.x;
+ if(y<55||y>652)return false;
+ return stackBlockers(w).every(b=>Math.abs(x-b.x)>=b.width/2+15
+    ||Math.abs(y-b.y)>=b.height/2+22);
+}
+
 type Tick={changed:boolean;poses?:Pose[];reset?:boolean;won?:boolean};
 export class LoopAuthority{
   world=initLoop();
@@ -320,9 +372,7 @@ export class LoopAuthority{
     if(!p||p.seat!==seat||w.completed||w.deadUntil>0||blackoutActive(w,now))return false;
     if(action.kind==='support'&&(seat===0||seat===1)&&w.supporting[seat]===null){
       const base:Seat=seat===0?1:2,other=poses[base];
-      if(!other||!(p.x>=7550&&p.x<=8000||p.x>=9100&&p.x<=9440)||Math.abs(p.x-other.x)>55
-        ||Math.abs(p.y-other.y)>75||Math.abs(p.vx)>135||Math.abs(other.vx)>135)return false;
-      if(seat===0&&w.supporting[1]!==2)return false;
+      if(!canStack(w,seat,poses))return false;
       w.supporting[seat]=base;
       if(w.supporting[0]===1&&w.supporting[1]===2){
         if(p.x>=7550&&p.x<=8000)w.suspensionStacked=true;
