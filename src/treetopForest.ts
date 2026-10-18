@@ -1,5 +1,5 @@
 import type {Pose,Seat} from './network';
-import {initVitals,validVitals,type Vitals} from './loopVitals';
+import {initVitals,validVitals,spendVital,regenVitals,VITALS,type VitalAction,type Vitals} from './loopVitals';
 
 /** Fase 03 da NOVA aventura. Independente da terceira fase clássica. */
 export const TREE_WIDTH=4400, TREE_HEIGHT=1250, TREE_CYCLE=60000, TREE_BLACKOUT=2000;
@@ -68,7 +68,35 @@ export function treeWind(w:TreeWorld,x:number):-1|0|1{
 const close=(p:Pose,x:number,y:number,dx=68,dy=65)=>Math.abs(p.x-x)<=dx&&Math.abs(p.y-y)<=dy;
 export class TreeAuthority{
  world=initTree();
- reset(now=Date.now()){const id=this.world.resetId+1;this.world=initTree(now);this.world.resetId=id;}
+ private lastJump:[number,number,number]=[0,0,0];
+ private firstJumpY=0; private doubled=false;
+ private lastSkill:[number,number,number]=[0,0,0];private resourceAt=Date.now();
+ reset(now=Date.now()){const id=this.world.resetId+1;this.world=initTree(now);this.world.resetId=id;
+  this.lastJump=[0,0,0];this.firstJumpY=0;this.doubled=false;this.lastSkill=[0,0,0];this.resourceAt=now;}
+ authorizeEnergy(seat:Seat,kind:VitalAction,poses:Pose[],now=Date.now(),facing:-1|1=1):{ok:boolean;reason:'ok'|'tired'|'cooldown'|'invalid'}{
+  const w=this.world,p=poses[seat];
+  const fail=(reason:'tired'|'cooldown'|'invalid')=>({ok:false,reason} as const);
+  if(!p||w.deadUntil>0||w.blackoutUntil>now||w.completed||w.health[seat]===0)return fail('invalid');
+  if((kind==='doubleJump'&&seat!==0)||(kind==='shoot'&&seat!==1)||(kind==='dash'&&seat!==2))return fail('invalid');
+  if(kind==='jump'){
+   if(now-this.lastJump[seat]<220)return fail('cooldown');
+   const grounded=treePlatforms(w).some(b=>Math.abs(p.x-b.x)<=b.width/2+12 &&
+     Math.abs(p.y-(b.y-b.height/2-22))<37&&Math.abs(p.vy)<120);
+   if(!grounded&&w.supporting[seat]===null)return fail('invalid');
+  }
+  if(kind==='doubleJump'&&(this.lastJump[0]===0||now-this.lastJump[0]<110||now-this.lastJump[0]>1650||this.doubled||p.y>this.firstJumpY+12||p.vy>420))return fail('invalid');
+  if((kind==='shoot'&&now-this.lastSkill[1]<VITALS.SHOT_COOLDOWN_MS)||
+     (kind==='dash'&&now-this.lastSkill[2]<VITALS.DASH_COOLDOWN_MS))return fail('cooldown');
+  if(!spendVital(w,seat,kind,now))return fail('tired');
+  if(kind==='jump'){this.lastJump[seat]=now;if(seat===0){this.firstJumpY=p.y;this.doubled=false;}}
+  else if(kind==='doubleJump')this.doubled=true;
+  else {this.lastSkill[seat]=now;this.interact(seat,kind,poses,now,facing);}
+  return {ok:true,reason:'ok'};
+ }
+ tickResources(poses:Pose[],now=Date.now()):boolean{
+  const dt=Math.max(0,Math.min(100,now-this.resourceAt));this.resourceAt=now;
+  return this.world.deadUntil===0&&this.world.blackoutUntil<=now&&!this.world.completed&&regenVitals(this.world,poses,now,dt);
+ }
  /** Returns new poses only for authoritative team respawn. */
  tick(poses:Pose[],now=Date.now()):{changed:boolean;poses?:Pose[];reset?:boolean;won?:boolean}{
   const w=this.world;
@@ -92,7 +120,9 @@ export class TreeAuthority{
   if(kind==='support'&&seat!==2){const base=(seat===0?1:2) as Seat;
    if(!close(p,poses[base].x,poses[base].y,50,70)||!close(p,3390,390,135,145))return false;
    if(seat===0&&w.supporting[1]!==2)return false;
-   w.supporting[seat]=base;return true;
+   w.supporting[seat]=base;
+   if(w.bridgeOpen&&!w.ropeOpen){if(seat===1)w.tower[1]=true;if(seat===0)w.tower[0]=true;}
+   return true;
   }
   if(kind==='detach'&&w.supporting[seat]!==null){w.supporting[seat]=null;return true;}
   let changed=false;
