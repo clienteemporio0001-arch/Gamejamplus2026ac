@@ -34,14 +34,14 @@ characters[0]={seat:0,x:FIRE_TARGETS.log.teo.x,y:FIRE_TARGETS.log.teo.y,vx:0,vy:
 characters[1]={seat:1,x:930,y:652,vx:0,vy:0};
 characters[2]={seat:2,x:930,y:652,vx:0,vy:0};
 assert.equal(authority.interact(0,'lever',characters,start+800),true);
-assert.equal(w.log[0],true);
+assert.equal(w.log[0],true,'Téo released first log lever');
 assert.equal(authority.authorizeEnergy(1,'shoot',characters,start+1100,1).ok,true);
-assert.equal(w.log[1],true);
+assert.equal(w.log[1],true,'Lia hit first log target');
 assert.equal(authority.interact(2,'switch',characters,start+1300),true);
 assert.equal(w.log[2],false,'Nino must dash first');
 assert.equal(authority.authorizeEnergy(2,'dash',characters,start+1500,1).ok,true);
 characters[2]={seat:2,x:FIRE_TARGETS.log.nino.x,y:FIRE_TARGETS.log.nino.y,vx:0,vy:0};
-assert.equal(authority.interact(2,'switch',characters,start+1800),true);
+assert.equal(authority.interact(2,'switch',characters,start+1800),true,'Nino switch action accepted');
 assert.ok(w.logOpen,'burning log opens only with all three actions');
 assert.ok(firePlatforms(w).some(p=>p.requires==='log'));
 assert.equal(fireObjective(w).progress,'0/3');
@@ -55,7 +55,7 @@ characters[2]={seat:2,x:2480,y:652,vx:0,vy:0};
 characters[0]={seat:0,x:FIRE_TARGETS.smoke.teo.x,y:FIRE_TARGETS.smoke.teo.y,vx:0,vy:0};
 assert.equal(authority.interact(0,'lever',characters,start+2800),true);
 assert.equal(authority.authorizeEnergy(1,'shoot',characters,start+3000,1).ok,true);
-assert.equal(w.smoke[1],true);
+assert.equal(w.smoke[1],true,'Lia shot smoke vent');
 assert.equal(authority.authorizeEnergy(2,'dash',characters,start+4000,1).ok,true);
 characters[2]={seat:2,x:FIRE_TARGETS.smoke.nino.x,y:FIRE_TARGETS.smoke.nino.y,vx:0,vy:0};
 authority.interact(2,'switch',characters,start+4500);
@@ -70,27 +70,27 @@ assert.equal(authority.authorizeEnergy(1,'shoot',characters,start+6000,1).ok,tru
 assert.equal(authority.authorizeEnergy(2,'dash',characters,start+7600,1).ok,true);
 characters[2]={seat:2,x:FIRE_TARGETS.tree.nino.x,y:FIRE_TARGETS.tree.nino.y,vx:0,vy:0};
 authority.interact(2,'switch',characters,start+8000);
-assert.equal(w.tree.every(Boolean),true);
+assert.equal(w.tree.every(Boolean),true,'third coop puzzle all three');
 assert.equal(w.treeOpen,false,'tree must visually fall before its collision bridge appears');
 assert.ok(w.treeFallAt>start+8000);
 authority.tick(characters,w.treeFallAt+100);
-assert.equal(w.treeOpen,true);
+assert.equal(w.treeOpen,true,'tree bridge unlocked after animation delay');
 assert.equal(firePlatforms(w).some(p=>p.requires==='tree'),true);
 assert.equal(pipoHint({phase:4,world:w}).objective,'corrida final');
 const late=fireCheckpoint(w);assert.equal(late.length,3);
 assert.ok(late.every(p=>fireGrounded(w,p)));
-assert.equal(fireFlareActive(w,start,4390),true);
-assert.equal(fireFlareActive(w,start+4400,4390),false);
-assert.equal(fireDamageZone(w,{x:4390,y:652},start),true);
-assert.equal(fireDamageZone(w,{x:4390,y:560},start),false);
-assert.equal(fireFlareActive(w,start+8800,4860),true);
+assert.equal(fireFlareActive(w,start,4390),true,'first area ignites during first cycle');
+assert.equal(fireFlareActive(w,start+4400,4390),false,'first fire safely subsides');
+assert.equal(fireDamageZone(w,{x:4390,y:652},start),true,'first active flare damages');
+assert.equal(fireDamageZone(w,{x:4390,y:560},start),false,'above fire safe');
+assert.equal(fireFlareActive(w,start+8800,4860),true,'third flare active in phase 2');
 // Victory demands all three living and near the safe river.
 const exit=FIRE_TARGETS.exit;
 const finishing:Pose[]=([0,1,2] as Seat[]).map(seat=>
  ({seat,x:exit.x,y:exit.y,vx:0,vy:0}));
 assert.notEqual(authority.tick([...finishing.slice(0,2),{...finishing[2],x:4400}],
  start+11000).won,true,'cannot win without the third friend');
-assert.equal(authority.tick(finishing,start+11100).won,true);
+assert.equal(authority.tick(finishing,start+11100).won,true,'all three characters complete final escape');
 assert.ok(w.completed);
 assert.ok(validFire(w));
 // Collapse hazard is telegraphed before a damaging impact.
@@ -119,12 +119,12 @@ const fatal=new FireAuthority();fatal.reset(start);
 const lost=FIRE_START.map(clone);
 lost[2]={seat:2,x:1100,y:FIRE_DEATH_Y+2,vx:0,vy:700};
 fatal.tick(lost,start+1000);
-assert.equal(fatal.world.health[2],0);
+assert.equal(fatal.world.health[2],0,'fall must kill and trigger reset');
 assert.ok(fatal.world.deadUntil>start+1000);
 const respawn=fatal.tick(lost,start+2800);
 assert.ok(respawn.respawn);
 assert.deepEqual(fatal.world.health,[3,3,3]);
-assert.equal(respawn.poses?.length,3);
+assert.equal(respawn.poses?.length,3,'checkpoint restores all seats');
 // Stage-specific source checks verify that classic fourth phase was NOT replaced.
 const network=readFileSync('src/network.ts','utf8');
 const main=readFileSync('src/main.ts','utf8');
