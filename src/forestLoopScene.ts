@@ -436,7 +436,7 @@ export class ForestLoopScene extends Phaser.Scene {
     this.shiftShade.setFillStyle(tint).setAlpha([.035,.13,.10][w.layout]);
     this.clearingTree.setTint([0xffffff,0xc9e0d7,0xb4dfff][w.layout]);
     this.movingRoots.forEach((root,i)=>{
-      root.x=5250+i*105+[0,-34,43][w.layout];
+      this.tweens.add({targets:root,x:5250+i*105+[0,-34,43][w.layout],duration:1800,ease:'Sine.easeInOut'});
       root.setAlpha([.28,.45,.4][w.layout]);
     });
     this.marks.forEach((mark,i)=>{
@@ -496,8 +496,8 @@ export class ForestLoopScene extends Phaser.Scene {
       else this.physics.resume();
     }
     const fade=pause&&w.deadUntil===0?(w.blackoutUntil-now>1000?.94:.86):w.deadUntil>0?.89:0;
-    this.blackout.setAlpha(fade);
-    this.blackoutText.setVisible(pause);
+    this.blackout.setAlpha(w.deadUntil>0?fade:0);
+    this.blackoutText.setVisible(pause&&w.deadUntil>0);
     if(pause){
       this.blackoutText.setText(w.deadUntil>0?
         'UM AMIGO CAIU NA FLORESTA\nNINGUÉM FICA PARA TRÁS\nREINICIANDO EM '+Math.max(1,Math.ceil((w.deadUntil-now)/1000))+'...':
