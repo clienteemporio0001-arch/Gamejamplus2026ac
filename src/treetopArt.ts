@@ -100,7 +100,8 @@ export class TreetopArt {
     610,145,i%2?0x83b7ac:0x5e94a1,.052).setDepth(-2);
    this.mist.push(fog);
   }
-  // A few asynchronous fireflies only; foliage and wind share batched Graphics.\n  for(let i=0;i<18;i++){
+  // A few asynchronous fireflies only; foliage and wind share batched Graphics.
+  for(let i=0;i<18;i++){
    const x=pick(200+i,0,this.width),y=pick(400+i,120,980);
    const dot=this.scene.add.circle(x,y,pick(600+i,.8,2.2),0xc4df9c,
     pick(i*17,.1,.32)).setDepth(5);
