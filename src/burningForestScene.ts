@@ -37,7 +37,7 @@ export class BurningForestScene extends Phaser.Scene {
  private darkText!:Phaser.GameObjects.Text;
  private dangerText!:Phaser.GameObjects.Text;
  private lastTreePhase:'calm'|'warning'|'impact'='calm';
- private lastDanger='',lastWarningAt=0;
+ private lastDanger='';private lastWarningAt=0;
  constructor(net:Network,touch:TouchInput,hud?:()=>void){
   super({key:'BurningForestScene'});this.net=net;this.touch=touch;this.hud=hud;
   this.world=net.fire;
