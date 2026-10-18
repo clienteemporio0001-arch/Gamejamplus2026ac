@@ -5,6 +5,11 @@ import type { Network, Pose, Seat } from './network';
 export class SoloBodies {
   readonly bodies: Phaser.Physics.Arcade.Body[] = [];
   private selected: Seat = 0;
+  /** The scene must always drive the same actor/body pair as the HUD seat. */
+  active(seat:Seat):{actor:Phaser.GameObjects.Rectangle;body:Phaser.Physics.Arcade.Body}{
+    if(this.selected!==seat)this.select(seat);
+    return {actor:this.actors[seat],body:this.bodies[seat]};
+  }
   constructor(
     private scene: Phaser.Scene,
     private net: Network,
@@ -24,6 +29,7 @@ export class SoloBodies {
   body(seat:Seat):Phaser.Physics.Arcade.Body { return this.bodies[seat]; }
   select(seat:Seat):void {
     if(!this.net.isSolo)return;
+    // Preserve vertical physics, but remove residual horizontal input on switch.
     this.bodies[this.selected]?.setVelocityX(0);
     this.selected=seat;
     for(const i of [0,1,2] as Seat[]){
