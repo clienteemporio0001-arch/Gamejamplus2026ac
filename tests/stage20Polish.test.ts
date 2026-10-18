@@ -53,7 +53,6 @@ assert.ok(fire.includes('paintHero(ink,seat,ms,pose.vx,pose.vy)'));
 assert.ok(intro.includes('paintHero(hero,i as 0|1|2)'));
 assert.ok(intro.includes('size.width/1200,size.height/700'),
  'intro maintains cinematic aspect ratio on mobile');
-assert.ok(main.includes('this.settings')===false||true); // source does not dictate implementation
 // Pipo retains contextual source from every phase and reduces repeat warnings.
 for(let i=1;i<=4;i++)assert.ok(pipo.includes('phase:'+i),'Pipo reads phase '+i);
 assert.ok(pipo.includes('lastAlertAt<6500'));
