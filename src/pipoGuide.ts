@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type {Network,Seat} from './network';
 import {pipoHint,type HintSource} from './pipoHints';
+import {pipoSpeechLayout} from './pipoBubbleLayout';
 
 /** One decorative bird per Phaser scene; no physics, AI, network packets or external assets. */
 export class PipoGuide {
@@ -11,6 +12,10 @@ export class PipoGuide {
  private bubble:Phaser.GameObjects.Container;
  private panel:Phaser.GameObjects.Graphics;
  private label:Phaser.GameObjects.Text;
+ private nameLabel:Phaser.GameObjects.Text;
+ private offscreenMarker:Phaser.GameObjects.Text;
+ private panelWidth=0;private panelHeight=0;
+ private lastTailX=Number.NaN;private lastTailY=Number.NaN;
  private key?:Phaser.Input.Keyboard.Key;
  private listener=()=>this.ask();
  private narrativeQueue:string[]=[];
@@ -66,10 +71,18 @@ export class PipoGuide {
   this.bird=add.container(0,0,[tail,right,body,left,beak,feet]).setDepth(125);
   this.bird.setScale(.82);
   this.panel=add.graphics();
-  this.label=add.text(0,0,'',{fontFamily:'Arial',fontSize:'14px',fontStyle:'bold',
-   color:'#efffed',align:'center',wordWrap:{width:254}}).setOrigin(.5);
-  this.bubble=add.container(0,0,[this.panel,this.label]).setDepth(185)
-   .setScrollFactor(0).setVisible(false);
+  this.label=add.text(0,10,'',{fontFamily:'Arial',fontSize:'14px',
+   fontStyle:'bold',color:'#efffed',align:'center',wordWrap:{width:254}})
+   .setOrigin(.5);
+  this.nameLabel=add.text(0,-36,'PIPO',{fontFamily:'Arial',fontSize:'12px',
+   fontStyle:'bold',color:'#c7ef9c',align:'center'}).setOrigin(.5);
+  this.bubble=add.container(0,0,[this.panel,this.nameLabel,this.label])
+   .setDepth(185).setScrollFactor(0).setVisible(false);
+  this.offscreenMarker=add.text(0,0,'PIPO • DICA',{fontFamily:'Arial',
+   fontSize:'12px',fontStyle:'bold',color:'#e0f8d7',
+   backgroundColor:'#061d20e0',padding:{left:10,right:10,top:6,bottom:6},
+   wordWrap:{width:230}}).setOrigin(.5).setScrollFactor(0)
+   .setDepth(185).setVisible(false);
   this.key=scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.H);
   window.addEventListener('pipo-help',this.listener);
   window.addEventListener('mission-pipo',this.narrativeListener);
@@ -107,12 +120,22 @@ export class PipoGuide {
  }
  private speak(now:number,urgent?:string,duration=6100):void{
   const hint=pipoHint(this.source());
-  this.label.setText('PIPO  •  '+(urgent??hint.lines[this.depth]));
+  const message=urgent??hint.lines[this.depth];
+  const view=this.scene.scale.gameSize;
+  const width=Math.min(296,Math.max(168,view.width-32));
+  this.label.setWordWrapWidth(width-28);
+  this.label.setText(message);
+  this.offscreenMarker.setWordWrapWidth(Math.min(230,view.width-40));
+  this.offscreenMarker.setText('PIPO • '+message);
+  this.panelWidth=width;
+  this.panelHeight=Math.min(Math.max(90,this.label.height+44),
+    Math.max(110,view.height*.38));
+  this.nameLabel.setY(-this.panelHeight/2+17);
+  this.label.setY(10);
   if(urgent===undefined)this.currentPriority=4;
-  const width=290,height=Math.max(76,this.label.height+31);
-  this.panel.clear().fillStyle(0x061d20,.95).fillRoundedRect(-width/2,-height/2,width,height,14)
-   .lineStyle(2,0x9bdc91,.92).strokeRoundedRect(-width/2,-height/2,width,height,14);
+  this.lastTailX=Number.NaN;this.lastTailY=Number.NaN;
   this.bubble.setVisible(true).setAlpha(1);
+  this.offscreenMarker.setVisible(false);
   this.talkingUntil=now+duration;this.fadingUntil=this.talkingUntil+500;
  }
  update(time:number,focusX:number,focusY:number,paused=false):void{
@@ -161,20 +184,51 @@ export class PipoGuide {
   this.left.setRotation(flap);
   this.right.setRotation(-flap*.85);
   this.beak.setRotation(now<this.talkingUntil?Math.sin(time*.028)*.19:0);
-  if(now>this.fadingUntil){this.bubble.setVisible(false);return;}
-  this.bubble.setVisible(true).setAlpha(now>this.talkingUntil?
-   Math.max(0,(this.fadingUntil-now)/500):1);
+  if(now>this.fadingUntil){
+   this.bubble.setVisible(false);
+   this.offscreenMarker.setVisible(false);
+   return;
+  }
+  const fade=now>this.talkingUntil?
+   Math.max(0,(this.fadingUntil-now)/500):1;
   const view=this.scene.scale.gameSize,cam=this.scene.cameras.main;
-  const screenX=(this.bird.x-cam.scrollX)*cam.zoom;
-  const screenY=(this.bird.y-cam.scrollY)*cam.zoom;
-  // A dialogue within the viewport always remains readable on mobile.
-  const width=Math.min(view.width-24,290);
-  this.bubble.setScale(Math.min(1,width/290));
-  const margin=width/2+8;
-  this.bubble.setPosition(
-   Phaser.Math.Clamp(screenX,margin,Math.max(margin,view.width-margin)),
-   Phaser.Math.Clamp(screenY-90,Math.min(142,view.height*.44),
-    Math.max(Math.min(142,view.height*.44),view.height-107))
-  );
+  // Camera.worldView includes the true zoom-adjusted world origin. ScrollX
+  // alone is insufficient with Phaser's centered zoom on narrow devices.
+  const layout=pipoSpeechLayout(
+   {width:view.width,height:view.height},
+   {x:this.bird.x,y:this.bird.y,worldX:cam.worldView.x,
+    worldY:cam.worldView.y,zoom:cam.zoom},this.label.height);
+  this.bubble.setVisible(!layout.offscreen).setAlpha(fade);
+  this.offscreenMarker.setVisible(layout.offscreen).setAlpha(fade);
+  if(layout.offscreen){
+   this.offscreenMarker.setPosition(layout.indicatorX,layout.indicatorY);
+   return;
+  }
+  const width=layout.width,height=layout.height;
+  if(width!==this.panelWidth||height!==this.panelHeight){
+   this.panelWidth=width;this.panelHeight=height;
+   this.label.setWordWrapWidth(width-28);
+   this.nameLabel.setY(-height/2+17);
+   this.lastTailX=Number.NaN;
+  }
+  if(!Number.isFinite(this.lastTailX)||
+    Math.abs(layout.tailX-this.lastTailX)>2||
+    Math.abs(layout.tailY-this.lastTailY)>2){
+   this.lastTailX=layout.tailX;this.lastTailY=layout.tailY;
+   this.panel.clear().fillStyle(0x061d20,.96)
+    .fillRoundedRect(-width/2,-height/2,width,height,13)
+    .lineStyle(2,0x9bdc91,.94)
+    .strokeRoundedRect(-width/2,-height/2,width,height,13);
+   // Physical speech-tail points from Pipo's bubble to his visible head.
+   this.panel.fillStyle(0x061d20,.96);
+   this.panel.fillTriangle(layout.tailX-10,height/2-2,
+    layout.tailX+10,height/2-2,layout.tailX,layout.tailY);
+   this.panel.lineStyle(2,0x9bdc91,.94);
+   this.panel.lineBetween(layout.tailX-10,height/2,
+    layout.tailX,layout.tailY);
+   this.panel.lineBetween(layout.tailX,layout.tailY,
+    layout.tailX+10,height/2);
+  }
+  this.bubble.setPosition(layout.x,layout.y);
  }
 }
