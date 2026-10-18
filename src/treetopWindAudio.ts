@@ -1,4 +1,5 @@
 import type {TreeWindPhase} from './treetopForest';
+import {AUDIO_CHANGE_EVENT,audioLevel} from './audioSettings';
 
 /** Tiny synthesized wind bed; activated only after the browser's user gesture. */
 export class TreetopWindAudio {
@@ -9,9 +10,11 @@ export class TreetopWindAudio {
  private phase:TreeWindPhase='calm';
  private muted=false;
  private readonly activate=()=>{void this.unlock();};
+ private readonly settingsChange=()=>this.apply();
  constructor(){
   document.addEventListener('pointerdown',this.activate,{passive:true});
   document.addEventListener('keydown',this.activate);
+  window.addEventListener(AUDIO_CHANGE_EVENT,this.settingsChange);
  }
  private async unlock():Promise<void>{
   if(this.context){if(this.context.state==='suspended')await this.context.resume();return;}
@@ -39,7 +42,7 @@ export class TreetopWindAudio {
  private apply():void{
   if(!this.context||!this.gain||!this.filter)return;
   const now=this.context.currentTime;
-  const amplitude=this.muted?0:this.phase==='gust'?.105:this.phase==='warning'?.047:.014;
+  const amplitude=(this.muted?0:this.phase==='gust'?.105:this.phase==='warning'?.047:.014)*audioLevel('sfx');
   this.gain.gain.setTargetAtTime(amplitude,now,.25);
   this.filter.frequency.setTargetAtTime(this.phase==='gust'?1200:
     this.phase==='warning'?860:430,now,.34);
@@ -47,6 +50,7 @@ export class TreetopWindAudio {
  destroy():void{
   document.removeEventListener('pointerdown',this.activate);
   document.removeEventListener('keydown',this.activate);
+  window.removeEventListener(AUDIO_CHANGE_EVENT,this.settingsChange);
   try{this.source?.stop();}catch{/* already stopped */}
   void this.context?.close();
   this.source=undefined;this.context=undefined;
