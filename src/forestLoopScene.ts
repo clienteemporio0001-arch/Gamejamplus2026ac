@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {preloadOfficialLandmarks,officialLandmark,LANDMARK_KEYS} from './officialLandmarks';
 import {PipoGuide} from './pipoGuide';
 import {CooperativeExitArt} from './cooperativeExitArt';
 import {SUSPENSION,SUSPENSION_LANDING_Y,LOOP_TERRAIN,LOOP_NATURAL_LEDGES,LOOP_LAYOUT_BRANCHES} from './forestLoop';
@@ -108,9 +109,7 @@ export class ForestLoopScene extends Phaser.Scene {
   }
   preload():void{
     this.load.svg('loop-clearing-tree',import.meta.env.BASE_URL+'assets/clearing-tree.svg');
-    this.load.svg('loop-hollow-tree',import.meta.env.BASE_URL+'assets/hollow-tree.svg');
-    this.load.svg('loop-stone',import.meta.env.BASE_URL+'assets/loop-stone.svg');
-    this.load.svg('loop-arch',import.meta.env.BASE_URL+'assets/loop-arch.svg');
+    preloadOfficialLandmarks(this);
     this.load.svg('loop-elevated-tree',import.meta.env.BASE_URL+'assets/loop-elevated-tree.svg');
   }
   private background():void{
@@ -132,26 +131,10 @@ export class ForestLoopScene extends Phaser.Scene {
     }
     // All landmark sprites are rooted at the exact collision-ground level.
     // Their luminous targets use the same coordinates as LoopAuthority.
-    const shapes=['loop-hollow-tree','loop-stone','loop-arch'] as const;
-    const sizing=[{width:235,height:320},{width:155,height:104},{width:244,height:182}];
     for(const index of [0,1,2] as const){
-      const mark=LOOP_MARKS[index],shape=sizing[index];
-      const holder=this.add.container(mark.x,markerBaseY).setDepth(12);
-      const sprite=this.add.image(0,-shape.height/2,shapes[index])
-        .setDisplaySize(shape.width,shape.height);
-      holder.add(sprite);
-      const detail=this.add.graphics();
-      detail.fillStyle(0x31563e,.75);
-      for(let j=0;j<4;j++){
-        const dx=(j-1.5)*31;
-        detail.fillEllipse(dx,-4,58,10);
-      }
-      detail.lineStyle(3,0x9dcb91,.6);
-      detail.strokeCircle(0,mark.y-markerBaseY,9);
-      detail.fillStyle([0xc7f5a5,0xf3dfa8,0x9bd3f3][index],.5);
-      detail.fillCircle(0,mark.y-markerBaseY,5);
-      holder.add(detail);
-      this.marks.push(holder);
+      const mark=LOOP_MARKS[index];
+      this.marks.push(officialLandmark(this,LANDMARK_KEYS[index],'night',
+        mark.x,markerBaseY,mark.y));
     }
     // Towering chasm tree is attached to its roots, while the narrow branch
     // at UPPER_BRANCH.centerY is the ONLY solid high landing for Téo.
