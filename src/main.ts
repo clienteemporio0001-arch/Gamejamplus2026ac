@@ -265,17 +265,21 @@ function refreshHud(): void {
       if(el&&el.textContent!==value)el.textContent=value;
     };
     const objective=net.level===4?fireObjective(net.fire):net.level===3?treeObjective(net.treetop):net.level===2?temporalObjective(net.temporal):loopObjective(net.loop);
-    const remaining=world.blackoutUntil>Date.now()
-      ?Math.max(0,Math.ceil((world.blackoutUntil-Date.now())/1000))
-      :Math.max(0,Math.ceil(((net.level===4?FIRE_COLLAPSE_PERIOD:net.level===3?TREE_CYCLE:net.level===2?TEMP_CYCLE:LOOP_CYCLE_MS)-Math.max(0,Date.now()-world.cycleStart))/1000));
-    update('loop-state',net.level===4?'🔥':['A','B','C'][world.layout]);
-    update('loop-timer',net.level===4?'ÁRVORE EM '+remaining+'s':
+    const remaining=net.level===4?
+      Math.max(0,Math.ceil((FIRE_COLLAPSE_PERIOD-
+        (Math.max(0,Date.now()-net.fire.cycleStart)%FIRE_COLLAPSE_PERIOD))/1000)):
+      world.blackoutUntil>Date.now()
+        ?Math.max(0,Math.ceil((world.blackoutUntil-Date.now())/1000))
+        :Math.max(0,Math.ceil(((net.level===3?TREE_CYCLE:net.level===2?TEMP_CYCLE:LOOP_CYCLE_MS)-
+           Math.max(0,Date.now()-world.cycleStart))/1000));
+    update('loop-state',['A','B','C'][world.layout]);
+    update('loop-timer',net.level===4?'NOVO COLAPSO EM '+remaining+'s':
       (world.blackoutUntil>Date.now()?'MUDANDO ':'APAGÃO EM ')+remaining+'s');
     update('loop-objective',objective.title);
     update('loop-progress',objective.progress);
     update('loop-wind',net.level===4?
       (fireHeavySmoke(net.fire,net.poses[net.localSeat],Date.now())?'⚠ FUMAÇA · ':'')+
-       (fireWind(Date.now(),net.fire)>0?'FOGO E VENTO ▶':'◀ FOGO E VENTO'):
+       (net.fire.windDirection>0?'FOGO E VENTO ▶':'◀ FOGO E VENTO'):
       net.level===3?
       (net.treetop.windPhase==='gust'?
         (treeExposure(net.poses[net.localSeat])===0?'🛡 ABRIGADO':
@@ -305,6 +309,13 @@ function refreshHud(): void {
       update('loop-energy-text-'+seat,Math.floor(percent)+'/100');
       document.getElementById('loop-vital-'+seat)?.classList.toggle('selected',
         seat===net.localSeat);
+    }
+    const inspector=document.getElementById('dev-inspector');
+    if(inspector&&devSession&&net.isSolo)inspector.textContent=devSnapshot();
+    const local=net.poses[net.localSeat];
+    const now=Date.now();
+    if(Math.abs(local?.vx??0)>75&&Math.abs(local?.vy??0)<65&&now-lastStepAt>390){
+      lastStepAt=now;audio.play('step');
     }
   }
   const scene = game?.scene.keys[net.experience==='loop'?(net.level===4?'BurningForestScene':net.level===3?'TreetopForestScene':net.level===2?'TemporalForestScene':'ForestLoopScene'):net.level >= 3 ? 'LateScene' : net.level === 2 ? 'JourneyScene' : 'ForestScene'] as DemoScene | ForestScene | RiverScene | JourneyScene | LateScene | ForestLoopScene | TemporalForestScene | TreetopForestScene | BurningForestScene | undefined;
