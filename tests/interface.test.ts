@@ -1,5 +1,5 @@
 import {readFileSync} from 'node:fs';
-import {initLoop,LOOP_START,LOOP_CYCLE_MS,LOOP_GEOMETRY,LOOP_MARKS} from '../src/forestLoop';
+import {initLoop,LOOP_START,LOOP_CYCLE_MS,LOOP_GEOMETRY,LOOP_MARKS,markPosition} from '../src/forestLoop';
 import {loopObjective,loopContext,loopWind,regionTitle} from '../src/forestLoopUI';
 
 let count=0;
@@ -81,18 +81,18 @@ ok(loopWind(w,0,5660).startsWith('◀'),'vento inicial aponta para a esquerda');
 ok(loopContext(w,0,5660,606,1001)==='','sem legenda ao nascer longe do puzzle');
 w.observed=true;
 expect('Algo mudou. Sigam o vento.','Marcos 0/3');
-ok(loopContext(w,0,LOOP_MARKS[0].x,480,1001).includes('E'),
+ok(loopContext(w,0,markPosition(w,0).x,480,1001).includes('E'),
   'Téo vê comando próximo da árvore');
 ok(loopContext(w,0,5660,606,1001)==='','sem comandos de puzzle fora de alcance');
-ok(loopContext(w,1,LOOP_MARKS[1].x-160,606,1001)==='',
+ok(loopContext(w,1,markPosition(w,1).x-160,606,1001)==='',
   'Lia não vê comando de ação bloqueada antes de Téo');
 w.marks[0]=true;
-ok(loopContext(w,1,LOOP_MARKS[1].x-160,606,1001).includes('J'),
+ok(loopContext(w,1,markPosition(w,1).x-160,606,1001).includes('J'),
   'Lia vê comando após Téo concluir a árvore');
-ok(loopContext(w,2,LOOP_MARKS[2].x-150,606,1001)==='',
+ok(loopContext(w,2,markPosition(w,2).x-150,606,1001)==='',
   'Nino não recebe comando antes de Lia');
 w.marks[1]=true;
-ok(loopContext(w,2,LOOP_MARKS[2].x-150,606,1001).includes('SHIFT'),
+ok(loopContext(w,2,markPosition(w,2).x-150,606,1001).includes('SHIFT'),
   'Nino recebe comando depois dos dois marcos anteriores');
 w.marks=[true,true,true];
 expect('Encontrem a passagem verdadeira.','Três amigos juntos');
