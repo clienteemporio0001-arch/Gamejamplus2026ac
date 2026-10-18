@@ -306,7 +306,7 @@ export class TreeAuthority{
   }else if(!w.ropeOpen){
    if(seat===0&&kind==='lever'&&w.tower[0]&&w.tower[1]
      &&w.supporting[0]===null&&!windy
-     &&close(p,TREE_TARGETS.tower.top.x,TREE_TARGETS.tower.top.y,57,17)
+     &&close(p,TREE_TARGETS.tower.top.x,TREE_TARGETS.tower.top.y,64,35)
      &&Math.abs(p.vy)<110)changed=w.tower[2]=true;
    if(w.tower.every(Boolean))w.ropeOpen=true;
   }else if(!w.finalOpen){
