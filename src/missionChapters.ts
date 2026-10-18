@@ -95,11 +95,14 @@ export function missionSnapshot(phase:MissionPhase,world:MissionWorld):MissionSn
    ['Bom trabalho! Falta uma raiz!','Nino, solte a raiz restante!',
     'Passagem liberada! Reúnam os três e atravessem!'][i],
    'LIBEREM AS RAÍZES NO ESTADO C.'));
-  return beats(phase,[echo,tree,roots],
+  const group=!w.echo.every(Boolean)?'MARCOS NA CHUVA':
+    !w.bridge?'ÁRVORE SOBRE A ÁGUA':'RAÍZES DA TEMPESTADE';
+  const result=beats(phase,[echo,tree,roots],
    !w.echo.every(Boolean)?'ENCONTREM OS TRÊS MARCOS NA CHUVA.':
    !w.bridge?'SOLTEM AS AMARRAS DA ÁRVORE SOBRE A ÁGUA.':
    !w.roots.every(Boolean)?'LIBEREM AS RAÍZES NO ESTADO C.':
    'REÚNAM OS TRÊS NA SAÍDA DA TEMPESTADE.',w.completed);
+  return {...result,next:result.beats.find(b=>b.group===group&&!b.done)??null};
  }
  if(phase===3){
   const w=world as TreeWorld;
@@ -123,10 +126,13 @@ export function missionSnapshot(phase:MissionPhase,world:MissionWorld):MissionSn
    return part(g.id+'-'+i,g.name,i,g.flags[i],target,['E','J','SHIFT + E'][i],
     g.heroes[i],g.pipo[i],g.name+': '+g.flags.filter(Boolean).length+'/3');
   }));
-  return beats(phase,arrays,!w.bridgeOpen?'CONCLUAM A PONTE DOS TRÊS.':
+  const group=!w.bridgeOpen?'PONTE DOS TRÊS':
+    !w.ropeOpen?'ESCADA HUMANA':'GALHOS DO TEMPO';
+  const result=beats(phase,arrays,!w.bridgeOpen?'CONCLUAM A PONTE DOS TRÊS.':
    !w.ropeOpen?'FORMEM A ESCADA HUMANA E SOLTEM O CIPÓ.':
    !w.finalOpen?'LIBEREM OS GALHOS DO TEMPO.':
    'REÚNAM OS TRÊS NO GALHO FINAL.',w.completed);
+  return {...result,next:result.beats.find(b=>b.group===group&&!b.done)??null};
  }
  const w=world as FireWorld;
  const groups=[
@@ -147,10 +153,13 @@ export function missionSnapshot(phase:MissionPhase,world:MissionWorld):MissionSn
  const arrays=groups.map(g=>([0,1,2] as const).map(i=>part(
    g.id+'-'+i,g.name,i,g.flags[i],g.targets[(['teo','lia','nino'] as const)[i]],
    ['E','J','SHIFT + E'][i],g.hero[i],g.bird[i],g.name+': '+g.flags.filter(Boolean).length+'/3')));
- return beats(phase,arrays,!w.logOpen?'LIBEREM O TRONCO EM CHAMAS.':
+ const group=!w.logOpen?'TRONCO EM CHAMAS':
+  !w.smokeOpen?'CORREDOR DE FUMAÇA':'ÁRVORES CAINDO';
+ const result=beats(phase,arrays,!w.logOpen?'LIBEREM O TRONCO EM CHAMAS.':
   !w.smokeOpen?'ABRAM O CORREDOR DE FUMAÇA.':
   !w.treeOpen?'DIRECIONEM A QUEDA DA ÁRVORE.':
   'REÚNAM OS TRÊS NA MARGEM SEGURA.',w.completed);
+ return {...result,next:result.beats.find(b=>b.group===group&&!b.done)??null};
 }
 /** Snapshot differences are idempotent, so reconnect does not replay historic dialogue. */
 export function newlyCompleted(oldSnapshot:MissionSnapshot|null,newSnapshot:MissionSnapshot):MissionBeat[]{
