@@ -489,7 +489,7 @@ export class LoopAuthority{
     if(allDone(this.world.tree)&&this.world.treeFallAt===0)this.world.treeFallAt=now;
   }
   private checkExit():void{
-    if(allDone(this.world.final)&&this.world.layout===2)this.world.exit=true;
+    if(this.world.bridge&&allDone(this.world.final))this.world.exit=true;
   }
   kill(now=Date.now()):boolean{
     return this.damage(0,now,true);
@@ -558,8 +558,8 @@ export class LoopAuthority{
     if(w.treeFallAt>0&&!w.bridge&&now-w.treeFallAt>=1900){
       w.bridge=true;return{changed:true};
     }
-    if(w.bridge&&allDone(w.final)&&w.layout===2&&!w.exit){w.exit=true;return{changed:true};}
-    if(w.exit&&w.suspendedOpen&&poses.every(p=>p.x>=11130&&p.x<=11360&&p.y>=540&&p.y<=660)){
+    if(w.bridge&&allDone(w.final)&&!w.exit){w.exit=true;return{changed:true};}
+    if(w.exit&&w.bridge&&w.suspendedOpen&&poses.length===3&&w.health.every(h=>h>0)&&poses.every(p=>w.health[p.seat]>0&&p.x>=11130&&p.x<=11360&&p.y>=540&&p.y<=660)){
       w.completed=true;return{changed:true,won:true};
     }
     if(w.lastRoute!=='right'&&now-w.routeAt>=3200&&allDone(w.marks)){
