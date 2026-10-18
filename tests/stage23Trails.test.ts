@@ -53,7 +53,7 @@ for(const layout of [0,1,2] as const){
  assert.ok(info.lines[0].includes('Trilhas liberadas'));
  assert.ok(info.lines[1].includes('árvore oca')&&info.lines[1].includes('pedra rachada'));
  assert.ok(info.lines[2].includes('Os três'));
- for(const [label,route] of [['verdadeira',correct],['falsa',wrong]] as const){
+ for(const [label,route] of [['falsa',wrong],['verdadeira',correct]] as const){
   const target=LOOP_GEOMETRY.portal[route];
   const actors=group(target);
   assert.equal(trailOccupants(actors,route).length,3);
