@@ -16,7 +16,7 @@ for(const f of ['loop-stone.svg','loop-arch.svg','loop-elevated-tree.svg']){
  const asset=readFileSync('public/assets/'+f,'utf8');
  ok(asset.includes('<svg')&&asset.includes('viewBox')&&asset.includes('</svg>'),
    f+' é um SVG original local íntegro');
- ok(scene.includes(f.replace('.svg','')),'cena carrega '+f);
+ ok((f==='loop-elevated-tree.svg'?scene:scene+readFileSync('src/officialLandmarks.ts','utf8')).includes(f.replace('.svg','')),'cena carrega '+f);
 }
 ok(scene.includes("this.add.image(0,-shape.height/2,shapes[index])"),
   'base de cada marco coincide com markerBaseY');
