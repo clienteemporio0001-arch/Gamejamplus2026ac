@@ -231,6 +231,37 @@ export class ForestLoopScene extends Phaser.Scene {
     ledgeBody.checkCollision.right=false;
     ledgeBody.checkCollision.up=true;
     this.ground(10520,548,145,20,'wood');
+    // The first suspended puzzle is separate from the original falling tree at x9465.
+    const high=this.ground(SUSPENSION.branch.x,SUSPENSION.branch.y,
+      SUSPENSION.branch.width,SUSPENSION.branch.height,'wood');
+    const oneWay=high.body as Phaser.Physics.Arcade.StaticBody;
+    oneWay.checkCollision.left=false;oneWay.checkCollision.right=false;
+    oneWay.checkCollision.down=false;oneWay.checkCollision.up=true;
+    const lever=this.add.graphics().setDepth(23);
+    lever.lineStyle(7,0x8fae77,1);lever.lineBetween(
+      SUSPENSION.lever.x,SUSPENSION.lever.y+23,
+      SUSPENSION.lever.x,SUSPENSION.lever.y-10);
+    lever.fillStyle(0xffd38b,.95);
+    lever.fillCircle(SUSPENSION.lever.x,SUSPENSION.lever.y-12,9);
+    for(const spot of [SUSPENSION.lia,SUSPENSION.nino]){
+      this.add.circle(spot.x,spot.y-15,11,0xb7edac,.28)
+        .setStrokeStyle(2,0xc8e1b1,.8).setDepth(22);
+    }
+    const timber=this.add.graphics().setDepth(20);
+    timber.fillStyle(0x493d2d,1);timber.fillRoundedRect(
+      -SUSPENSION.width/2,-SUSPENSION.height/2,SUSPENSION.width,SUSPENSION.height,9);
+    timber.lineStyle(4,0x927653,.95);timber.lineBetween(
+      -SUSPENSION.width/2+9,-5,SUSPENSION.width/2-9,-5);
+    for(let x=-SUSPENSION.width/2+20;x<SUSPENSION.width/2-10;x+=43){
+      timber.lineStyle(3,0x271e1a,.8);timber.lineBetween(x,-11,x+7,9);
+    }
+    this.suspension=this.add.container(SUSPENSION.initialX,656,[timber]).setDepth(20);
+    this.suspensionCables=this.add.graphics().setDepth(19);
+    // Collider stays disabled during motion; scenery and physics agree when stable.
+    this.suspensionCollider=this.add.rectangle(SUSPENSION.initialX,656,
+      SUSPENSION.width,SUSPENSION.height,0xffffff,.001).setDepth(19);
+    this.physics.add.existing(this.suspensionCollider,true);
+    this.blocks.push(this.suspensionCollider);
     this.bridge=this.ground(LOOP_GEOMETRY.bridge.x,LOOP_GEOMETRY.bridge.y,
       LOOP_GEOMETRY.bridge.width,LOOP_GEOMETRY.bridge.height,'wood');
     // Only the host's loop snapshot determines physical blockers.
@@ -371,7 +402,25 @@ export class ForestLoopScene extends Phaser.Scene {
       if(w.health[seat]<this.w.health[seat])this.fallImpact(seat,false);
     }
 
-    this.w={...w,marks:[...w.marks],tree:[...w.tree],final:[...w.final],supporting:[...w.supporting]};
+    this.w={...w,marks:[...w.marks],tree:[...w.tree],final:[...w.final],
+      suspended:[...w.suspended],supporting:[...w.supporting]};
+    if(this.suspensionCollider){
+      const settled=w.suspendedX===w.suspendedTo&&w.suspendedOpen;
+      const position=w.suspendedX;
+      this.suspension.setX(position);
+      this.suspensionCollider.setX(position);
+      this.suspensionCollider.setVisible(settled);
+      const body=this.suspensionCollider.body as Phaser.Physics.Arcade.StaticBody;
+      body.enable=settled;
+      if(settled)body.updateFromGameObject();
+      this.suspensionCables.clear();
+      for(const x of [position-SUSPENSION.width/2+45,position+SUSPENSION.width/2-45]){
+        this.suspensionCables.lineStyle(5,0x558f6b,.91);
+        this.suspensionCables.lineBetween(x,260,x,643);
+        this.suspensionCables.lineStyle(1,0xccf5ac,.65);
+        this.suspensionCables.lineBetween(x+3,260,x+3,643);
+      }
+    }
     const walls=barriers(w);
     this.blockers.forEach((b,i)=>this.active(b,walls[i].enabled));
     this.active(this.finalBarrier,!w.exit);
@@ -404,7 +453,11 @@ export class ForestLoopScene extends Phaser.Scene {
   private action(seat:Seat):void{
     const x=this.local.x,y=this.local.y,w=this.w;
     if(seat===0){
-      if(w.observed && !w.marks[0]&&Math.abs(x-LOOP_MARKS[0].x)<90)this.net.act({kind:'lever'});
+      if(w.lastRoute==='right'&&!w.suspended[0]&&
+        Math.abs(x-SUSPENSION.lever.x)<65&&Math.abs(y-SUSPENSION_LANDING_Y)<22)
+        this.net.act({kind:'lever'});
+      else if(w.observed && !w.marks[0]&&Math.abs(x-LOOP_MARKS[0].x)<90)
+        this.net.act({kind:'lever'});
       else if(allDone(w.marks)&&w.teoSummitReached&&!w.tree[0]
         &&hasSummitFooting({seat,x,y,vx:this.body.velocity.x,vy:this.body.velocity.y})
         &&Math.abs(x-LOOP_TREE[0].x)<=37)
