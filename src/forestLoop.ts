@@ -80,8 +80,8 @@ export function validLoop(value:unknown):value is LoopWorld{
     &&['observed','bridge','exit','completed','stackMilestone','climbReady','teoUpperReached'].every(k=>typeof w[k]==='boolean')
     &&Array.isArray(w.supporting)&&w.supporting.length===3
     &&w.supporting.every((b:unknown,i:number)=>b===null||(i===0&&b===1)||(i===1&&b===2))
-    &&bool3(w.marks)&&bool3(w.tree)&&bool3(w.final)&&validVitals(w)
-    &&['none','wrong','right'].includes(String(w.lastRoute));
+    &&bool3(w.marks)&&bool3(w.tree)&&bool3(w.final)
+    &&['none','wrong','right'].includes(String(w.lastRoute))&&validVitals(w);
 }
 export const allDone=(items:readonly boolean[])=>items.every(Boolean);
 export const blackoutActive=(w:LoopWorld,now:number)=>w.blackoutUntil>0&&now<w.blackoutUntil;
