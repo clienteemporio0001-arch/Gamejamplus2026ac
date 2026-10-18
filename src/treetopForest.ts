@@ -1,3 +1,4 @@
+import {exitPresence} from './sharedExit';
 import type {Pose,Seat} from './network';
 import {initVitals,validVitals,spendVital,regenVitals,VITALS,type VitalAction,type Vitals} from './loopVitals';
 
@@ -254,7 +255,7 @@ export class TreeAuthority{
    w.deathByGust=w.windPhase==='gust';w.deadUntil=now+1500;w.health=[0,0,0];
    return {changed:true};
   }
-  if(w.finalOpen&&poses.length===3&&poses.every(p=>close(p,TREE_TARGETS.exit.x,TREE_TARGETS.exit.y,88,44))){
+  if(w.finalOpen&&exitPresence(3,poses,w.health).ready){
    w.completed=true;return {changed:true,won:true};
   }
   const wind=treeWindSchedule(w,now);
