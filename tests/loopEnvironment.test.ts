@@ -137,7 +137,7 @@ for(const layout of [0,1,2] as const){
  const state={...w,layout};
  for(const i of [0,6,12,19,24]){
   const field=leafAt(state,i,15300);
-  ok(field.direction===windGuide(state,0,110+i*145).direction,
+  ok(field.direction===windGuide(state,0,110+i*(LOOP_WIDTH-220)/(WIND_LEAVES-1)).direction,
     'vento na área '+i+' acompanha windGuide no estado '+layout);
   ok(Number.isFinite(swayAt(state,110+i*145,15300,i)),
     'folhagem animada sob mesmo estado');
