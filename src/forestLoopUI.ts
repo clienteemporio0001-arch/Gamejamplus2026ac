@@ -24,7 +24,7 @@ export function loopContext(w:LoopWorld,seat:Seat,x:number,y:number,now=Date.now
   if(w.completed||w.deadUntil>0||w.blackoutUntil>now)return '';
   const near=(tx:number,ty:number,radius=100,dy=100)=>
     Math.abs(x-tx)<=radius&&Math.abs(y-ty)<=dy;
-  if(w.observed&&!w.marks[seat]){
+  if(w.observed&&!w.marks[seat]&&w.marks.slice(0,seat).every(Boolean)){
     const point=LOOP_MARKS[seat];
     if(seat===0&&near(point.x,point.y,90,90))return 'E · Investigar árvore oca';
     if(seat===1&&near(point.x-150,604,125,85))return 'J · Acertar pedra rachada';
