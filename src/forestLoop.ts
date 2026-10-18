@@ -100,6 +100,7 @@ export function validLoop(value:unknown):value is LoopWorld{
     &&Array.isArray(w.supporting)&&w.supporting.length===3
     &&w.supporting.every((b:unknown,i:number)=>b===null||(i===0&&b===1)||(i===1&&b===2))
     &&bool3(w.marks)&&bool3(w.tree)&&bool3(w.final)&&bool3(w.suspended)
+    &&[w.suspendedX,w.suspendedFrom,w.suspendedTo].every(x=>x>=SUSPENSION.initialX-500&&x<=SUSPENSION.finalX+200)
     &&['none','wrong','right'].includes(String(w.lastRoute))&&validVitals(w);
 }
 export const allDone=(items:readonly boolean[])=>items.every(Boolean);
@@ -134,7 +135,7 @@ export function windGuide(w:LoopWorld,seat:Seat,x:number):{direction:-1|0|1;targ
     hint=!w.stackMilestone?'APOIO: NINO PARADO, LIA SOBE COM E, TÉO SOBE EM LIA COM E.':
       !w.teoUpperReached?'TÉO: SOLTE-SE, USE SALTO DUPLO E ATERRISSE NO GALHO ALTO.':
       'SOLTEM AS TRÊS AMARRAS PARA A ÁRVORE FORMAR A PONTE.';
-  }else if(x<2990){
+  }else if(x<10190){
     target=10110;hint='ATRAVESSEM A ÁRVORE DEITADA PARA A OUTRA MARGEM.';
   }else if(w.layout!==2){
     target=10110;
@@ -143,9 +144,9 @@ export function windGuide(w:LoopWorld,seat:Seat,x:number):{direction:-1|0|1;targ
     target=LOOP_FINAL[w.final.findIndex(value=>!value)].x-22;
     hint='CADA PERSONAGEM PRECISA ATIVAR SEU MECANISMO FINAL.';
   }else if(w.layout!==2){
-    target=3300;hint='A SAÍDA AINDA MENTE. ESPEREM A FLORESTA INVERTIDA.';
+    target=10500;hint='A SAÍDA AINDA MENTE. ESPEREM A FLORESTA INVERTIDA.';
   }else {
-    target=3730;hint='AGORA SIGAM O VENTO ATÉ A SAÍDA REAL.';
+    target=11230;hint='AGORA SIGAM O VENTO ATÉ A SAÍDA REAL.';
   }
   return {direction:target>x+38?1:target<x-38?-1:0,target,
     hint:hint+(seat===0?' · TÉO':seat===1?' · LIA':' · NINO')};
@@ -287,7 +288,7 @@ export class LoopAuthority{
         w.suspended[1]=true;this.slideSuspension(SUSPENSION.liaX,now);return true;
       }
       if(w.observed&&w.marks[0]&&!w.marks[1]&&shoot(LOOP_MARKS[1])){w.marks[1]=true;return true;}
-      if(allDone(w.marks)&&!w.tree[1]&&shoot(LOOP_TREE[1])){w.tree[1]=true;this.checkTree(now);return true;}
+      if(w.suspendedOpen&&allDone(w.marks)&&!w.tree[1]&&shoot(LOOP_TREE[1])){w.tree[1]=true;this.checkTree(now);return true;}
       if(w.bridge&&!w.final[1]&&shoot(LOOP_FINAL[1])){w.final[1]=true;this.checkExit();return true;}
       return false;
     }
@@ -301,7 +302,7 @@ export class LoopAuthority{
       if(w.observed&&!w.marks[0]&&near(p,LOOP_MARKS[0].x,LOOP_MARKS[0].y,68,87)){
         w.marks[0]=true;return true;
       }
-      if(w.stackMilestone&&w.teoUpperReached&&w.teoSummitReached&&w.climbReady
+      if(w.suspendedOpen&&w.stackMilestone&&w.teoUpperReached&&w.teoSummitReached&&w.climbReady
         &&allDone(w.marks)&&!w.tree[0]
         &&hasSummitFooting(p)
         &&Math.abs(p.x-LOOP_TREE[0].x)<=37){
@@ -322,7 +323,7 @@ export class LoopAuthority{
       if(w.observed&&w.marks[0]&&w.marks[1]&&!w.marks[2]&&near(p,LOOP_MARKS[2].x,LOOP_MARKS[2].y,67,85)){
         w.marks[2]=true;this.lastSwitch[2]=now;return true;
       }
-      if(allDone(w.marks)&&!w.tree[2]&&near(p,LOOP_TREE[2].x,LOOP_TREE[2].y,65,85)){
+      if(w.suspendedOpen&&allDone(w.marks)&&!w.tree[2]&&near(p,LOOP_TREE[2].x,LOOP_TREE[2].y,65,85)){
         w.tree[2]=true;this.checkTree(now);this.lastSwitch[2]=now;return true;
       }
       if(w.bridge&&!w.final[2]&&near(p,LOOP_FINAL[2].x,LOOP_FINAL[2].y,67,85)){
