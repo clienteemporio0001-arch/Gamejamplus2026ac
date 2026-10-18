@@ -22,8 +22,8 @@ check(!art.includes('setGravityY')&&!art.includes('setVelocityX'),'arte não toc
 check(art.includes('setScrollFactor(layer.scroll)'),'camadas usam parallax');
 check(art.includes('material ===')&&art.includes('fillRoundedRect'),'texturas de plataformas por material');
 check(art.includes('this.lowPower ? 6 : 14'),'partículas reduzidas no mobile');
-check(art.includes('setVisible(skin.target.visible'),'plataformas decorativas seguem a visibilidade física');
-check(art.includes('setPosition(skin.target.x, skin.target.y)'),'skinning acompanha plataformas móveis');
+check(art.includes('t.visible&&t.active')&&art.includes('skin.ink.setVisible(visible)'),'plataformas decorativas seguem visibilidade física e culling da câmera');
+check(art.includes('skin.ink.setPosition(t.x,t.y)')&&art.includes('skin.ink.x!==t.x'),'skinning acompanha plataformas móveis sem recalcular corpos imóveis');
 for(const file of ['src/forestScene.ts','src/journeyScene.ts','src/lateScene.ts']){
   const text=readFileSync(file,'utf8');
   check(text.includes('new NightArt(this,'),file+' aplica visual');
