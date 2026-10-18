@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import {PipoGuide} from './pipoGuide';
+import {MissionDirector} from './missionDirector';
 import {TreetopArt} from './treetopArt';
 import {TreetopWindAudio} from './treetopWindAudio';
 import {CHARACTERS,type Network,type Seat} from './network';
@@ -33,7 +34,7 @@ export class TreetopForestScene extends Phaser.Scene {
  private dashUntil=0;private pendingJump=false;private paused=false;
  private dark!:Phaser.GameObjects.Rectangle;private darkText!:Phaser.GameObjects.Text;
  private hint!:Phaser.GameObjects.Text;private guide!:Phaser.GameObjects.Text;
- private pipo!:PipoGuide;
+ private pipo!:PipoGuide;private missions!:MissionDirector;
  private lastWindPhase:TreeWindPhase='calm';
  private windStatus!:Phaser.GameObjects.Text;
  private windDirectionShown:-1|1=1;
@@ -99,6 +100,7 @@ export class TreetopForestScene extends Phaser.Scene {
   this.cursors=this.input.keyboard?.createCursorKeys();
   this.keys=this.input.keyboard?.addKeys('A,D,E') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
   this.pipo=new PipoGuide(this,this.net);
+   this.missions=new MissionDirector(this,this.net,3,this.avatars);
   this.hint=this.caption(0,0,'',13,'#f0dfb1');
   this.guide=this.caption(this.scale.gameSize.width/2,92,'',14,'#c3f6da')
    .setScrollFactor(0).setDepth(150);
@@ -280,7 +282,8 @@ export class TreetopForestScene extends Phaser.Scene {
   this.windStatus.setVisible(w.windPhase!=='calm'&&!pause);
   this.windStatus.setColor(w.windPhase==='gust'?'#ffe4a0':'#dff5bd');
   this.hint.setVisible(false);
-  this.pipo.update(time,this.local.x,this.local.y,pause);
+  this.missions.update(time,pause);
+   this.pipo.update(time,this.local.x,this.local.y,pause);
   const localPose=this.net.poses.map((p,i)=>this.net.isSolo?
    {seat:p.seat,x:this.avatars[i].x,y:this.avatars[i].y,
     vx:this.solo?.body(p.seat).velocity.x??p.vx,
