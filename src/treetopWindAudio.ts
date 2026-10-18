@@ -42,7 +42,7 @@ export class TreetopWindAudio {
  private apply():void{
   if(!this.context||!this.gain||!this.filter)return;
   const now=this.context.currentTime;
-  const amplitude=(this.muted?0:this.phase==='gust'?.105:this.phase==='warning'?.047:.014)*audioLevel('sfx');
+  const amplitude=(this.muted?0:this.phase==='gust'?.105:this.phase==='warning'?.047:.014)*audioLevel('ambient');
   this.gain.gain.setTargetAtTime(amplitude,now,.25);
   this.filter.frequency.setTargetAtTime(this.phase==='gust'?1200:
     this.phase==='warning'?860:430,now,.34);
