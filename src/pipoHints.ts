@@ -1,9 +1,11 @@
 import type {LoopWorld} from './forestLoop';
 import type {TemporalWorld} from './temporalForest';
 import type {TreeWorld} from './treetopForest';
+import type {FireWorld} from './burningForest';
 
 /** All guidance is determined by the authoritative phase snapshot, never guesses from the camera. */
-export type HintSource={phase:1;world:LoopWorld}|{phase:2;world:TemporalWorld}|{phase:3;world:TreeWorld};
+export type HintSource={phase:1;world:LoopWorld}|{phase:2;world:TemporalWorld}|
+ {phase:3;world:TreeWorld}|{phase:4;world:FireWorld};
 export type PipoHint={objective:string;lines:readonly [string,string,string]};
 const guidance=(objective:string,lines:readonly [string,string,string]):PipoHint=>({objective,lines});
 export function pipoHint(source:HintSource):PipoHint{
@@ -101,6 +103,29 @@ export function pipoHint(source:HintSource):PipoHint{
    'A correnteza ficou para trás! Boa equipe!',
    'Agora os três devem seguir juntos até a saída.',
    'Reúnam Téo, Lia e Nino no trecho final da Fase 2.'
+  ]);
+ }
+ if(source.phase===4){
+  const w=source.world;
+  if(!w.logOpen)return guidance('tronco em chamas',[
+   'Ei! O fogo bloqueou a passagem. Precisamos daquela árvore!',
+   'Téo alcança a amarra alta, Lia acerta o alvo e Nino ativa a trava.',
+   'Téo usa salto duplo e E no galho; Lia atira com J; Nino usa dash + E na alavanca.'
+  ]);
+  if(!w.smokeOpen)return guidance('corredor de fumaça',[
+   'A fumaça está fechando o caminho! Não fiquem parados!',
+   'Procurem três respiros na fumaça. O vento está movendo o perigo.',
+   'Lia atira com J no respiro, Nino usa dash + E e Téo sobe e pressiona E.'
+  ]);
+  if(!w.treeOpen)return guidance('árvores caindo',[
+   'A madeira está estalando! Aquela árvore vai cair!',
+   'Os três precisam soltar os pontos certos para formar outra ponte.',
+   'Téo solta a amarra alta com E; Lia usa J; Nino ativa a raiz com dash + E.'
+  ]);
+  return guidance('corrida final',[
+   'Rápido! A margem do rio está logo ali! Eu vejo água!',
+   'As chamas mudam com o vento: esperem a janela segura antes de correr.',
+   'Evitem as chamas que crescem a cada ciclo. Reúnam Téo, Lia e Nino na margem!'
   ]);
  }
  const w=source.world;
