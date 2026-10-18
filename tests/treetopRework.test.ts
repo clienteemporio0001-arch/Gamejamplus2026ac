@@ -55,7 +55,7 @@ assert.equal(treeFatal({...TREE_START[0],y:TREE_VOID_Y+5,vy:250},base,w),true);
 assert.equal(treeFatal({...TREE_START[0],y:TREE_VOID_Y+5,vy:-250},base,w),false);
 assert.equal(treeFatal({...TREE_START[0],y:TREE_VOID_Y+5,vy:250},base,w,base+50),false);
 // Spaced climb sections are within the ballistic envelope, including upward steps.
-const line=[4,5,6,7,8,9,10,11,12,15,16,17]; // start and bridge-side branches
+const line=[4,5,6,7,8,9,10,11,12,14,15,16,17]; // start and bridge-side branches
 for(let i=1;i<line.length;i++){
  const a=TREE_PLATFORMS[line[i-1]],b=TREE_PLATFORMS[line[i]];
  const rise=(a.y-a.height/2-22)-(b.y-b.height/2-22);
