@@ -1,6 +1,6 @@
 import type { Seat,Pose } from './network';
 import { LOOP_MARKS, LOOP_TREE, LOOP_FINAL, LOOP_GEOMETRY, UPPER_BRANCH, upperLandingY, summitLandingY, allDone, windGuide,
-  SUSPENSION,SUSPENSION_LANDING_Y,markPosition,trailOccupants,correctRoute,TRAIL_MEET_RADIUS_X,canStack,type LoopWorld } from './forestLoop';
+  SUSPENSION,SUSPENSION_LANDING_Y,markPosition,trailOccupants,correctRoute,TRAIL_MEET_RADIUS_X,canStack,suspensionLeverStatus,SUSPENSION_LEVER_FEEDBACK,type LoopWorld } from './forestLoop';
 
 /** UI copy is pure data: no world coordinates are used for the fixed-screen HUD. */
 export type LoopObjective={title:string;progress:string};
@@ -51,8 +51,14 @@ export function loopContext(w:LoopWorld,seat:Seat,x:number,y:number,now=Date.now
     }
   }
   if(w.lastRoute==='right'&&!w.suspendedOpen){
-    if(seat===0&&!w.suspended[0]&&near(SUSPENSION.lever.x,
-      SUSPENSION_LANDING_Y,65,23))return 'E · Puxar cipós da plataforma';
+    if(seat===0&&!w.suspended[0]&&
+      Math.abs(x-SUSPENSION.lever.x)<=190){
+      const current=poses[seat]??{seat,x,y,vx:0,vy:0};
+      if(canStack(w,seat,poses))return 'E · Téo sobe em Lia, sobre Nino';
+      const status=suspensionLeverStatus(w,{...current,x,y});
+      return status==='ready'?'E / USAR · Puxar cipós da passarela':
+        SUSPENSION_LEVER_FEEDBACK[status];
+    }
     if(seat===1&&w.suspended[0]&&!w.suspended[1]&&
       near(SUSPENSION.lia.x-165,606,125,90))return 'J · Soltar trava suspensa';
     if(seat===2&&w.suspended[0]&&w.suspended[1]&&!w.suspended[2]&&
