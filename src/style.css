@@ -530,7 +530,7 @@ body.playing{overflow:hidden;touch-action:none;overscroll-behavior:none}
  filter:blur(13px);animation:menu-haze 12s ease-in-out infinite alternate}
 .menu-atmosphere:before{top:5%;}.menu-atmosphere:after{bottom:-13%;animation-delay:-6s}
 .menu-atmosphere i{
- position:absolute;left:calc(7% + var(--leaf)*8%);top:calc(4% + mod(var(--leaf),6)*12%);
+ position:absolute;left:calc(7% + var(--leaf)*8%);top:calc(5% + var(--leaf)*7%);
  display:block;width:12px;height:6px;border-radius:85% 0 90% 0;
  background:#b9daa057;transform:rotate(-23deg);
  animation:menu-leaf calc(11s + var(--leaf)*.7s) linear infinite;
