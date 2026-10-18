@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type {Network,Seat} from './network';
 import {pipoHint,type HintSource} from './pipoHints';
-import {pipoSpeechLayout} from './pipoBubbleLayout';
+import {pipoSpeechLayout,pipoHudCoords} from './pipoBubbleLayout';
 
 /** One decorative bird per Phaser scene; no physics, AI, network packets or external assets. */
 export class PipoGuide {
@@ -201,7 +201,9 @@ export class PipoGuide {
   this.bubble.setVisible(!layout.offscreen).setAlpha(fade);
   this.offscreenMarker.setVisible(layout.offscreen).setAlpha(fade);
   if(layout.offscreen){
-   this.offscreenMarker.setPosition(layout.indicatorX,layout.indicatorY);
+   const fixed=pipoHudCoords(layout.indicatorX,layout.indicatorY,
+    {width:view.width,height:view.height},cam.zoom);
+   this.offscreenMarker.setPosition(fixed.x,fixed.y).setScale(fixed.scale);
    return;
   }
   const width=layout.width,height=layout.height;
@@ -229,6 +231,8 @@ export class PipoGuide {
    this.panel.lineBetween(layout.tailX,layout.tailY,
     layout.tailX+10,height/2);
   }
-  this.bubble.setPosition(layout.x,layout.y);
+  const fixed=pipoHudCoords(layout.x,layout.y,
+   {width:view.width,height:view.height},cam.zoom);
+  this.bubble.setPosition(fixed.x,fixed.y).setScale(fixed.scale);
  }
 }
