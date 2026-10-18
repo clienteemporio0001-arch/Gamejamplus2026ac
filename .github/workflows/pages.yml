@@ -20,7 +20,7 @@ jobs:
           node-version: '22'
       - run: npm install --no-audit --no-fund
       - run: npm run build
-      - run: npm run test:logic
+      - run: npm run test
       - name: Disponibilizar ZIP HTML5, mesmo sem Pages
         uses: actions/upload-artifact@v4
         with:
