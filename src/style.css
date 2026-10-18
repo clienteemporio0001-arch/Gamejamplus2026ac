@@ -662,7 +662,8 @@ body.playing{overflow:hidden;touch-action:none;overscroll-behavior:none}
 }
 @media (pointer:coarse) and (orientation:landscape){
  #ui.in-game .game-tool-strip{
-  top:calc(max(6px,env(safe-area-inset-top)) + 55px);
+  /* Fullscreen occupies the row above; the two gameplay tools share this next row. */
+  top:calc(var(--game-tools-top,65px) + 39px);
   bottom:auto;right:max(8px,env(safe-area-inset-right));
   gap:5px
  }
