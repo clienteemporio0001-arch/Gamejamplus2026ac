@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import {PipoGuide} from './pipoGuide';
-import {SUSPENSION,SUSPENSION_LANDING_Y} from './forestLoop';
+import {SUSPENSION,SUSPENSION_LANDING_Y,LOOP_TERRAIN,LOOP_NATURAL_LEDGES,LOOP_LAYOUT_BRANCHES} from './forestLoop';
 import {MissionDirector} from './missionDirector';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import { LOOP_WIDTH, LOOP_GEOMETRY, LOOP_MARKS, LOOP_TREE, LOOP_FINAL, ROUTES, barriers,
@@ -32,6 +32,7 @@ export class ForestLoopScene extends Phaser.Scene {
   private suspension!:Phaser.GameObjects.Container;
   private suspensionCollider!:Phaser.GameObjects.Rectangle;
   private suspensionCables!:Phaser.GameObjects.Graphics;
+  private layoutLedges:Phaser.GameObjects.Rectangle[]=[];
   private contextText!:Phaser.GameObjects.Text;
    private pipo!:PipoGuide;private missions!:MissionDirector;
   private regionToast!:Phaser.GameObjects.Text;
@@ -194,15 +195,11 @@ export class ForestLoopScene extends Phaser.Scene {
     this.physics.world.setBoundsCollision(true,true,false,false);
     this.background();
     // Five genuine traversal gaps before the original tree bridge, not an enlarged empty floor.
-    for(const [left,right] of [[0,2000],[2260,4100],[4340,6470],
-      [6700,SUSPENSION.gapStart],[SUSPENSION.gapEnd,LOOP_GEOMETRY.chasm.start],
-      [LOOP_GEOMETRY.chasm.end,LOOP_WIDTH]]){
-      this.ground((left+right)/2,674,right-left,72);
+    for(const terrain of LOOP_TERRAIN){
+      this.ground((terrain.from+terrain.to)/2,674,terrain.to-terrain.from,72);
     }
-    // Jumpable natural ledges and temporary-looking stone shelves for traversal.
-    for(const [x,y,width] of [[2100,625,105],[4210,622,98],[6580,625,115],
-      [2570,590,155],[3800,587,140],[6000,587,125],
-      [7200,585,112],[7480,586,110],[8950,590,144],[10220,597,155]]){
+    // Natural stepping stones have identical coordinates in physics and fall tracking.
+    for(const {x,y,width} of LOOP_NATURAL_LEDGES){
       const ledge=this.ground(x,y,width,22,'wood');
       const body=ledge.body as Phaser.Physics.Arcade.StaticBody;
       body.checkCollision.down=false;body.checkCollision.left=false;
@@ -231,6 +228,14 @@ export class ForestLoopScene extends Phaser.Scene {
     ledgeBody.checkCollision.right=false;
     ledgeBody.checkCollision.up=true;
     this.ground(10520,548,145,20,'wood');
+    // A/B/C create optional elevated passages without removing the permanent route.
+    for(const branch of LOOP_LAYOUT_BRANCHES){
+      const ledge=this.ground(branch.x,branch.y,branch.width,18,'wood');
+      const body=ledge.body as Phaser.Physics.Arcade.StaticBody;
+      body.checkCollision.down=false;body.checkCollision.left=false;
+      body.checkCollision.right=false;body.checkCollision.up=true;
+      this.layoutLedges.push(ledge);
+    }
     // The first suspended puzzle is separate from the original falling tree at x9465.
     const high=this.ground(SUSPENSION.branch.x,SUSPENSION.branch.y,
       SUSPENSION.branch.width,SUSPENSION.branch.height,'wood');
@@ -423,6 +428,7 @@ export class ForestLoopScene extends Phaser.Scene {
     }
     const walls=barriers(w);
     this.blockers.forEach((b,i)=>this.active(b,walls[i].enabled));
+    this.layoutLedges.forEach((ledge,i)=>this.active(ledge,LOOP_LAYOUT_BRANCHES[i].layout===w.layout));
     this.active(this.finalBarrier,!w.exit);
     this.active(this.bridge,w.bridge);
     this.ropes.forEach((rope,i)=>rope.setVisible(!w.tree[i]));
