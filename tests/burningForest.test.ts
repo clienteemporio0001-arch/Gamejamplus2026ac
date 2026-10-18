@@ -82,9 +82,12 @@ assert.equal(pipoHint({phase:4,world:w}).objective,'corrida final');
 const late=fireCheckpoint(w);assert.equal(late.length,3);
 assert.ok(late.every(p=>fireGrounded(w,p)));
 assert.equal(fireFlareActive(w,start,4390),true,'first area ignites during first cycle');
+w.flare=1; // replay host snapshot after the first fire window
 assert.equal(fireFlareActive(w,start+4400,4390),false,'first fire safely subsides');
+w.flare=0;
 assert.equal(fireDamageZone(w,{x:4390,y:652},start),true,'first active flare damages');
 assert.equal(fireDamageZone(w,{x:4390,y:560},start),false,'above fire safe');
+w.flare=2; // host-authoritative third active phase
 assert.equal(fireFlareActive(w,start+8800,4860),true,'third flare active in phase 2');
 // Victory demands all three living and near the safe river.
 const exit=FIRE_TARGETS.exit;
@@ -103,7 +106,9 @@ const danger=FIRE_START.map(clone);
 danger[0]={seat:0,x:3655,y:653,vx:0,vy:0};
 storm.tick(danger,start+14000);
 assert.ok(storm.world.treeWarningUntil>start+14000);
+assert.equal(storm.world.treeStatus,'warning','host announces the falling tree');
 storm.tick(danger,start+15200);
+assert.equal(storm.world.treeStatus,'impact','host synchronizes tree impact');
 assert.ok(storm.world.health[0]<3,'collapse causes real damage');
 assert.equal(fireTreePhase(storm.world,start+17000),'calm');
 // Heavy smoke drains stamina; standing in it for long is punished.
