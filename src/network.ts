@@ -8,6 +8,8 @@ import { JourneyAuthority, initialJourney, validJourney, floatingLogs, validMoti
 import { ForestAuthority, FOREST_WIDTH, FOREST_SPAWNS, FOREST_CHECKPOINTS, forestDanger, validForest, initialForest, type ForestWorld } from './forest';
 import { LoopAuthority, LOOP_START, LOOP_WIDTH, validLoop, initLoop, blackoutActive, type LoopWorld } from './forestLoop';
 import { type VitalAction } from './loopVitals';
+import {FallTracker,loopFallSurfaces,temporalFallSurfaces} from './fallDamage';
+import {SUMMIT_BRANCH} from './forestLoop';
 import {TemporalAuthority,TEMP_WIDTH,TEMP_START,initTemporal,validTemporal,type TemporalWorld} from './temporalForest';
 
 export type Stage = 'lobby' | 'intro' | 'playing' | 'transition' | 'final';
@@ -190,6 +192,7 @@ export class Network {
   private listeners: { [K in keyof Events]?: Array<(payload: Events[K]) => void> } = {};
   private heartbeat: ReturnType<typeof setInterval> | null = null;
   private reconnectTimer: ReturnType<typeof setInterval> | null = null;
+  private fallTracker=new FallTracker();
   private vitalityRequestId=0;
   private lastVitalRequestIds:[number,number,number]=[0,0,0];
   private lastInput = 0;
@@ -227,6 +230,7 @@ export class Network {
     this.shutdown();
     this.shuttingDown=false;
     this.role='solo';this.code='SOLO';this.experience=mode;this.localSeat=0;
+    this.fallTracker.reset();
     this.loopAuthority.reset();this.loop=this.loopAuthority.world;
     this.temporalAuthority.reset();this.temporal=this.temporalAuthority.world;
     this.players=([0,1,2] as Seat[]).map(seat=>({seat,online:true,ready:true}));
@@ -267,6 +271,7 @@ export class Network {
   }
   restartSolo():void {
     if(!this.isSolo||!this.playing)return;
+    this.fallTracker.reset();
     if(this.experience==='loop'){
       if(this.level===2){
         this.temporalAuthority.reset();this.shareTemporal();
@@ -717,6 +722,7 @@ export class Network {
   private advanceLevel(): void {
     if (!this.isHost || this.stage !== 'transition' || !this.everyoneConnected) return;
     if(this.experience==='loop'&&this.level===1){
+      this.fallTracker.reset();
       this.temporalAuthority.reset();this.temporal=this.temporalAuthority.world;
       this.poses=TEMP_START.map(p=>({...p}));
       this.shareTemporal();
@@ -904,6 +910,13 @@ export class Network {
     if(this.experience==='loop'&&this.level===2){
       const now=Date.now();
       const w=this.temporalAuthority.world;
+      if(w.blackoutUntil>now||w.deadUntil>0||w.completed){
+        this.fallTracker.reset();
+      }else{
+        const hits=this.fallTracker.sample(this.poses,
+          temporalFallSurfaces(w.layout,w.bridge),now,w.supporting);
+        for(const seat of hits)if(this.temporalAuthority.damage(seat,now,false))this.shareTemporal();
+      }
       if(w.deadUntil===0&&!(w.blackoutUntil>now)){
         for(const p of this.poses){
           if(p.y>=690||(p.x>=2610&&p.x<=2970&&p.y>=655)){
@@ -919,6 +932,7 @@ export class Network {
       if(this.temporalAuthority.tickResources(this.poses,now))this.shareTemporal();
       const state=this.temporalAuthority.tick(this.poses,now);
       if(state.poses){
+        this.fallTracker.reset();
         this.poses=state.poses.map(p=>({...p}));
         for(const pose of this.poses){
           this.broadcast({t:'respawn',pose});this.emit('respawn',pose);
@@ -931,6 +945,14 @@ export class Network {
     }
     if(this.experience==='loop'){
       const now=Date.now();
+      const l=this.loopAuthority.world;
+      if(blackoutActive(l,now)||l.deadUntil>0||l.completed){
+        this.fallTracker.reset();
+      }else{
+        const hits=this.fallTracker.sample(this.poses,loopFallSurfaces(l.layout,l.bridge,
+          SUMMIT_BRANCH),now,l.supporting);
+        for(const seat of hits)if(this.loopAuthority.damage(seat,now,false))this.shareLoop();
+      }
       if(!blackoutActive(this.loopAuthority.world,now)
         &&this.loopAuthority.world.deadUntil===0){
         for(const p of this.poses){
@@ -949,6 +971,7 @@ export class Network {
       if(this.loopAuthority.tickResources(this.poses,now))this.shareLoop();
       const state=this.loopAuthority.tick(this.poses,now);
       if(state.poses){
+        this.fallTracker.reset();
         this.poses=state.poses.map(p=>({...p}));
         for(const pose of this.poses){
           this.broadcast({t:'respawn',pose});this.emit('respawn',pose);
@@ -1109,6 +1132,7 @@ export class Network {
     this.forestAuthority.reset();this.forest=initialForest();
     this.authority.reset(); this.puzzle = initialWorld(); this.lastAction.clear(); this.effectGate.reset(); this.pendingRestore = false;
     this.tokens = [null, null, null]; this.lastInput = 0; this.lastReceived = [0, 0, 0];
+    this.fallTracker.reset();
     this.sessionToken='';this.reconnectDeadline=0;this.vitalityRequestId=0;
     this.lastVitalRequestIds=[0,0,0];
     this.emit('change', undefined);

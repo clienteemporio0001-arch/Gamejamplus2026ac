@@ -65,8 +65,8 @@ ok(lia.includes('data-touch="ability"')&&lia.includes('TIRO'),'Lia contextual sl
 ok(nino.includes('data-touch="ability"')&&nino.includes('DASH'),'Nino contextual dash');
 ok(teo.includes('mobile-seat-picker'),'solo selection at edge');
 ok(!guest.includes('mobile-seat-picker'),'no multiplayer character selector');
-ok(guest.includes('data-touch="left"')&&guest.includes('data-touch="right"'),
-  'left and right controls separate');
+ok(guest.includes('data-joystick')&&!guest.includes('data-touch="left"'),
+  'analog stick replaces two mobile arrows');
 
 const main=readFileSync('src/main.ts','utf8');
 const css=readFileSync('src/style.css','utf8');

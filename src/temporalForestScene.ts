@@ -10,7 +10,7 @@ import type {VitalAction} from './loopVitals';
 import {temporalDrop,rainBudget,rippleAt} from './temporalRain';
 import {temporalHint,TEMP_MARK_NAMES} from './temporalGuidance';
 import {
- TEMP_WIDTH,TEMP_START,TEMP_CHANNEL,TEMP_UPPER,TEMP_ECHO,TEMP_TREE,TEMP_ROOTS,
+ TEMP_WIDTH,TEMP_START,TEMP_CHANNEL,TEMP_UPPER,TEMP_SUMMIT,tempSummitFooting,TEMP_ECHO,TEMP_TREE,TEMP_ROOTS,
  TEMP_LAYOUTS,tempBlocks,tempSurface,tempWind,temporalObjective,tempNear,tempLanding,
  type TemporalWorld
 } from './temporalForest';
@@ -190,6 +190,10 @@ export class TemporalForestScene extends Phaser.Scene {
   this.platform(3585,678,1230,80);
   this.platform(TEMP_ECHO[0].x,539,145,19,'root' as 'wood');
   this.platform(TEMP_UPPER.x,TEMP_UPPER.y,TEMP_UPPER.width,TEMP_UPPER.height,'wood');
+  const summit=this.platform(TEMP_SUMMIT.x,TEMP_SUMMIT.y,TEMP_SUMMIT.width,TEMP_SUMMIT.height,'wood');
+  const summitCollider=summit.body as Phaser.Physics.Arcade.StaticBody;
+  summitCollider.checkCollision.down=false;summitCollider.checkCollision.left=false;
+  summitCollider.checkCollision.right=false;summitCollider.checkCollision.up=true;
   this.platform(TEMP_ROOTS[0].x,543,155,20,'wood');
   this.bridge=this.platform(2790,656,360,34,'wood');
   this.temporary=this.platform(3640,592,145,18,'wood');
@@ -285,7 +289,17 @@ export class TemporalForestScene extends Phaser.Scene {
     this.off.forEach(off=>off());
   });
  }
- private sync(w:TemporalWorld):void{
+ private fallImpact(seat:Seat,wet:boolean):void{
+  const actor=this.avatars[seat];if(!actor)return;
+  const cloud=this.add.ellipse(actor.x,actor.y+22,54,12,wet?0x8ed8e7:0xc7b49a,.65).setDepth(65);
+  this.tweens.add({targets:cloud,scaleX:1.6,alpha:0,duration:450,onComplete:()=>cloud.destroy()});
+  const label=this.text(actor.x,actor.y-43,'−1 ♥',13,'#ffabab');
+  this.tweens.add({targets:label,y:label.y-17,alpha:0,duration:700,onComplete:()=>label.destroy()});
+ }
+ private sync(w:TemporalWorld):void{  if(this.avatars.length===3)for(const seat of [0,1,2] as Seat[]){
+    if(w.health[seat]<this.w.health[seat])this.fallImpact(seat,true);
+  }
+
   this.w={...w,echo:[...w.echo],tree:[...w.tree],roots:[...w.roots],
    supporting:[...w.supporting],health:[...w.health],stamina:[...w.stamina],
    safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],skillAt:[...w.skillAt]};
@@ -312,8 +326,8 @@ export class TemporalForestScene extends Phaser.Scene {
   const w=this.w,p=this.local,body=this.body;
   if(seat===0){
    if(!w.echo[0]&&Math.abs(p.x-TEMP_ECHO[0].x)<95)this.net.act({kind:'lever'});
-   else if(w.echo.every(Boolean)&&w.teoLanded&&!w.tree[0]&&
-      tempLanding({seat,x:p.x,y:p.y,vx:body.velocity.x,vy:body.velocity.y}))this.net.act({kind:'lever'});
+   else if(w.echo.every(Boolean)&&w.teoLanded&&w.teoSummitReached&&!w.tree[0]&&
+      tempSummitFooting({seat,x:p.x,y:p.y,vx:body.velocity.x,vy:body.velocity.y}))this.net.act({kind:'lever'});
    else if(w.bridge&&w.layout===2&&!w.roots[0]&&
       tempNear({seat,x:p.x,y:p.y,vx:0,vy:0},TEMP_ROOTS[0].x,TEMP_ROOTS[0].y))
      this.net.act({kind:'lever'});

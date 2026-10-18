@@ -48,7 +48,7 @@ ok(temporalHint(w,0,pose(0,2440),8000)?.action.includes('APOIA'),
 w.stacked=true;
 ok(temporalHint(w,0,pose(0,2440),8000)?.action.includes('PULE'),
   'Téo vê salto duplo somente após formação');
-w.teoLanded=true;
+w.teoLanded=true;w.teoSummitReached=true;
 ok(temporalHint(w,0,pose(0,2440),8000)?.action.includes('E'),
   'Téo no galho vê a amarra E');
 ok(temporalHint(w,1,pose(1,2440),8000)?.action.includes('J'),

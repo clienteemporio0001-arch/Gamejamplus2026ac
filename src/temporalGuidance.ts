@@ -26,7 +26,8 @@ export function temporalHint(w:TemporalWorld,seat:Seat,p:Pose,now:number):Tempor
  if(!w.bridge){
   if(seat===0&&Math.abs(p.x-TEMP_TREE[0].x)<200){
    return {label:'GALHO DA ÁRVORE-PONTE',action:!w.stacked?'E · NINO APOIA LIA, LIA APOIA TÉO':
-    !w.teoLanded?'TÉO · PULE DUAS VEZES PARA O GALHO':'TÉO · E: SOLTE A AMARRA',
+    !w.teoLanded?'TÉO · SALTO DUPLO: PRIMEIRO GALHO':
+    !w.teoSummitReached?'TÉO · SALTO DUPLO: GALHO SUPERIOR':'TÉO · E: SOLTE A AMARRA',
      targetX:TEMP_TREE[0].x,targetY:TEMP_TREE[0].y};
   }
   if(seat===1&&p.x>=TEMP_TREE[1].x-360&&p.x<TEMP_TREE[1].x-40)

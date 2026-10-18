@@ -28,6 +28,12 @@ export const LOOP_START: Pose[] = ([0,1,2] as Seat[]).map(seat=>({
 export const LOOP_PHYSICS={characterHeight:44,gravity:850,jumpVelocity:465} as const;
 export const UPPER_BRANCH={x:2140,centerY:325,width:156,height:20,anchorX:2130} as const;
 export const upperLandingY=UPPER_BRANCH.centerY-UPPER_BRANCH.height/2-LOOP_PHYSICS.characterHeight/2;
+export const SUMMIT_BRANCH={x:2140,centerY:120,width:135,height:20,anchorX:2140} as const;
+export const summitLandingY=SUMMIT_BRANCH.centerY-SUMMIT_BRANCH.height/2-LOOP_PHYSICS.characterHeight/2;
+export const hasSummitFooting=(p:Pose):boolean=>
+  Math.abs(p.y-summitLandingY)<=6&&
+  Math.abs(p.x-SUMMIT_BRANCH.x)<=SUMMIT_BRANCH.width/2-LOOP_PHYSICS.characterHeight/2&&
+  Math.abs(p.vy)<=65&&Math.abs(p.vx)<=155;
 export const soloJumpRise=LOOP_PHYSICS.jumpVelocity**2/(2*LOOP_PHYSICS.gravity);
 export const hasBranchFooting=(p:Pose):boolean=>
   Math.abs(p.y-upperLandingY)<=5 &&
@@ -40,7 +46,7 @@ export const LOOP_MARKS=[
   {x:1260,y:589,seat:2,name:'TRONCO EM ARCO'},
 ] as const;
 export const LOOP_TREE=[
-  {x:UPPER_BRANCH.anchorX,y:upperLandingY,seat:0},{x:2310,y:574,seat:1},{x:2242,y:592,seat:2}
+  {x:SUMMIT_BRANCH.anchorX,y:summitLandingY,seat:0},{x:2560,y:574,seat:1},{x:2242,y:592,seat:2}
 ] as const;
 export const LOOP_FINAL=[
   {x:3320,y:510,seat:0},{x:3470,y:573,seat:1},{x:3595,y:590,seat:2}
@@ -57,7 +63,7 @@ export type LoopWorld=Vitals & {
   layout:Layout; cycle:number;cycleStart:number;blackoutUntil:number;observed:boolean;
   marks:[boolean,boolean,boolean];tree:[boolean,boolean,boolean];treeFallAt:number;bridge:boolean;
   supporting:[Seat|null,Seat|null,Seat|null];stackMilestone:boolean;
-  climbReady:boolean;teoUpperReached:boolean;
+  climbReady:boolean;teoUpperReached:boolean;teoSummitReached:boolean;
   final:[boolean,boolean,boolean];exit:boolean;
   lastRoute:'none'|'wrong'|'right'; routeAt:number;routeCount:number;
   deadUntil:number;resetId:number; completed:boolean;
@@ -67,7 +73,7 @@ const nonNegative=(value:unknown):value is number=>typeof value==='number'&&Numb
 export const initLoop=(now=Date.now()):LoopWorld=>({
   layout:0,cycle:0,cycleStart:now,blackoutUntil:0,observed:false,
   marks:[false,false,false],tree:[false,false,false],treeFallAt:0,bridge:false,
-  supporting:[null,null,null],stackMilestone:false,climbReady:false,teoUpperReached:false,
+  supporting:[null,null,null],stackMilestone:false,climbReady:false,teoUpperReached:false,teoSummitReached:false,
   final:[false,false,false],exit:false,lastRoute:'none',routeAt:0,routeCount:0,
   deadUntil:0,resetId:0,completed:false,...initVitals()
 });
@@ -77,7 +83,7 @@ export function validLoop(value:unknown):value is LoopWorld{
   return (w.layout===0||w.layout===1||w.layout===2)
     &&nonNegative(w.cycle)&&Number.isInteger(w.cycle)
     &&['cycleStart','blackoutUntil','treeFallAt','routeAt','routeCount','deadUntil','resetId'].every(k=>nonNegative(w[k]))
-    &&['observed','bridge','exit','completed','stackMilestone','climbReady','teoUpperReached'].every(k=>typeof w[k]==='boolean')
+    &&['observed','bridge','exit','completed','stackMilestone','climbReady','teoUpperReached','teoSummitReached'].every(k=>typeof w[k]==='boolean')
     &&Array.isArray(w.supporting)&&w.supporting.length===3
     &&w.supporting.every((b:unknown,i:number)=>b===null||(i===0&&b===1)||(i===1&&b===2))
     &&bool3(w.marks)&&bool3(w.tree)&&bool3(w.final)
@@ -184,7 +190,7 @@ export class LoopAuthority{
     if(kind==='jump'){
       if(now-this.lastJumpAt[seat]<220)return fail('cooldown');
       const standing=(Math.abs(p.vy)<120&&(p.y>570&&p.y<643
-        ||Math.abs(p.y-upperLandingY)<35
+        ||Math.abs(p.y-upperLandingY)<35 || Math.abs(p.y-summitLandingY)<35
         ||Math.abs(p.y-514)<35
         ||Math.abs(p.y-516)<35));
       if(!standing&&w.supporting[seat]===null)return fail('invalid');
@@ -260,9 +266,9 @@ export class LoopAuthority{
       if(w.observed&&!w.marks[0]&&near(p,LOOP_MARKS[0].x,LOOP_MARKS[0].y,68,87)){
         w.marks[0]=true;return true;
       }
-      if(w.stackMilestone&&w.teoUpperReached&&w.climbReady
+      if(w.stackMilestone&&w.teoUpperReached&&w.teoSummitReached&&w.climbReady
         &&allDone(w.marks)&&!w.tree[0]
-        &&hasBranchFooting(p)
+        &&hasSummitFooting(p)
         &&Math.abs(p.x-LOOP_TREE[0].x)<=37){
 
         w.tree[0]=true;this.checkTree(now);return true;
@@ -303,6 +309,11 @@ export class LoopAuthority{
     if(w.climbReady&&!w.teoUpperReached&&w.supporting[0]===null
       &&w.blackoutUntil===0&&w.deadUntil===0&&hasBranchFooting(poses[0])){
       w.teoUpperReached=true;
+      return{changed:true};
+    }
+    if(w.teoUpperReached&&!w.teoSummitReached&&w.supporting[0]===null
+      &&w.blackoutUntil===0&&w.deadUntil===0&&hasSummitFooting(poses[0])){
+      w.teoSummitReached=true;
       return{changed:true};
     }
     // Pose authority for the two supported players. Their bases retain physics.

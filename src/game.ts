@@ -5,7 +5,7 @@ import { EXIT, LEVER, PEDAL, PICKUPS, SWITCH, TARGET, type WorldState } from './
 import { SkillVfx } from './skillVfx';
 import { configureCamera } from './camera';
 
-export type TouchInput = { left: boolean; right: boolean; jump: boolean; interact: boolean; ability: boolean; jumpQueue?:number; interactQueue?:number; abilityQueue?:number };
+export type TouchInput = { left: boolean; right: boolean; jump: boolean; interact: boolean; ability: boolean; jumpQueue?:number; interactQueue?:number; abilityQueue?:number; moveX?:number };
 
 /** Primeira fase cooperativa; Phaser controla apenas o personagem local. */
 export class DemoScene extends Phaser.Scene {

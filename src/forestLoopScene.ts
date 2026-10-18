@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import { LOOP_WIDTH, LOOP_GEOMETRY, LOOP_MARKS, LOOP_TREE, LOOP_FINAL, ROUTES, barriers,
   allDone, windGuide, blackoutActive, warningActive, type LoopWorld, LOOP_START,
-  UPPER_BRANCH,upperLandingY,markerBaseY,hasBranchFooting } from './forestLoop';
+  UPPER_BRANCH,SUMMIT_BRANCH,upperLandingY,summitLandingY,markerBaseY,hasBranchFooting,hasSummitFooting } from './forestLoop';
 import { NightArt } from './visuals';
 import { loopContext, regionTitle } from './forestLoopUI';
 import { leafAt, swayAt, WIND_LEAVES } from './loopWind';
@@ -177,6 +177,13 @@ export class ForestLoopScene extends Phaser.Scene {
       .setDepth(10);
     this.physics.add.existing(stoneHitbox,true);
     this.blocks.push(stoneHitbox);
+    const upperSummit=this.ground(SUMMIT_BRANCH.x,SUMMIT_BRANCH.centerY,
+      SUMMIT_BRANCH.width,SUMMIT_BRANCH.height,'wood');
+    const summitBody=upperSummit.body as Phaser.Physics.Arcade.StaticBody;
+    summitBody.checkCollision.down=false;
+    summitBody.checkCollision.left=false;
+    summitBody.checkCollision.right=false;
+    summitBody.checkCollision.up=true;
     this.upperBranch=this.ground(UPPER_BRANCH.x,UPPER_BRANCH.centerY,
       UPPER_BRANCH.width,UPPER_BRANCH.height,'wood');
     const ledgeBody=this.upperBranch.body as Phaser.Physics.Arcade.StaticBody;
@@ -309,7 +316,20 @@ export class ForestLoopScene extends Phaser.Scene {
       this.off.forEach(off=>off());
     });
   }
-  private sync(w:LoopWorld):void{
+  private fallImpact(seat:Seat,wet:boolean):void{
+    const actor=this.avatars[seat];if(!actor)return;
+    const cloud=this.add.ellipse(actor.x,actor.y+22,54,12,wet?0x8ed8e7:0xc7b49a,.65).setDepth(65);
+    this.tweens.add({targets:cloud,scaleX:1.6,alpha:0,duration:450,onComplete:()=>cloud.destroy()});
+    const label=this.add.text(actor.x,actor.y-43,'−1 ♥',{
+      fontFamily:'Arial',fontSize:'13px',fontStyle:'bold',color:'#ffabab',
+      stroke:'#132020',strokeThickness:3
+    }).setOrigin(.5).setDepth(70);
+    this.tweens.add({targets:label,y:label.y-17,alpha:0,duration:700,onComplete:()=>label.destroy()});
+  }
+  private sync(w:LoopWorld):void{    if(this.avatars.length===3)for(const seat of [0,1,2] as Seat[]){
+      if(w.health[seat]<this.w.health[seat])this.fallImpact(seat,false);
+    }
+
     this.w={...w,marks:[...w.marks],tree:[...w.tree],final:[...w.final],supporting:[...w.supporting]};
     const walls=barriers(w);
     this.blockers.forEach((b,i)=>this.active(b,walls[i].enabled));
@@ -333,8 +353,8 @@ export class ForestLoopScene extends Phaser.Scene {
     const x=this.local.x,y=this.local.y,w=this.w;
     if(seat===0){
       if(w.observed && !w.marks[0]&&Math.abs(x-LOOP_MARKS[0].x)<90)this.net.act({kind:'lever'});
-      else if(allDone(w.marks)&&w.teoUpperReached&&!w.tree[0]
-        &&hasBranchFooting({seat,x,y,vx:this.body.velocity.x,vy:this.body.velocity.y})
+      else if(allDone(w.marks)&&w.teoSummitReached&&!w.tree[0]
+        &&hasSummitFooting({seat,x,y,vx:this.body.velocity.x,vy:this.body.velocity.y})
         &&Math.abs(x-LOOP_TREE[0].x)<=37)
         this.net.act({kind:'lever'});
       else if(w.bridge&&!w.final[0]&&Math.abs(x-LOOP_FINAL[0].x)<95)this.net.act({kind:'lever'});

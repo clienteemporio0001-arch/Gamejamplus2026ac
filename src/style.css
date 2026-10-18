@@ -421,3 +421,20 @@ body.playing{overflow:hidden;touch-action:none;overscroll-behavior:none}
  body.playing{--game-tools-top:calc(54px + env(safe-area-inset-top))}
  #ui.in-game .loop-menu-options{max-height:calc(100dvh - 100px - env(safe-area-inset-bottom))}
 }
+
+/* ETAPA 15 — two-thumb analog movement, existing action buttons unchanged. */
+#mobile-controls .analog-stick{
+ position:relative;display:block;width:clamp(82px,18vh,115px);height:clamp(82px,18vh,115px);
+ border-radius:50%;border:2px solid #d1e9dd89;background:radial-gradient(circle,#153d42a8,#0c2628cc);
+ box-shadow:0 0 0 6px #061d2060,inset 0 0 15px #98d9e01b,0 3px 16px #000b;
+ pointer-events:auto;touch-action:none;-webkit-user-select:none;user-select:none;
+ -webkit-tap-highlight-color:transparent
+}
+#mobile-controls .analog-stick:after{content:"";position:absolute;inset:14%;border:1px dashed #d1f9d045;
+ border-radius:50%;pointer-events:none}
+#mobile-controls .analog-knob{position:absolute;left:50%;top:50%;width:42%;height:42%;
+ transform:translate(-50%,-50%);border-radius:50%;background:linear-gradient(155deg,#7ac5bf,#356d7d);
+ border:2px solid #e4fff0c9;box-shadow:0 2px 7px #0009;pointer-events:none;will-change:transform}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:390px){
+ #mobile-controls .analog-stick{width:84px;height:84px}
+}

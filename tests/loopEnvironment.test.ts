@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs';
 import {
-  LOOP_START,LOOP_MARKS,LOOP_TREE,LOOP_PHYSICS,UPPER_BRANCH,
-  upperLandingY,soloJumpRise,hasBranchFooting,LoopAuthority,initLoop,
+  LOOP_START,LOOP_MARKS,LOOP_TREE,LOOP_PHYSICS,UPPER_BRANCH,SUMMIT_BRANCH,
+  upperLandingY,summitLandingY,soloJumpRise,hasBranchFooting,hasSummitFooting,LoopAuthority,initLoop,
   validLoop,windGuide,LOOP_CYCLE_MS,LOOP_GEOMETRY,markerBaseY,
 } from '../src/forestLoop';
 import {leafAt,swayAt,WIND_LEAVES} from '../src/loopWind';
@@ -44,9 +44,9 @@ ok(scene.includes('ledgeBody.checkCollision.down=false')&&
    scene.includes('ledgeBody.checkCollision.up=true'),
   'plataforma superior deixa passar de baixo e recebe aterrissagem pelo topo');
 ok(!scene.includes("this.ground(2108,550"),'antigo degrau que permitia atalhos foi removido');
-ok(LOOP_TREE[0].y===upperLandingY,'ponto de amarra coincide com posição do corpo sobre galho');
-ok(UPPER_BRANCH.x-UPPER_BRANCH.width/2<LOOP_TREE[0].x &&
-   LOOP_TREE[0].x<UPPER_BRANCH.x+UPPER_BRANCH.width/2,'alvo Téo fica no galho');
+ok(LOOP_TREE[0].y===summitLandingY,'ponto de amarra coincide com posição do corpo sobre galho');
+ok(SUMMIT_BRANCH.x-SUMMIT_BRANCH.width/2<LOOP_TREE[0].x &&
+   LOOP_TREE[0].x<SUMMIT_BRANCH.x+SUMMIT_BRANCH.width/2,'alvo Téo fica no galho');
 
 const floor=LOOP_GEOMETRY.clearing.groundY-LOOP_PHYSICS.characterHeight/2;
 const onLia=floor-LOOP_PHYSICS.characterHeight*2;
@@ -120,7 +120,10 @@ ok(!game.tick(players,11700).changed,'velocidade alta não confirma pouso');
 players[0]=pose(upperLandingY);
 ok(game.tick(players,11800).changed&&game.world.teoUpperReached,
   'host confirma chegada ao galho estável');
-ok(game.act(0,{kind:'lever'},players,11900)&&game.world.tree[0],
+ok(!game.act(0,{kind:'lever'},players,11900),'primeiro galho não ativa amarra');
+players[0]=pose(summitLandingY);
+ok(game.tick(players,11940).changed&&game.world.teoSummitReached,'host verifica pouso final');
+ok(game.act(0,{kind:'lever'},players,11980)&&game.world.tree[0],
   'Téo solta primeira amarra a partir da plataforma');
 ok(!game.world.tree[1]&&!game.world.tree[2],'Téo não conclui outras duas amarras');
 

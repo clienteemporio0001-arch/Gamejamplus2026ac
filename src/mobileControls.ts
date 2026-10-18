@@ -1,4 +1,5 @@
 import type {TouchInput} from './game';
+import {stickAxis} from './joystick';
 export type TouchKey='left'|'right'|'jump'|'interact'|'ability';
 export type PulseKey='jump'|'interact'|'ability';
 export const TOUCH_KEYS=['left','right','jump','interact','ability'] as const;
@@ -6,7 +7,7 @@ const PULSES:Record<PulseKey,'jumpQueue'|'interactQueue'|'abilityQueue'>={jump:'
 const isPulse=(key:TouchKey):key is PulseKey=>key==='jump'||key==='interact'||key==='ability';
 export function clearTouch(touch:TouchInput):void{
  for(const key of TOUCH_KEYS)touch[key]=false;
- touch.jumpQueue=0;touch.interactQueue=0;touch.abilityQueue=0;
+ touch.jumpQueue=0;touch.interactQueue=0;touch.abilityQueue=0;touch.moveX=0;
 }
 /** One pulse per fresh pointer press. Supports 2 fast presses between Phaser frames. */
 export function consumeTouch(touch:TouchInput,key:PulseKey):boolean{
@@ -53,9 +54,9 @@ export function mobilePadMarkup(solo:boolean,seat:0|1|2|null):string{
    [0,1,2].map(i=>'<button type="button" data-seat="'+i+'" '+
     (seat===i?'class="selected" ':'')+'aria-label="Selecionar '+['Téo','Lia','Nino'][i]+'">'+
     ['T','L','N'][i]+'</button>').join('')+'</nav>':'')+
-   '<div class="thumb-zone thumb-left" aria-label="Movimento">'+
-   '<button type="button" class="touch-btn move" data-touch="left" aria-label="Esquerda">◀</button>'+
-   '<button type="button" class="touch-btn move" data-touch="right" aria-label="Direita">▶</button></div>'+
+   '<div class="thumb-zone thumb-left" aria-label="Movimento analógico">'+
+   '<div class="analog-stick" data-joystick role="application" aria-label="Joystick analógico virtual">'+
+   '<div class="analog-knob" aria-hidden="true"></div></div></div>'+
    '<div class="thumb-zone thumb-right" aria-label="Ações">'+
    special+
    '<button type="button" class="touch-btn action" data-touch="interact" aria-label="Interagir">E <small>USAR</small></button>'+
@@ -74,20 +75,45 @@ export function mountMobilePad(root:HTMLElement,touch:TouchInput,solo:boolean,se
  root.innerHTML=mobilePadMarkup(solo,seat);
  let current=seat,dead=false;
  const pressed=new Map<number,{key:TouchKey;button:HTMLButtonElement}>();
+ let analogFinger:number|null=null;
  const keyFrom=(element:EventTarget|null):HTMLButtonElement|null=>
   element instanceof Element?element.closest<HTMLButtonElement>('button[data-touch]'):null;
  const reset=()=>{
-  pointers.clear();pressed.clear();
+  pointers.clear();pressed.clear();analogFinger=null;
+  touch.moveX=0;
+  const knob=root.querySelector<HTMLElement>('.analog-knob');
+  if(knob)knob.style.transform='translate(-50%,-50%)';
   root.querySelectorAll('.pressed').forEach(element=>element.classList.remove('pressed'));
  };
  const ready=()=>{
   if(dead||!root.isConnected)return false;
-  return (['left','right','jump','interact'] as TouchKey[]).every(key=>
+  return !!root.querySelector('[data-joystick]')&&(['jump','interact'] as TouchKey[]).every(key=>
     !!root.querySelector('[data-touch="'+key+'"]'))&&
     (current===0||current===null||!!root.querySelector('[data-touch="ability"]'))&&
     (!solo||root.querySelectorAll('[data-seat]').length===3);
  };
+ const updateStick=(event:PointerEvent)=>{
+  const stick=root.querySelector<HTMLElement>('[data-joystick]');
+  if(!stick)return;
+  const rect=stick.getBoundingClientRect();
+  const radius=Math.min(rect.width,rect.height)*.37;
+  const axis=stickAxis(event.clientX-rect.left-rect.width/2,
+    event.clientY-rect.top-rect.height/2,radius);
+  touch.moveX=axis.x;
+  touch.left=axis.x<-.01;touch.right=axis.x>.01;
+  const knob=stick.querySelector<HTMLElement>('.analog-knob');
+  if(knob)knob.style.transform='translate(calc(-50% + '+axis.knobX+'px),calc(-50% + '+axis.knobY+'px))';
+ };
  const down=(event:PointerEvent)=>{
+  const stick=event.target instanceof Element?
+    event.target.closest<HTMLElement>('[data-joystick]'):null;
+  if(stick&&root.contains(stick)){
+   event.preventDefault();event.stopPropagation();
+   if(analogFinger!==null||event.pointerType==='mouse'&&event.button!==0)return;
+   analogFinger=event.pointerId;updateStick(event);
+   try{stick.setPointerCapture(event.pointerId);}catch{/* WebView */}
+   return;
+  }
   const button=keyFrom(event.target);
   if(!button||!root.contains(button))return;
   if(event.pointerType==='mouse'&&event.button!==0)return;
@@ -99,6 +125,14 @@ export function mountMobilePad(root:HTMLElement,touch:TouchInput,solo:boolean,se
   try{button.setPointerCapture(event.pointerId);}catch{/* unsupported WebView */}
  };
  const up=(event:PointerEvent)=>{
+  if(analogFinger===event.pointerId){
+   analogFinger=null;touch.moveX=0;touch.left=false;touch.right=false;
+   const stick=root.querySelector<HTMLElement>('[data-joystick]');
+   const knob=stick?.querySelector<HTMLElement>('.analog-knob');
+   if(knob)knob.style.transform='translate(-50%,-50%)';
+   try{if(stick?.hasPointerCapture(event.pointerId))stick.releasePointerCapture(event.pointerId);}catch{/* WebView */}
+   return;
+  }
   const active=pressed.get(event.pointerId);
   if(!active)return;
   event.preventDefault();
@@ -107,6 +141,9 @@ export function mountMobilePad(root:HTMLElement,touch:TouchInput,solo:boolean,se
   if(!pointers.count(active.key))active.button.classList.remove('pressed');
   try{if(active.button.hasPointerCapture(event.pointerId))
     active.button.releasePointerCapture(event.pointerId);}catch{/* detached */}
+ };
+ const move=(event:PointerEvent)=>{
+  if(analogFinger===event.pointerId){event.preventDefault();updateStick(event);}
  };
  const leave=(event:PointerEvent)=>{
   const active=pressed.get(event.pointerId);
@@ -141,6 +178,7 @@ export function mountMobilePad(root:HTMLElement,touch:TouchInput,solo:boolean,se
   });
  };
  root.addEventListener('pointerdown',down);
+ root.addEventListener('pointermove',move);
  for(const name of ['pointerup','pointercancel','lostpointercapture'] as const)
   root.addEventListener(name,up);
  root.addEventListener('pointerleave',leave,true);
@@ -153,6 +191,7 @@ export function mountMobilePad(root:HTMLElement,touch:TouchInput,solo:boolean,se
   if(dead)return;
   reset();dead=true;
   root.removeEventListener('pointerdown',down);
+  root.removeEventListener('pointermove',move);
   for(const name of ['pointerup','pointercancel','lostpointercapture'] as const)
    root.removeEventListener(name,up);
   root.removeEventListener('pointerleave',leave,true);

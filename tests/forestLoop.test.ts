@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { LoopAuthority, LOOP_START, LOOP_WIDTH, LOOP_CYCLE_MS, LOOP_BLACKOUT_MS, ROUTES,
   LOOP_MARKS,LOOP_TREE,LOOP_FINAL,validLoop,warningActive,blackoutActive,windGuide,
-  correctRoute,layoutReachable,barriers,safeReposition,LOOP_GEOMETRY } from '../src/forestLoop';
+  correctRoute,layoutReachable,barriers,safeReposition,LOOP_GEOMETRY,UPPER_BRANCH,upperLandingY } from '../src/forestLoop';
 import type { Pose,Seat } from '../src/network';
 let count=0;
 const ok=(yes:unknown,message:string)=>{if(!yes)throw Error('FALHA LOOP: '+message);count++};
@@ -79,10 +79,14 @@ ok(a.world.supporting.every(x=>x===null),'vínculos soltos sem teleporte dos cor
 
 goto(0,LOOP_TREE[0].x,LOOP_TREE[0].y);
 ok(!act(0,'lever',65880),'Téo não solta amarra apenas por estar perto, antes do pouso validado');
+goto(0,UPPER_BRANCH.x,upperLandingY);
 ok(a.tick(p,65900).changed&&a.world.teoUpperReached,
   'o anfitrião confirma o pouso no galho alto depois do desprendimento');
-ok(act(0,'lever',66000),'Téo solta primeira amarra somente apoiado no galho');
-goto(1,2060,604);
+ok(!act(0,'lever',65950),'primeiro galho ainda não libera amarra');
+goto(0,LOOP_TREE[0].x,LOOP_TREE[0].y);
+ok(a.tick(p,65980).changed&&a.world.teoSummitReached,'host confirma segundo galho');
+ok(act(0,'lever',66000),'Téo solta primeira amarra somente no topo');
+goto(1,2220,604);
 ok(act(1,'shoot',66600),'Lia corta segunda amarra');
 goto(2,2115);ok(!act(2,'dash',67000),'Nino parte do lado correto');
 goto(2,LOOP_TREE[2].x,LOOP_TREE[2].y);

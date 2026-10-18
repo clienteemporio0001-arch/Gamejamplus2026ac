@@ -1,5 +1,20 @@
 # A FLORESTA MENTE — MAS O VENTO NÃO
 
+## Etapa 15 — joystick analógico, escalada em dois galhos e queda perigosa
+
+**Controles:** o mobile substituiu os botões direcionais por joystick analógico virtual à esquerda, com raio limitado e zona morta de 15%. A manopla acompanha o dedo, gera `TouchInput.moveX` normalizado entre −1 e +1 e volta ao centro ao soltar, cancelar ou perder foco. Outro dedo continua podendo pressionar PULAR, E ou a habilidade. Téo não tem botão de habilidade redundante. O teclado continua digital e tem prioridade quando há A/D ou setas. O joystick não aumenta a velocidade máxima e os botões de habilidade continuam sujeitos à autoridade. Os protótipos clássicos mantêm compatibilidade via flags left/right sintetizadas a partir do eixo.
+
+**Escalada:** na Boca da Noite e na Floresta Temporal, Téo precisa do apoio Nino→Lia→Téo, depois salto duplo ao galho intermediário e outra sequência de salto duplo ao galho superior. O segundo patamar é uma plataforma Arcade real, com colisão de cima e verificações autoritativas separadas. Nenhum único salto ou salto duplo partindo diretamente do chão chega ao topo. A amarra só pode ser liberada com E em cima do galho superior, validado no anfitrião. A fase 1 moveu o alvo distante de Lia para x2560, do outro lado do canal, alcançável por um disparo a partir da margem esquerda em x≈2220, sem alterar alcance nem custo de estamina. Não há novos cenários, AI ou alterações na física.
+
+**Dano por queda:** `src/fallDamage.ts` deriva o limite seguro das constantes atuais de física: velocidade inicial 465, gravidade 850, alcance vertical por salto ≈127px; a referência de duas sequências completas é ≈509px. O host acompanha a posição mínima no ar e só considera dano quando ocorre contato estável com solo/galho/ponte realmente ativa. Cada aterrissagem perigosa tira **um coração**, com invulnerabilidade de 1,2s já existente, efeitos locais discretos e reinício coletivo quando chega a zero. Água profunda e abismo continuam fatais independentemente dos corações. Sem dano técnico depois de blackout, teleporte, reconexão ou reset: a trajetória de queda é invalidada nesses casos; suportes humanos não criam queda falsa. Nenhuma estamina adicional é cobrada no pouso. Todas as três poses são observadas no solo e nas sessões online; convidados não enviam campos arbitrários de dano.
+
+**Limitação:** o anfitrião observa as poses autorizadas pelas conexões, mas não replica integralmente o Arcade remoto; um cliente modificado ainda poderia manipular seu movimento reportado. A solução atual evita aceitar valores de dano declarados pelo convidado e usa a geometria conhecida do servidor. As mudanças de escalada e joystick exigem playtest visual em Android e em três navegadores para confirmar a ergonomia e ausência de softlocks.
+
+Verificações: `npm run build` e `npm run test:logic`, com `tests/stage15.test.ts` e regressões adaptadas para os novos galhos.
+
+---
+
+
 ## Etapa 14 — hotfix de controle e clareza da Floresta Temporal
 
 Foi removido o listener destrutivo de troca de personagem em src/main.ts. O touch pad tem estado de montagem explícito: ensureMobileControls() verifica integridade e remonta somente se não existir; updateMobileCharacter() altera o botão de habilidade e a seleção sem destruir os botões de movimentação, pulo e E; unmountMobileControls() encerra os listeners somente no menu, prólogo ou transição. A função mountMobilePad usa event delegation nos botões, captura IDs de toque individuais e remove listeners em shutdown, evitando vazamentos na troca de cena/reinício. A mesma instância de controle serve às Fases 1 e 2. Fullscreen e rotação atualizam o viewport sem reload.

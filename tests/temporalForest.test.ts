@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import type {Pose,Seat} from '../src/network';
-import {TEMP_WIDTH,TEMP_START,TEMP_CYCLE,TEMP_BLACKOUT,TEMP_CHANNEL,TEMP_UPPER,
+import {TEMP_WIDTH,TEMP_START,TEMP_CYCLE,TEMP_BLACKOUT,TEMP_CHANNEL,TEMP_UPPER,TEMP_SUMMIT,
  TEMP_LAYOUTS,TEMP_ECHO,TEMP_TREE,TEMP_ROOTS,TemporalAuthority,initTemporal,validTemporal,
  tempWind,tempBlocks,tempSurface,temporalObjective,tempLanding} from '../src/temporalForest';
 import {temporalDrop,rainBudget,rippleAt} from '../src/temporalRain';
@@ -110,7 +110,10 @@ ok(!act(a,0,'lever',15700),'E sem aterrissar não ativa amarra');
 set(0,TEMP_UPPER.x,260);ok(!a.tick(p,16000).changed,'no ar não conta como pouso');
 set(0,TEMP_UPPER.x,TEMP_UPPER.landing);
 ok(a.tick(p,16100).changed&&a.world.teoLanded,'pouso elevado validado pelo host');
-ok(act(a,0,'lever',16200)&&a.world.tree[0],'amarras superior exige pouso e E');
+ok(!act(a,0,'lever',16200),'primeiro galho não libera a amarra');
+set(0,TEMP_SUMMIT.x,TEMP_SUMMIT.landing);
+ok(a.tick(p,16250).changed&&a.world.teoSummitReached,'segundo patamar exige pouso');
+ok(act(a,0,'lever',16300)&&a.world.tree[0],'amarra superior exige dois pousos e E');
 
 set(1,2440);
 ok(a.authorizeEnergy(1,'shoot',p,16500,1).ok&&a.world.tree[1],

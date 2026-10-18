@@ -5,8 +5,12 @@ export const TEMP_WIDTH=4200, TEMP_CYCLE=60000, TEMP_BLACKOUT=2000;
 export const TEMP_START:Pose[]=([0,1,2] as Seat[]).map(seat=>({seat,x:1920+seat*64,y:606,vx:0,vy:0}));
 export const TEMP_CHANNEL={start:2610,end:2970,bridgeY:655} as const;
 export const TEMP_UPPER={x:2440,y:325,width:165,height:20,landing:293} as const;
+export const TEMP_SUMMIT={x:2440,y:120,width:145,height:20,landing:88} as const;
+export const tempSummitFooting=(p:Pose):boolean=>
+ Math.abs(p.x-TEMP_SUMMIT.x)<=TEMP_SUMMIT.width/2-22&&
+ Math.abs(p.y-TEMP_SUMMIT.landing)<=6&&Math.abs(p.vx)<165&&Math.abs(p.vy)<70;
 export const TEMP_ECHO=[{x:870,y:515},{x:1300,y:598},{x:1630,y:598}] as const;
-export const TEMP_TREE=[{x:2440,y:TEMP_UPPER.landing},{x:2700,y:598},{x:2550,y:598}] as const;
+export const TEMP_TREE=[{x:2440,y:TEMP_SUMMIT.landing},{x:2700,y:598},{x:2550,y:598}] as const;
 export const TEMP_ROOTS=[{x:3240,y:514},{x:3530,y:598},{x:3800,y:598}] as const;
 export const TEMP_LAYOUTS=[
   {obstacles:[980,1520,3380],puddles:[420,1730,3180],temporaryBridge:false,wind:-1},
@@ -17,7 +21,7 @@ export type TemporalWorld=Vitals&{
   layout:0|1|2;cycle:number;cycleStart:number;blackoutUntil:number;deadUntil:number;resetId:number;
   echo:[boolean,boolean,boolean];tree:[boolean,boolean,boolean];bridgeAt:number;bridge:boolean;
   roots:[boolean,boolean,boolean];exit:boolean;completed:boolean;
-  supporting:[Seat|null,Seat|null,Seat|null];stacked:boolean;climbReady:boolean;teoLanded:boolean;
+  supporting:[Seat|null,Seat|null,Seat|null];stacked:boolean;climbReady:boolean;teoLanded:boolean;teoSummitReached:boolean;
   dashAt:number;dashX:number;teoJumpAt:number;teoJumpY:number;teoDoubled:boolean;
   skillAt:[number,number,number];resourceAt:number;
 };
@@ -28,7 +32,7 @@ export function initTemporal(now=Date.now()):TemporalWorld{
  return {layout:0,cycle:0,cycleStart:now,blackoutUntil:0,deadUntil:0,resetId:0,
   echo:[false,false,false],tree:[false,false,false],bridgeAt:0,bridge:false,
   roots:[false,false,false],exit:false,completed:false,supporting:[null,null,null],
-  stacked:false,climbReady:false,teoLanded:false,dashAt:0,dashX:0,
+  stacked:false,climbReady:false,teoLanded:false,teoSummitReached:false,dashAt:0,dashX:0,
   teoJumpAt:0,teoJumpY:0,teoDoubled:false,skillAt:[0,0,0],resourceAt:now,...initVitals()};
 }
 export function validTemporal(value:unknown):value is TemporalWorld{
@@ -37,7 +41,7 @@ export function validTemporal(value:unknown):value is TemporalWorld{
  return [0,1,2].includes(Number(w.layout))
    &&['cycle','cycleStart','blackoutUntil','deadUntil','resetId','bridgeAt','dashAt','dashX',
    'teoJumpAt','teoJumpY','resourceAt'].every(k=>nonneg(w[k]))
-   &&['bridge','exit','completed','stacked','climbReady','teoLanded','teoDoubled'].every(k=>typeof w[k]==='boolean')
+   &&['bridge','exit','completed','stacked','climbReady','teoLanded','teoSummitReached','teoDoubled'].every(k=>typeof w[k]==='boolean')
    &&triple(w.echo)&&triple(w.tree)&&triple(w.roots)
    &&Array.isArray(w.skillAt)&&w.skillAt.length===3&&w.skillAt.every(nonneg)
    &&Array.isArray(w.supporting)&&w.supporting.length===3
@@ -113,7 +117,7 @@ export class TemporalAuthority{
   }
   if(a.kind==='lever'&&seat===0){
    if(!w.echo[0]&&tempNear(actor,TEMP_ECHO[0].x,TEMP_ECHO[0].y,85,94)){w.echo[0]=true;return true;}
-   if(w.echo.every(Boolean)&&w.teoLanded&&!w.tree[0]&&tempLanding(actor)){w.tree[0]=true;this.maybeFall(now);return true;}
+   if(w.echo.every(Boolean)&&w.teoLanded&&w.teoSummitReached&&!w.tree[0]&&tempSummitFooting(actor)){w.tree[0]=true;this.maybeFall(now);return true;}
    if(w.bridge&&w.layout===2&&!w.roots[0]&&tempNear(actor,TEMP_ROOTS[0].x,TEMP_ROOTS[0].y,75,80)){
     w.roots[0]=true;this.maybeExit();return true;
    }
@@ -140,7 +144,7 @@ export class TemporalAuthority{
   if(kind==='jump'){
    if(now-this.lastJump[seat]<220)return fail('cooldown');
    const grounded=Math.abs(p.vy)<120&&(p.y>=567&&p.y<=645
-     ||Math.abs(p.y-TEMP_UPPER.landing)<37||Math.abs(p.y-516)<35);
+     ||Math.abs(p.y-TEMP_UPPER.landing)<37||Math.abs(p.y-TEMP_SUMMIT.landing)<37||Math.abs(p.y-516)<35);
    if(!grounded&&w.supporting[seat]===null)return fail('invalid');
   }
   if(kind==='doubleJump'&&(this.lastJump[0]===0||now-this.lastJump[0]<115||
@@ -203,6 +207,9 @@ export class TemporalAuthority{
   if(now-w.cycleStart>=TEMP_CYCLE){w.blackoutUntil=now+TEMP_BLACKOUT;return{changed:true};}
   if(w.climbReady&&!w.teoLanded&&w.supporting[0]===null&&tempLanding(poses[0])){
    w.teoLanded=true;return{changed:true};
+  }
+  if(w.teoLanded&&!w.teoSummitReached&&w.supporting[0]===null&&tempSummitFooting(poses[0])){
+    w.teoSummitReached=true;return{changed:true};
   }
   if(w.bridgeAt&&!w.bridge&&now-w.bridgeAt>=1900){w.bridge=true;return{changed:true};}
   if(w.bridge&&w.roots.every(Boolean)&&w.layout===2&&!w.exit){w.exit=true;return{changed:true};}
