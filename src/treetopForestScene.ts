@@ -1,20 +1,24 @@
 import Phaser from 'phaser';
 import {PipoGuide} from './pipoGuide';
+import {TreetopArt} from './treetopArt';
 import {CHARACTERS,type Network,type Seat} from './network';
 import type {TouchInput} from './game';
 import {SoloBodies} from './soloBodies';
 import {consumeTouch,clearTouch} from './mobileControls';
-import {cameraZoomFor,isCoarseDevice} from './mobileViewport';
+import {isCoarseDevice} from './mobileViewport';
 import {gameKeys} from './keyboard';
 import type {VitalAction} from './loopVitals';
-import {TREE_WIDTH,TREE_HEIGHT,TREE_START,TREE_PLATFORMS,treePlatforms,
- treeObjective,treeWind,type TreeWorld} from './treetopForest';
+import {TREE_WIDTH,TREE_HEIGHT,TREE_START,TREE_PLATFORMS,TREE_SHELTERS,TREE_TARGETS,
+ TREE_GRAVITY,TREE_JUMP,TREE_SPEED,treePlatforms,treeWindVelocity,treeExposure,treeCameraZoom,
+ type TreeWindPhase,type TreeWorld} from './treetopForest';
 
 /** Fase 3 da aventura principal. Nenhum chão é criado abaixo dos galhos. */
 export class TreetopForestScene extends Phaser.Scene {
  private net:Network;private touch:TouchInput;private hud?:()=>void;
  private w:TreeWorld;
  private platforms:Phaser.GameObjects.Rectangle[]=[];
+ private skins:Phaser.GameObjects.Graphics[]=[];
+ private art!:TreetopArt;
  private avatars:Phaser.GameObjects.Rectangle[]=[];
  private names:Phaser.GameObjects.Text[]=[];
  private local!:Phaser.GameObjects.Rectangle;private body!:Phaser.Physics.Arcade.Body;
@@ -28,7 +32,9 @@ export class TreetopForestScene extends Phaser.Scene {
  private dark!:Phaser.GameObjects.Rectangle;private darkText!:Phaser.GameObjects.Text;
  private hint!:Phaser.GameObjects.Text;private guide!:Phaser.GameObjects.Text;
  private pipo!:PipoGuide;
- private canopy!:Phaser.GameObjects.Graphics;private leafParticles:{x:number;y:number;speed:number;phase:number}[]=[];
+ private lastWindPhase:TreeWindPhase='calm';
+ private windStatus!:Phaser.GameObjects.Text;
+ private windDirectionShown:-1|1=1;
  constructor(net:Network,touch:TouchInput,hud?:()=>void){
   super({key:'TreetopForestScene'});this.net=net;this.touch=touch;this.hud=hud;
   this.w={...net.treetop};
@@ -38,59 +44,14 @@ export class TreetopForestScene extends Phaser.Scene {
    color,stroke:'#071c1b',strokeThickness:4,align:'center'}).setOrigin(.5).setDepth(55);
  }
  private makeEnvironment():void{
-  const backdrop=this.add.graphics().setDepth(-30);
-  backdrop.fillGradientStyle(0x07151d,0x07151d,0x0b343b,0x071e33,1);
-  backdrop.fillRect(0,0,TREE_WIDTH,TREE_HEIGHT);
-  // Far below the canopy only fog, distant forests and open air are visible.
-  for(let layer=0;layer<5;layer++){
-   const parallax=this.add.graphics().setDepth(-24+layer).setAlpha(.28+layer*.07);
-   const color=[0x0b2636,0x153e49,0x1b5655,0x1b4947,0x14362c][layer];
-   parallax.fillStyle(color);
-   for(let x=-200;x<TREE_WIDTH+300;x+=260){
-    const h=115+(Math.sin(x*.013+layer)*45)+layer*25;
-    const base=TREE_HEIGHT-65+layer*10;
-    parallax.fillTriangle(x,base,x+125,base-h,x+250,base);
-   }
-  }
-  const haze=this.add.graphics().setDepth(-15);
-  for(let row=0;row<6;row++){
-   haze.fillStyle(row%2?0x6db9bb:0x3f7c92,.035+row*.017);
-   haze.fillRect(0,850+row*62,TREE_WIDTH,52);
-  }
-  // Monumental trees with distinct silhouettes, original procedural scenery.
-  for(let x=180;x<TREE_WIDTH+200;x+=430){
-   const trunk=this.add.graphics().setDepth(-10);
-   const sway=Math.sin(x*.037)*35;
-   trunk.fillStyle(0x19392c,.93);
-   trunk.fillRoundedRect(x-57+sway,85,114,1100,42);
-   trunk.fillStyle(0x2b5540,.45);
-   trunk.fillRect(x-25+sway,92,10,1000);
-   for(let b=0;b<7;b++){
-    const y=135+b*138;
-    trunk.lineStyle(28+(b%2)*6,0x224b38,.9);
-    trunk.lineBetween(x+sway,y,x+(b%2?150:-165)+sway,y-85);
-    trunk.fillStyle(b%2?0x163f35:0x1b523f,.83);
-    trunk.fillEllipse(x+(b%2?135:-125)+sway,y-120,270,132);
-   }
-   const canopy=this.add.graphics().setDepth(-8);
-   for(let c=0;c<4;c++){
-    canopy.fillStyle([0x144e3b,0x226d50,0x1a5548,0x28755a][c],.73);
-    canopy.fillEllipse(x-120+c*78+sway,90+Math.sin(c+x)*20,260,160);
-   }
-  }
-  this.canopy=this.add.graphics().setDepth(11);
-  for(let i=0;i<75;i++)this.leafParticles.push({
-   x:(i*233)%TREE_WIDTH,y:(i*83)%TREE_HEIGHT,speed:13+i%7*5,phase:i*1.91});
-  // Floating landmarks explain each cooperative obstacle.
-  const markers=[
-   [2960,240,'1 · PONTE DOS TRÊS'],[3540,135,'2 · ESCADA HUMANA'],
-   [3890,55,'3 · GALHOS DO TEMPO'],[4170,55,'A ÚLTIMA COPA']
-  ] as const;
-  for(const [x,y,title] of markers){
-   // Subtle glow remains; Pipo explains the puzzle instead of a large title.
-   void title;
-   const aura=this.add.circle(x,y+27,8,0xffe7a8,.8).setDepth(12);
-   this.tweens.add({targets:aura,alpha:.2,scale:1.5,duration:1450,yoyo:true,repeat:-1});
+  this.art=new TreetopArt(this,TREE_WIDTH,TREE_HEIGHT);
+  for(const zone of TREE_SHELTERS)this.art.shelter(zone);
+  for(const target of [TREE_TARGETS.bridge.teo,TREE_TARGETS.bridge.lia,TREE_TARGETS.bridge.nino,
+    TREE_TARGETS.tower.top,TREE_TARGETS.time.lia,TREE_TARGETS.time.teo,TREE_TARGETS.time.nino]){
+   const ring=this.add.circle(target.x,target.y-12,11,0xf2d899,.2)
+     .setStrokeStyle(2,0xe1d59e,.82).setDepth(24);
+   this.tweens.add({targets:ring,alpha:.32,scale:1.16,duration:1450,
+    yoyo:true,repeat:-1});
   }
  }
  create():void{
@@ -98,52 +59,48 @@ export class TreetopForestScene extends Phaser.Scene {
   this.physics.world.setBoundsCollision(true,true,false,false);
   this.makeEnvironment();
   for(const p of TREE_PLATFORMS){
-   const platform=this.add.rectangle(p.x,p.y,p.width,p.height,0x396b4b)
-    .setStrokeStyle(2,0x8fbd83).setDepth(15);
-   this.add.rectangle(p.x,p.y-p.height/2-3,p.width,6,0x73996d,.85).setDepth(16);
+   const platform=this.add.rectangle(p.x,p.y,p.width,p.height,0xffffff,0.001).setDepth(15);
+   this.skins.push(this.art.branch(p));
    this.physics.add.existing(platform,true);
    const staticBody=platform.body as Phaser.Physics.Arcade.StaticBody;
    staticBody.checkCollision.down=false;staticBody.checkCollision.left=false;
    staticBody.checkCollision.right=false;staticBody.checkCollision.up=true;
    this.platforms.push(platform);
   }
-  const scenery=this.add.graphics().setDepth(14);
-  for(let i=0;i<24;i++){
-   const x=960+i*140,y=780-Math.sin(i*.8)*150;
-   scenery.lineStyle(2,0x347b5d,.5);
-   scenery.lineBetween(x,y-135,x+Math.sin(i)*20,y);
-  }
   for(const seat of [0,1,2] as Seat[]){
    const p=this.net.poses[seat]??TREE_START[seat];
    const actor=this.add.rectangle(p.x,p.y,30,44,CHARACTERS[seat].color)
     .setDepth(30).setStrokeStyle(3,seat===0?0x17342f:0x21423d);
-   this.avatars.push(actor);
+   this.avatars.push(actor);this.art.character(actor,seat);
    this.names.push(this.caption(p.x,p.y-48,CHARACTERS[seat].name,12,CHARACTERS[seat].hex));
    if(this.net.localSeat===seat){
     this.local=actor;this.physics.add.existing(actor);
     this.body=actor.body as Phaser.Physics.Arcade.Body;
-    this.body.setGravityY(850).setMaxVelocity(410,960).setCollideWorldBounds(true);
+    this.body.setGravityY(TREE_GRAVITY).setMaxVelocity(410,1000).setCollideWorldBounds(true);
     for(const b of this.platforms)this.physics.add.collider(actor,b);
    }
   }
   if(this.net.isSolo){
-   this.solo=new SoloBodies(this,this.net,this.avatars,this.platforms,410,960);
+   this.solo=new SoloBodies(this,this.net,this.avatars,this.platforms,410,1000);
    this.solo.select(this.net.localSeat??0);
    this.off.push(this.net.on('solo-seat',seat=>{
     this.solo?.select(seat);this.local=this.avatars[seat];this.body=this.solo!.body(seat);
+    this.cameras.main.startFollow(this.local,false,.10,.095,0,-75);
     this.pending.clear();this.jumps=0;this.pendingJump=false;this.dashUntil=0;this.hud?.();
    }));
   }
   this.cameras.main.setBounds(0,0,TREE_WIDTH,TREE_HEIGHT);
-  this.cameras.main.setZoom(cameraZoomFor({width:this.scale.gameSize.width,
+  this.cameras.main.setZoom(treeCameraZoom({width:this.scale.gameSize.width,
     height:this.scale.gameSize.height},isCoarseDevice()));
-  this.cameras.main.startFollow(this.local,false,.095,.075,0,-65);
+  this.cameras.main.startFollow(this.local,false,.09,.085,0,-76);
   this.cursors=this.input.keyboard?.createCursorKeys();
   this.keys=this.input.keyboard?.addKeys('A,D,E') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
   this.pipo=new PipoGuide(this,this.net);
   this.hint=this.caption(0,0,'',13,'#f0dfb1');
   this.guide=this.caption(this.scale.gameSize.width/2,92,'',14,'#c3f6da')
    .setScrollFactor(0).setDepth(150);
+  this.windStatus=this.caption(this.scale.gameSize.width/2,130,'',15,'#e3f0b8')
+   .setScrollFactor(0).setDepth(152).setVisible(false);
   this.dark=this.add.rectangle(this.scale.gameSize.width/2,this.scale.gameSize.height/2,
    this.scale.gameSize.width+150,this.scale.gameSize.height+150,0x041119)
    .setScrollFactor(0).setDepth(190).setAlpha(0);
@@ -172,7 +129,12 @@ export class TreetopForestScene extends Phaser.Scene {
    if(reply.kind==='jump'||reply.kind==='doubleJump'){
     if(reply.kind==='jump'&&this.net.treetop.supporting[awaiting.seat]!==null){
      this.pendingJump=true;this.net.act({kind:'detach'});
-    }else{this.body.setVelocityY(-465);this.jumps=reply.kind==='doubleJump'?2:1;}
+    }else{
+     const headwind=this.w.windPhase==='gust'&&treeExposure(this.local)>.35
+       &&this.facing!==this.w.windDirection;
+     this.body.setVelocityY(headwind?-425:-TREE_JUMP);
+     this.jumps=reply.kind==='doubleJump'?2:1;
+    }
    }else if(reply.kind==='dash'){
     this.dashUntil=this.time.now+650;this.lastDash=this.time.now+1900;
    }else if(reply.kind==='shoot'){
@@ -183,9 +145,10 @@ export class TreetopForestScene extends Phaser.Scene {
    }
   }));
   const resize=(size:Phaser.Structs.Size)=>{
-   this.cameras.main.setZoom(cameraZoomFor({width:size.width,height:size.height},isCoarseDevice()));
+   this.cameras.main.setZoom(treeCameraZoom({width:size.width,height:size.height},isCoarseDevice()));
    this.cameras.main.setBounds(0,0,TREE_WIDTH,TREE_HEIGHT);
    this.guide.setPosition(size.width/2,Math.min(92,size.height*.18));
+   this.windStatus.setPosition(size.width/2,Math.min(124,size.height*.31));
    this.dark.setPosition(size.width/2,size.height/2).setSize(size.width+150,size.height+150);
    this.darkText.setPosition(size.width/2,size.height/2);
   };
@@ -202,6 +165,7 @@ export class TreetopForestScene extends Phaser.Scene {
   TREE_PLATFORMS.forEach((p,i)=>{
    const body=this.platforms[i].body as Phaser.Physics.Arcade.StaticBody;
    body.enable=active.has(p);this.platforms[i].setVisible(active.has(p));
+   this.skins[i].setVisible(active.has(p));
    if(active.has(p))body.updateFromGameObject();
   });
  }
@@ -236,19 +200,29 @@ export class TreetopForestScene extends Phaser.Scene {
   this.dark.setAlpha(pause?.91:0);
   this.darkText.setVisible(pause);
   if(pause){
-   this.darkText.setText(w.deadUntil>0?'UM AMIGO CAIU NO VAZIO\nNINGUÉM FICA PARA TRÁS':
+   this.darkText.setText(w.deadUntil>0?(w.deathByGust?'A RAJADA DERRUBOU UM AMIGO\nNINGUÉM FICA PARA TRÁS':
+    'UM AMIGO CAIU NO VAZIO\nNINGUÉM FICA PARA TRÁS'):
     w.blackoutUntil>now?'A FLORESTA MENTE...\nMAS O VENTO NÃO.':
     'AGUARDANDO A EQUIPE...');
    this.solo?.report();
   }else{
    this.solo?.beforeFrame(w.supporting);
+   // Every solo avatar has real Arcade physics. Wind also affects unattended friends.
+   if(this.solo){
+    for(const other of [0,1,2] as Seat[]){
+     if(other===seat||w.supporting[other]!==null)continue;
+     const b=this.solo.body(other),avatar=this.avatars[other];
+     const standing=b.blocked.down||b.touching.down;
+     b.setVelocityX(treeWindVelocity(w,{x:avatar.x,y:avatar.y},standing,0));
+    }
+   }
    const base=w.supporting[seat];
    if(base!==null){
     const parent=this.avatars[base];
     this.body.setAllowGravity(false);this.body.reset(parent.x,parent.y-44);this.body.setVelocity(0,0);
    }else if(!this.body.allowGravity){
     this.body.setAllowGravity(true);
-    if(this.pendingJump){this.body.setVelocityY(-465);this.jumps=1;this.pendingJump=false;}
+    if(this.pendingJump){this.body.setVelocityY(-TREE_JUMP);this.jumps=1;this.pendingJump=false;}
    }
    let dir=0;
    if(this.cursors?.left.isDown||this.keys?.A?.isDown)dir--;
@@ -263,7 +237,8 @@ export class TreetopForestScene extends Phaser.Scene {
    const ability=gameKeys.consumeSkill(seat)||consumeTouch(this.touch,'ability');
    this.touch.jump=false;this.touch.interact=false;this.touch.ability=false;
    if(base===null){
-    this.body.setVelocityX(seat===2&&time<this.dashUntil?this.facing*345:dir*235);
+    const desired=seat===2&&time<this.dashUntil?this.facing*345:dir*TREE_SPEED;
+    this.body.setVelocityX(treeWindVelocity(w,this.local,grounded,desired));
     if(jumping&&(grounded||seat===0&&this.jumps<2))
      this.request(grounded?'jump':'doubleJump',seat);
    }else{
@@ -285,22 +260,32 @@ export class TreetopForestScene extends Phaser.Scene {
    this.names[i].setPosition(avatar.x,avatar.y-48)
     .setColor(i===seat?'#ffffff':CHARACTERS[i].hex);
   }
-  const objectives=treeObjective(w);
-  this.guide.setText('');
-  const guidance=(!w.bridgeOpen?'NINO: DASH + E   ·   LIA: DISPARO   ·   TÉO: E':
-    !w.ropeOpen?'NINO → LIA → TÉO: SUBAM COM E E LIBEREM O CIPÓ':
-    !w.finalOpen?'OBSERVEM OS ESTADOS A / B / C':'REÚNAM OS TRÊS NO ÚLTIMO GALHO');
-  const wind=treeWind(w,this.local.x);
-  this.hint.setText('')
-   .setPosition(this.local.x,this.local.y-86).setVisible(false);
-  this.pipo.update(time,this.local.x,this.local.y,pause);
-  void objectives;void guidance;void wind;
-  this.canopy.clear();this.canopy.fillStyle(0xa4d5b0,.58);
-  for(const leaf of this.leafParticles){
-   const x=(leaf.x+time*.001*leaf.speed)%TREE_WIDTH;
-   const y=leaf.y+Math.sin(time*.0016+leaf.phase)*12;
-   this.canopy.fillEllipse(x,y,5,2.5);
+  if(this.lastWindPhase!==w.windPhase){
+   const older=this.lastWindPhase;
+   this.lastWindPhase=w.windPhase;
+   if(w.windPhase==='warning')this.pipo.warnWind('O vento vai apertar! Procurem os abrigos!');
+   else if(w.windPhase==='gust'&&older!=='warning')
+    this.pipo.warnWind('Abriguem-se! A rajada está chegando!');
   }
+  this.windDirectionShown=w.windDirection;
+  this.windStatus.setText(w.windPhase==='warning'?
+    '⚠ RAJADA EM BREVE — PROCURE UM ABRIGO':
+    w.windPhase==='gust'?
+      (w.windDirection===1?'🌪 RAJADA FORTE ▶':'◀ RAJADA FORTE 🌪'):'');
+  this.windStatus.setVisible(w.windPhase!=='calm'&&!pause);
+  this.windStatus.setColor(w.windPhase==='gust'?'#ffe4a0':'#dff5bd');
+  this.hint.setVisible(false);
+  this.pipo.update(time,this.local.x,this.local.y,pause);
+  const localPose=this.net.poses.map((p,i)=>this.net.isSolo?
+   {seat:p.seat,x:this.avatars[i].x,y:this.avatars[i].y,
+    vx:this.solo?.body(p.seat).velocity.x??p.vx,
+    vy:this.solo?.body(p.seat).velocity.y??p.vy}:p);
+  this.art.update(time,localPose,w.windPhase,w.windDirection,w.gustCount);
+  // Look ahead to the landing platform while falling, and toward the next jump.
+  const camera=this.cameras.main;
+  camera.followOffset.x=Phaser.Math.Linear(camera.followOffset.x,this.facing*35,.05);
+  camera.followOffset.y=Phaser.Math.Linear(camera.followOffset.y,
+   this.body.velocity.y>100?82:-80,.035);
   this.hud?.();
   void dt;
  }
