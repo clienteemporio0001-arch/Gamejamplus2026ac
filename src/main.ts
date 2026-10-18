@@ -623,6 +623,12 @@ function showJoin(): void {
     (event.target as HTMLInputElement).setCustomValidity('');
   });
 }
+/** Mission effects are derived from the already validated chapter snapshots. */
+window.addEventListener('mission-audio',event=>{
+ const message=(event as CustomEvent<{kind?:string}>).detail;
+ if(!net.playing||net.experience!=='loop')return;
+ if(message?.kind==='puzzle')audio.play('puzzle');
+});
 /** Shared audio follows authoritative events, never triggers gameplay rules. */
 const soundProgress=new Map<number,{count:number;dead:boolean;blackout:boolean;health:string}>();
 function observeSound(phase:1|2|3|4,
