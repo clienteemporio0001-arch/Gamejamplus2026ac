@@ -1,4 +1,5 @@
 import type {FireWorld} from './burningForest';
+import {AUDIO_CHANGE_EVENT,audioLevel} from './audioSettings';
 import {fireVisualTreePhase} from './burningForest';
 /** Lightweight, opt-in-by-interaction procedural soundscape for the final act. */
 export class BurningForestAudio {
@@ -9,9 +10,11 @@ export class BurningForestAudio {
  private phase:'calm'|'warning'|'impact'='calm';
  private wind:-1|1=1;
  private unlockHandler=()=>{void this.unlock();};
+ private settingsChange=()=>this.mix(this.phase);
  constructor(){
   document.addEventListener('pointerdown',this.unlockHandler,{passive:true});
   document.addEventListener('keydown',this.unlockHandler);
+  window.addEventListener(AUDIO_CHANGE_EVENT,this.settingsChange);
  }
  private async unlock():Promise<void>{
   if(this.ctx){
@@ -34,13 +37,13 @@ export class BurningForestAudio {
  private mix(phase:'calm'|'warning'|'impact'):void{
   if(!this.ctx||!this.filter||!this.master)return;
   const now=this.ctx.currentTime;
-  const amp=phase==='impact'?.13:phase==='warning'?.072:.028;
+  const amp=(phase==='impact'?.13:phase==='warning'?.072:.028)*audioLevel('sfx');
   this.master.gain.setTargetAtTime(amp,now,.36);
   this.filter.frequency.setTargetAtTime(phase==='impact'?1250:
    phase==='warning'?960:600,now,.4);
  }
  private crack():void{
-  if(!this.ctx)return;
+  if(!this.ctx||!audioLevel('sfx'))return;
   const ctx=this.ctx;
   const oscillator=ctx.createOscillator();
   const gain=ctx.createGain();
@@ -48,7 +51,7 @@ export class BurningForestAudio {
   oscillator.frequency.setValueAtTime(134,ctx.currentTime);
   oscillator.frequency.exponentialRampToValueAtTime(41,ctx.currentTime+.23);
   gain.gain.setValueAtTime(.0001,ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(.08,ctx.currentTime+.009);
+  gain.gain.exponentialRampToValueAtTime(.08*audioLevel('sfx'),ctx.currentTime+.009);
   gain.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+.24);
   oscillator.connect(gain);gain.connect(ctx.destination);
   oscillator.start();oscillator.stop(ctx.currentTime+.27);
@@ -68,6 +71,7 @@ export class BurningForestAudio {
  destroy():void{
   document.removeEventListener('pointerdown',this.unlockHandler);
   document.removeEventListener('keydown',this.unlockHandler);
+  window.removeEventListener(AUDIO_CHANGE_EVENT,this.settingsChange);
   try{this.hiss?.stop();}catch{/* already stopped */}
   void this.ctx?.close();this.ctx=undefined;
  }
