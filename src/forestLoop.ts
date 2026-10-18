@@ -469,7 +469,7 @@ export class LoopAuthority{
     if(w.exit&&w.suspendedOpen&&poses.every(p=>p.x>=11130&&p.x<=11360&&p.y>=540&&p.y<=660)){
       w.completed=true;return{changed:true,won:true};
     }
-    if(now-w.routeAt>=3200&&allDone(w.marks)){
+    if(w.lastRoute!=='right'&&now-w.routeAt>=3200&&allDone(w.marks)){
       for(const route of ['oca','pedra'] as const){
         if(trailOccupants(poses,route).length!==3)continue;
         const correct=ROUTES[w.layout].correct===route;
