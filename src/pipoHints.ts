@@ -77,11 +77,11 @@ export function pipoHint(source:HintSource):PipoHint{
   ]);
   if(!w.exit)return guidance('travas finais',[
    'A passagem ainda não está segura. Olhem o vento!',
-   'Esperem o estado C e ativem os três mecanismos finais.',
-   'No estado C, Téo usa E, Lia atira no alvo e Nino usa dash e E.'
+   'Concluam as três travas finais. O tronco abrirá em qualquer estado.',
+   'Téo usa E, Lia atira no alvo e Nino usa dash e E nas suas travas.'
   ]);
   return guidance('saída',[
-   'Boa! Agora só falta reunir toda a equipe!',
+   'Boa! As três travas foram liberadas! O caminho está aberto!'
    'A saída verdadeira está aberta. Não deixem ninguém para trás.',
    'Levem os três amigos juntos à saída da floresta!'
   ]);
