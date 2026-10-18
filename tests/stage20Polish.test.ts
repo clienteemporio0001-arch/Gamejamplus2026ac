@@ -82,7 +82,7 @@ assert.equal(clampVolume(175,50),100);
 assert.equal(clampVolume(-5,50),0);
 assert.equal(clampVolume(Number.NaN,50),50);
 assert.deepEqual(normalizeAudioSettings({music:110,sfx:-100,muted:true}),
- {music:100,sfx:0,muted:true});
+ {music:100,sfx:0,ambient:DEFAULT_AUDIO_SETTINGS.ambient,musicMuted:false,muted:true});
 assert.deepEqual(normalizeAudioSettings(null),DEFAULT_AUDIO_SETTINGS);
 setAudioSettings({music:61,sfx:37,muted:true});
 assert.equal(getAudioSettings().music,61);
@@ -99,7 +99,7 @@ assert.ok(treeAudio.includes('window.addEventListener(AUDIO_CHANGE_EVENT,this.se
  'treetop audio responds immediately to preference changes');
 assert.ok(fireAudio.includes('window.addEventListener(AUDIO_CHANGE_EVENT,this.settingsChange)'),
  'fire audio responds immediately to preference changes');
-assert.ok(treeAudio.includes("audioLevel('sfx')")&&fireAudio.includes("audioLevel('sfx')"));
+assert.ok(treeAudio.includes("audioLevel('ambient')")&&fireAudio.includes("audioLevel('ambient')"));
 assert.ok(main.includes("net.on('vital-reply'"));
 assert.ok(main.includes("if(data.stage==='final')audio.play('victory')"));
 // The official chain has four new acts without replacing classic level 4.
