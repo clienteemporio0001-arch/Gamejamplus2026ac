@@ -62,12 +62,14 @@ authority.interact(2,'switch',characters,start+4500);
 assert.ok(w.smokeOpen,'vent releases smoke corridor');
 assert.equal(fireHeavySmoke(w,{x:2500,y:653},start+4700),false);
 assert.equal(pipoHint({phase:4,world:w}).objective,'árvores caindo');
+// Simulate travel and stamina recovery between the second and third challenges.
+for(let t=4700;t<=7400;t+=50)authority.tickResources(characters,start+t);
 characters[0]={seat:0,x:FIRE_TARGETS.tree.teo.x,y:FIRE_TARGETS.tree.teo.y,vx:0,vy:0};
 characters[1]={seat:1,x:3470,y:652,vx:0,vy:0};
 characters[2]={seat:2,x:3520,y:652,vx:0,vy:0};
 assert.equal(authority.interact(0,'lever',characters,start+5500),true);
 assert.equal(authority.authorizeEnergy(1,'shoot',characters,start+6000,1).ok,true);
-assert.equal(authority.authorizeEnergy(2,'dash',characters,start+7600,1).ok,true);
+assert.equal(authority.authorizeEnergy(2,'dash',characters,start+7600,1).ok,true,'Nino has replenished stamina before the third dash');
 characters[2]={seat:2,x:FIRE_TARGETS.tree.nino.x,y:FIRE_TARGETS.tree.nino.y,vx:0,vy:0};
 authority.interact(2,'switch',characters,start+8000);
 assert.equal(w.tree.every(Boolean),true,'third coop puzzle all three');
