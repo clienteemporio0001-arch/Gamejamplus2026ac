@@ -17,6 +17,8 @@ export class PipoGuide {
  private objective='';
  private depth:0|1|2=0;
  private lastAsk=-100000;
+ private hasRequested=false;
+ private lastAlert='';private lastAlertAt=0;
  private lastProgress=0;
  private talkingUntil=0;
  private fadingUntil=0;
@@ -74,17 +76,21 @@ export class PipoGuide {
   if(!this.net.playing||this.net.experience!=='loop')return;
   const now=Date.now();
   if(now-this.lastAsk<2000||now<this.talkingUntil)return;
-  this.lastAsk=now;this.depth=Math.min(2,this.depth+1) as 0|1|2;
-  this.speak(now);
+  this.lastAsk=now;
+  this.depth=this.hasRequested?Math.min(2,this.depth+1) as 0|1|2:0;
+  this.hasRequested=true;this.speak(now);
  }
  /** Warnings are high-priority, short and do not change hint progression. */
  warnDanger(message:string):void{
   if(this.net.experience!=='loop'||!this.net.playing)return;
-  this.speak(Date.now(),message,3500);
+  const now=Date.now();
+  if(message===this.lastAlert&&now-this.lastAlertAt<6500)return;
+  this.lastAlert=message;this.lastAlertAt=now;
+  this.speak(now,message,3500);
  }
  warnWind(message:string):void{
   if(this.net.experience!=='loop'||this.net.level!==3||!this.net.playing)return;
-  this.speak(Date.now(),message,3400);
+  this.warnDanger(message);
  }
  private speak(now:number,urgent?:string,duration=6100):void{
   const hint=pipoHint(this.source());
@@ -99,12 +105,13 @@ export class PipoGuide {
   if(!this.net.playing)return;
   const now=Date.now(),hint=pipoHint(this.source());
   if(hint.objective!==this.objective){
-   this.objective=hint.objective;this.depth=0;this.lastProgress=now;
+   this.objective=hint.objective;this.depth=0;this.hasRequested=false;this.lastProgress=now;
   }
   const source=this.source(),cycle=source.world.cycle;
   if(this.previousCycle<0)this.previousCycle=cycle;
   else if(cycle!==this.previousCycle){
-   this.previousCycle=cycle;this.depth=0;this.lastAsk=now;this.speak(now);
+   this.previousCycle=cycle;this.depth=0;this.hasRequested=false;
+   this.lastAsk=now;this.speak(now);
   }
   if(!paused&&now-this.lastProgress>90000&&now>this.fadingUntil){
    this.depth=Math.min(2,this.depth+1) as 0|1|2;
@@ -140,12 +147,13 @@ export class PipoGuide {
   const screenX=(this.bird.x-cam.scrollX)*cam.zoom;
   const screenY=(this.bird.y-cam.scrollY)*cam.zoom;
   // A dialogue within the viewport always remains readable on mobile.
-  const width=Math.min(view.width-12,290);
+  const width=Math.min(view.width-24,290);
   this.bubble.setScale(Math.min(1,width/290));
   const margin=width/2+8;
   this.bubble.setPosition(
    Phaser.Math.Clamp(screenX,margin,Math.max(margin,view.width-margin)),
-   Phaser.Math.Clamp(screenY-85,64,Math.max(64,view.height-115))
+   Phaser.Math.Clamp(screenY-90,Math.min(142,view.height*.44),
+    Math.max(Math.min(142,view.height*.44),view.height-107))
   );
  }
 }
