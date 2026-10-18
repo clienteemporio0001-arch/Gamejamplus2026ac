@@ -2,7 +2,7 @@
  * Never substitute synthetic estimates for live FPS on the user device. */
 export type PerformanceFrame={
  now:number;updateMs:number;cameraX:number;velocityX:number;velocityY:number;
- x:number;transforming:boolean;
+ x:number;transforming:boolean;playersOnline?:number;
 };
 type Sample=PerformanceFrame&{frameMs:number;cameraDelta:number};
 export type PerformanceSummary={count:number;fps:number;avgMs:number;maxMs:number;
@@ -10,7 +10,7 @@ export type PerformanceSummary={count:number;fps:number;avgMs:number;maxMs:numbe
  scenarios:Record<string,{count:number;fps:number;avgMs:number;maxMs:number}>};
 export const SCENARIOS=[
  'parado','direita','esquerda','pulando','câmera seguindo',
- 'transformação A/B/C','plataforma suspensa'
+ 'transformação A/B/C','plataforma suspensa','multiplayer 3 jogadores'
 ] as const;
 export class FrameProfiler{
  private history:Sample[]=[];
@@ -47,7 +47,8 @@ export class FrameProfiler{
     'pulando':by(p=>Math.abs(p.velocityY)>=80),
     'câmera seguindo':by(p=>p.cameraDelta>.4),
     'transformação A/B/C':by(p=>p.transforming),
-    'plataforma suspensa':by(p=>p.x>=7350&&p.x<=8860)
+    'plataforma suspensa':by(p=>p.x>=7350&&p.x<=8860),
+    'multiplayer 3 jogadores':by(p=>(p.playersOnline??0)>=3)
    }};
  }
 }
