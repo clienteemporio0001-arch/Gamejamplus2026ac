@@ -148,7 +148,8 @@ export function treeObjective(w:TreeWorld):{title:string;progress:string}{
  return {title:'A Última Copa: reúnam os três na saída.',progress:'Saída liberada'};
 }
 export function treeWind(w:TreeWorld,x:number):-1|0|1{
- const target=!w.bridgeOpen?3200:!w.ropeOpen?3500:!w.finalOpen?3850:4150;
+ const target=!w.bridgeOpen?TREE_TARGETS.bridge.nino.x:!w.ropeOpen?TREE_TARGETS.tower.base.x:
+  !w.finalOpen?TREE_TARGETS.time.lia.x:TREE_TARGETS.exit.x;
  return target>x+40?1:target<x-40?-1:0;
 }
 const close=(p:Pose,x:number,y:number,dx=68,dy=65)=>Math.abs(p.x-x)<=dx&&Math.abs(p.y-y)<=dy;
@@ -184,48 +185,102 @@ export class TreeAuthority{
   return this.world.deadUntil===0&&this.world.blackoutUntil<=now&&!this.world.completed&&regenVitals(this.world,poses,now,dt);
  }
  /** Returns new poses only for authoritative team respawn. */
- tick(poses:Pose[],now=Date.now()):{changed:boolean;poses?:Pose[];reset?:boolean;won?:boolean}{
+ tick(poses:Pose[],now=Date.now(),protectedUntil=0):{changed:boolean;poses?:Pose[];reset?:boolean;won?:boolean}{
   const w=this.world;
   if(w.deadUntil){if(now<w.deadUntil)return {changed:false};this.reset(now);return {changed:true,poses:TREE_START.map(p=>({...p})),reset:true};}
   if(w.completed)return {changed:false,won:true};
   if(w.blackoutUntil){if(now<w.blackoutUntil)return {changed:false};
    w.blackoutUntil=0;w.layout=((w.layout+1)%3) as TreeLayout;w.cycle++;w.cycleStart=now;
-   // Preserve everyone's progress, but never strand them on a vanished branch.
-   const safe=poses.every(p=>treePlatforms(w).some(b=>Math.abs(p.x-b.x)<b.width/2-10&&Math.abs(p.y-(b.y-b.height/2-22))<35));
-   return {changed:true,poses:safe?undefined:TREE_START.map(p=>({...p}))};
+   w.windPhase='calm';w.windUntil=0;w.supporting=[null,null,null];
+   // Never punish anyone for the world removing a branch mid-jump.
+   const active=treePlatforms(w);
+   const adjusted=poses.map(p=>{
+    const standing=active.some(b=>Math.abs(p.x-b.x)<b.width/2-8
+      &&Math.abs(p.y-(b.y-b.height/2-22))<38);
+    if(standing)return {...p};
+    const nearby=active.filter(b=>Math.abs(p.x-b.x)<170
+      &&Math.abs(p.y-(b.y-b.height/2-22))<230)
+      .sort((a,b)=>Math.abs(a.x-p.x)+Math.abs(a.y-p.y)-
+        Math.abs(b.x-p.x)-Math.abs(b.y-p.y))[0];
+    if(!nearby)return {...TREE_START[p.seat]};
+    return {seat:p.seat,x:Math.max(nearby.x-nearby.width/2+20,
+      Math.min(nearby.x+nearby.width/2-20,p.x)),
+      y:nearby.y-nearby.height/2-22,vx:0,vy:0};
+   });
+   return {changed:true,poses:adjusted.some((p,i)=>p.x!==poses[i].x||p.y!==poses[i].y)?
+     adjusted:undefined};
   }
-  if(now-w.cycleStart>=TREE_CYCLE){w.blackoutUntil=now+TREE_BLACKOUT;return {changed:true};}
-  if(poses.some(p=>treeFatal(p,now,w))){w.deadUntil=now+1400;w.health=[0,0,0];return {changed:true};}
-  if(w.finalOpen&&poses.length===3&&poses.every(p=>close(p,4150,101,110,75))){w.completed=true;return {changed:true,won:true};}
+  if(now-w.cycleStart>=TREE_CYCLE){
+   w.blackoutUntil=now+TREE_BLACKOUT;w.windPhase='calm';w.windUntil=0;
+   return {changed:true};
+  }
+  if(poses.some(p=>treeFatal(p,now,w,protectedUntil))){
+   w.deathByGust=w.windPhase==='gust';w.deadUntil=now+1500;w.health=[0,0,0];
+   return {changed:true};
+  }
+  if(w.finalOpen&&poses.length===3&&poses.every(p=>close(p,TREE_TARGETS.exit.x,TREE_TARGETS.exit.y,88,44))){
+   w.completed=true;return {changed:true,won:true};
+  }
+  const wind=treeWindSchedule(w,now);
+  if(w.windPhase!==wind.phase||w.windDirection!==wind.direction||w.windUntil!==wind.until){
+   const startedGust=w.windPhase!=='gust'&&wind.phase==='gust';
+   w.windPhase=wind.phase;w.windDirection=wind.direction;w.windUntil=wind.until;
+   if(startedGust)w.gustCount++;
+   return {changed:true};
+  }
   return {changed:false};
  }
- /** All puzzle actions are character-specific, position-validated and host-authoritative. */
- interact(seat:Seat,kind:'lever'|'switch'|'shoot'|'support'|'detach'|'dash',poses:Pose[],now=Date.now(),facing:-1|1=1):boolean{
-  const w=this.world,p=poses[seat];if(!p||w.deadUntil||w.blackoutUntil>now||w.completed)return false;
+ /** All puzzle actions use the host's validated positions and actual skill events. */
+ interact(seat:Seat,kind:'lever'|'switch'|'shoot'|'support'|'detach'|'dash',
+  poses:Pose[],now=Date.now(),facing:-1|1=1):boolean{
+  const w=this.world,p=poses[seat];
+  if(!p||w.deadUntil||w.blackoutUntil>now||w.completed)return false;
+  const windy=w.windPhase==='gust'&&treeExposure(p)>.35;
   if(kind==='dash'&&seat===2){w.dashAt=now;w.dashX=p.x;return true;}
-  if(kind==='support'&&seat!==2){const base=(seat===0?1:2) as Seat;
-   if(!close(p,poses[base].x,poses[base].y,50,70)||!close(p,3390,390,135,145))return false;
+  if(kind==='support'&&(seat===0||seat===1)){
+   const base:Seat=seat===0?1:2,b=poses[base];
+   if(!b||w.supporting[seat]!==null||!close(p,b.x,b.y,49,69)
+    ||!close(p,TREE_TARGETS.tower.base.x,TREE_TARGETS.tower.base.y,105,105)
+    ||!w.bridgeOpen||w.ropeOpen)return false;
    if(seat===0&&w.supporting[1]!==2)return false;
    w.supporting[seat]=base;
-   if(w.bridgeOpen&&!w.ropeOpen){if(seat===1)w.tower[1]=true;if(seat===0)w.tower[0]=true;}
+   if(seat===1)w.tower[1]=true;else w.tower[0]=true;
    return true;
   }
-  if(kind==='detach'&&w.supporting[seat]!==null){w.supporting[seat]=null;return true;}
+  if(kind==='detach'&&w.supporting[seat]!==null){
+   w.supporting[seat]=null;
+   if(seat===1)w.supporting[0]=null;
+   return true;
+  }
   let changed=false;
+  const shot=(target:{x:number;y:number})=>seat===1&&kind==='shoot'
+   &&!windy&&(target.x-p.x)*facing>=0&&(target.x-p.x)*facing<=360
+   &&Math.abs(p.y-18-target.y)<56;
   if(!w.bridgeOpen){
-   if(seat===2&&kind==='switch'&&now-w.dashAt<=2800&&p.x-w.dashX>90&&close(p,3010,345))changed=w.bridge[2]=true;
-   if(seat===1&&kind==='shoot'&&facing===1&&p.x<3200&&p.x>2810&&close(p,2960,343,180,140))changed=w.bridge[1]=true;
-   if(seat===0&&kind==='lever'&&close(p,3150,256,64,45))changed=w.bridge[0]=true;
+   if(seat===2&&kind==='switch'&&!windy&&w.dashAt>0
+     &&now-w.dashAt<=2800&&p.x-w.dashX>=105
+     &&close(p,TREE_TARGETS.bridge.nino.x,TREE_TARGETS.bridge.nino.y,55,65))
+     changed=w.bridge[2]=true;
+   if(!w.bridge[1]&&shot(TREE_TARGETS.bridge.lia))changed=w.bridge[1]=true;
+   if(seat===0&&kind==='lever'&&!windy
+     &&close(p,TREE_TARGETS.bridge.teo.x,TREE_TARGETS.bridge.teo.y,48,16)
+     &&Math.abs(p.vy)<115)changed=w.bridge[0]=true;
    if(w.bridge.every(Boolean))w.bridgeOpen=true;
   }else if(!w.ropeOpen){
-   if(seat===1&&w.supporting[1]===2)changed=w.tower[1]=true;
-   if(seat===0&&w.supporting[0]===1)changed=w.tower[0]=true;
-   if(seat===0&&kind==='lever'&&w.tower[0]&&w.tower[1]&&close(p,3710,206,65,45))changed=w.tower[2]=true;
+   if(seat===0&&kind==='lever'&&w.tower[0]&&w.tower[1]
+     &&w.supporting[0]===null&&!windy
+     &&close(p,TREE_TARGETS.tower.top.x,TREE_TARGETS.tower.top.y,57,17)
+     &&Math.abs(p.vy)<110)changed=w.tower[2]=true;
    if(w.tower.every(Boolean))w.ropeOpen=true;
   }else if(!w.finalOpen){
-   if(seat===1&&w.layout===0&&kind==='shoot'&&facing===1&&close(p,3710,205,145,110))changed=w.time[1]=true;
-   if(seat===0&&w.layout===1&&kind==='lever'&&close(p,3940,136,65,45))changed=w.time[0]=true;
-   if(seat===2&&w.layout===2&&kind==='switch'&&now-w.dashAt<2800&&p.x-w.dashX>90&&close(p,3940,136,130,130))changed=w.time[2]=true;
+   if(w.layout===0&&!w.time[1]&&shot(TREE_TARGETS.time.lia))changed=w.time[1]=true;
+   if(w.layout===1&&seat===0&&kind==='lever'&&!windy
+     &&close(p,TREE_TARGETS.time.teo.x,TREE_TARGETS.time.teo.y,53,20)
+     &&Math.abs(p.vy)<110)changed=w.time[0]=true;
+   if(w.layout===2&&seat===2&&kind==='switch'&&!windy&&w.dashAt>0
+     &&now-w.dashAt<=2800&&p.x-w.dashX>=105
+     &&close(p,TREE_TARGETS.time.nino.x,TREE_TARGETS.time.nino.y,62,62))
+     changed=w.time[2]=true;
    if(w.time.every(Boolean))w.finalOpen=true;
   }
   return changed;
