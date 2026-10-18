@@ -18,12 +18,12 @@ for(const f of ['loop-stone.svg','loop-arch.svg','loop-elevated-tree.svg']){
    f+' é um SVG original local íntegro');
  ok((f==='loop-elevated-tree.svg'?scene:scene+readFileSync('src/officialLandmarks.ts','utf8')).includes(f.replace('.svg','')),'cena carrega '+f);
 }
-ok(scene.includes("this.add.image(0,-shape.height/2,shapes[index])"),
+ok(scene.includes("officialLandmark(this,LANDMARK_KEYS[index],'night'")&&readFileSync('src/officialLandmarks.ts','utf8').includes('scene.add.image('),
   'base de cada marco coincide com markerBaseY');
-ok(scene.includes('this.add.container(mark.x,markerBaseY)'),'marcos ancorados ao terreno');
+ok(scene.includes('mark.x,markerBaseY,mark.y'),'marcos ancorados ao terreno');
 ok(markerBaseY===LOOP_GEOMETRY.clearing.groundY,'pé dos três marcos encontra o chão');
 ok(scene.includes('mark.setX(markPosition(w,i).x)'),'alvos não flutuam após transformar o mapa');
-ok(scene.includes('LOOP_MARKS[index]')&&scene.includes('mark.y-markerBaseY'),
+ok(scene.includes('LOOP_MARKS[index]')&&readFileSync('src/officialLandmarks.ts','utf8').includes('targetY-footY'),
   'brilho da interação usa posição do mesmo marco');
 ok(scene.includes('stoneHitbox')&&scene.includes('this.blocks.push(stoneHitbox)'),
   'rocha natural possui colisão estática proporcional');
