@@ -407,6 +407,7 @@ export class ForestLoopScene extends Phaser.Scene {
       if(w.health[seat]<this.w.health[seat])this.fallImpact(seat,false);
     }
 
+    const layoutChanged=this.w.layout!==w.layout;
     this.w={...w,marks:[...w.marks],tree:[...w.tree],final:[...w.final],
       suspended:[...w.suspended],supporting:[...w.supporting]};
     if(this.suspensionCollider){
@@ -436,7 +437,7 @@ export class ForestLoopScene extends Phaser.Scene {
     this.shiftShade.setFillStyle(tint).setAlpha([.035,.13,.10][w.layout]);
     this.clearingTree.setTint([0xffffff,0xc9e0d7,0xb4dfff][w.layout]);
     this.movingRoots.forEach((root,i)=>{
-      this.tweens.add({targets:root,x:5250+i*105+[0,-34,43][w.layout],duration:1800,ease:'Sine.easeInOut'});
+      if(layoutChanged)this.tweens.add({targets:root,x:5250+i*105+[0,-34,43][w.layout],duration:1800,ease:'Sine.easeInOut'});
       root.setAlpha([.28,.45,.4][w.layout]);
     });
     this.marks.forEach((mark,i)=>{
