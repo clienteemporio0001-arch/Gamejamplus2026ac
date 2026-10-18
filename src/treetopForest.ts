@@ -163,8 +163,17 @@ export class TreeAuthority{
  private lastJump:[number,number,number]=[0,0,0];
  private firstJumpY=0; private doubled=false;
  private lastSkill:[number,number,number]=[0,0,0];private resourceAt=Date.now();
+ private shiftRiders:Array<{seat:Seat;fromX:number;fromY:number;toX:number;toY:number}>=[];
+ private carried(poses:Pose[],fraction:number):Pose[]{
+  const t=Math.max(0,Math.min(1,fraction)),smooth=t*t*(3-2*t);
+  return poses.map(p=>{
+   const rider=this.shiftRiders.find(r=>r.seat===p.seat);
+   return rider?{...p,x:rider.fromX+(rider.toX-rider.fromX)*smooth,
+    y:rider.fromY+(rider.toY-rider.fromY)*smooth,vx:0,vy:0}:{...p};
+  });
+ }
  reset(now=Date.now()){const id=this.world.resetId+1;this.world=initTree(now);this.world.resetId=id;
-  this.lastJump=[0,0,0];this.firstJumpY=0;this.doubled=false;this.lastSkill=[0,0,0];this.resourceAt=now;}
+  this.lastJump=[0,0,0];this.firstJumpY=0;this.doubled=false;this.lastSkill=[0,0,0];this.resourceAt=now;this.shiftRiders=[];}
  authorizeEnergy(seat:Seat,kind:VitalAction,poses:Pose[],now=Date.now(),facing:-1|1=1):{ok:boolean;reason:'ok'|'tired'|'cooldown'|'invalid'}{
   const w=this.world,p=poses[seat];
   const fail=(reason:'tired'|'cooldown'|'invalid')=>({ok:false,reason} as const);
@@ -194,7 +203,13 @@ export class TreeAuthority{
   const w=this.world;
   if(w.deadUntil){if(now<w.deadUntil)return {changed:false};this.reset(now);return {changed:true,poses:TREE_START.map(p=>({...p})),reset:true};}
   if(w.completed)return {changed:false,won:true};
-  if(w.blackoutUntil){if(now<w.blackoutUntil)return {changed:false};
+  if(w.blackoutUntil){
+   if(now<w.blackoutUntil){
+    const nextPoses=this.carried(poses,
+      (now-(w.blackoutUntil-TREE_BLACKOUT))/TREE_BLACKOUT);
+    return {changed:false,poses:this.shiftRiders.length?nextPoses:undefined};
+   }
+   poses=this.carried(poses,1);
    w.blackoutUntil=0;w.layout=((w.layout+1)%3) as TreeLayout;w.cycle++;w.cycleStart=now;
    w.windPhase='calm';w.windUntil=0;w.supporting=[null,null,null];
    // Never punish anyone for the world removing a branch mid-jump.
@@ -212,10 +227,26 @@ export class TreeAuthority{
       Math.min(nearby.x+nearby.width/2-20,p.x)),
       y:nearby.y-nearby.height/2-22,vx:0,vy:0};
    });
-   return {changed:true,poses:adjusted.some((p,i)=>p.x!==poses[i].x||p.y!==poses[i].y)?
-     adjusted:undefined};
+   this.shiftRiders=[];
+   return {changed:true,poses:adjusted};
   }
   if(now-w.cycleStart>=TREE_CYCLE){
+   const previous=TREE_PLATFORMS.filter(p=>p.state===w.layout);
+   const upcoming=TREE_PLATFORMS.filter(p=>p.state===((w.layout+1)%3));
+   this.shiftRiders=[];
+   for(const pose of poses){
+    if(w.supporting[pose.seat]!==null)continue;
+    const old=previous.find(p=>Math.abs(p.x-pose.x)<p.width/2-10&&
+      Math.abs(pose.y-(p.y-p.height/2-22))<19&&Math.abs(pose.vy)<130);
+    if(!old)continue;
+    const target=[...upcoming].sort((a,b)=>
+      Math.abs(a.x-old.x)+Math.abs(a.y-old.y)-
+      Math.abs(b.x-old.x)-Math.abs(b.y-old.y))[0];
+    if(!target)continue;
+    this.shiftRiders.push({seat:pose.seat,fromX:pose.x,fromY:pose.y,
+      toX:target.x+Math.max(-target.width/2+28,Math.min(target.width/2-28,pose.x-old.x)),
+      toY:target.y-target.height/2-22});
+   }
    w.blackoutUntil=now+TREE_BLACKOUT;w.windPhase='calm';w.windUntil=0;
    return {changed:true};
   }
