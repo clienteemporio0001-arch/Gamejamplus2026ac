@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import {PipoGuide} from './pipoGuide';
+import {CooperativeExitArt} from './cooperativeExitArt';
 import {MissionDirector} from './missionDirector';
 import {animateForestProps} from './forestTransformFX';
 import {CHARACTERS,type Network,type Seat,type Pose} from './network';
@@ -50,6 +51,7 @@ export class TemporalForestScene extends Phaser.Scene {
  private darkText!:Phaser.GameObjects.Text;
  private hint!:Phaser.GameObjects.Text;
  private pipo!:PipoGuide;private missions!:MissionDirector;
+ private exitArt?:CooperativeExitArt;
  private region!:Phaser.GameObjects.Text;
  private regionId=-1;private regionEnds=0;
  private pending=new Map<number,{seat:Seat;kind:VitalAction}>();
@@ -238,6 +240,7 @@ export class TemporalForestScene extends Phaser.Scene {
   this.frontRain=this.add.graphics().setDepth(55);
   this.ripples=this.add.graphics().setDepth(14);
   this.pipo=new PipoGuide(this,this.net);
+  this.exitArt=new CooperativeExitArt(this,2,line=>this.pipo?.warnDanger(line));
    this.missions=new MissionDirector(this,this.net,2,this.avatars);
    this.hint=this.text(0,0,'',12,'#c6e9e0').setVisible(false).setDepth(66);
   this.region=this.text(this.scale.gameSize.width/2,110,'',14,'#d8ebed')
@@ -448,6 +451,7 @@ export class TemporalForestScene extends Phaser.Scene {
   this.hint.setVisible(Boolean(this.hint.text)).setPosition(this.local.x,this.local.y-81);
   this.missions.update(time,pause);
    this.pipo.update(time,this.local.x,this.local.y,pause);
+   this.exitArt?.update(w.bridge&&w.roots.every(Boolean)&&w.exit,this.net.poses,w.health,time);
   void guidance;
   this.echoLabels.forEach((label,i)=>{
     const marker=TEMP_ECHO[i];
