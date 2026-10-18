@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import {PipoGuide} from './pipoGuide';
 import {TreetopArt} from './treetopArt';
+import {TreetopWindAudio} from './treetopWindAudio';
 import {CHARACTERS,type Network,type Seat} from './network';
 import type {TouchInput} from './game';
 import {SoloBodies} from './soloBodies';
@@ -19,6 +20,7 @@ export class TreetopForestScene extends Phaser.Scene {
  private platforms:Phaser.GameObjects.Rectangle[]=[];
  private skins:Phaser.GameObjects.Graphics[]=[];
  private art!:TreetopArt;
+ private windAudio!:TreetopWindAudio;
  private avatars:Phaser.GameObjects.Rectangle[]=[];
  private names:Phaser.GameObjects.Text[]=[];
  private local!:Phaser.GameObjects.Rectangle;private body!:Phaser.Physics.Arcade.Body;
@@ -58,6 +60,7 @@ export class TreetopForestScene extends Phaser.Scene {
   this.physics.world.setBounds(0,0,TREE_WIDTH,TREE_HEIGHT+250);
   this.physics.world.setBoundsCollision(true,true,false,false);
   this.makeEnvironment();
+  this.windAudio=new TreetopWindAudio();
   for(const p of TREE_PLATFORMS){
    const platform=this.add.rectangle(p.x,p.y,p.width,p.height,0xffffff,0.001).setDepth(15);
    this.skins.push(this.art.branch(p));
@@ -154,6 +157,7 @@ export class TreetopForestScene extends Phaser.Scene {
   };
   this.scale.on(Phaser.Scale.Events.RESIZE,resize);resize(this.scale.gameSize);
   this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{
+   this.windAudio.destroy();
    this.off.forEach(off=>off());this.scale.off(Phaser.Scale.Events.RESIZE,resize);
   });
  }
@@ -268,6 +272,7 @@ export class TreetopForestScene extends Phaser.Scene {
     this.pipo.warnWind('Abriguem-se! A rajada está chegando!');
   }
   this.windDirectionShown=w.windDirection;
+  this.windAudio.setPhase(w.windPhase,pause);
   this.windStatus.setText(w.windPhase==='warning'?
     '⚠ RAJADA EM BREVE — PROCURE UM ABRIGO':
     w.windPhase==='gust'?
