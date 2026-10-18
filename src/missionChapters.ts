@@ -1,5 +1,5 @@
 import type {LoopWorld} from './forestLoop';
-import {LOOP_MARKS,LOOP_GEOMETRY,ROUTES,LOOP_TREE,LOOP_FINAL,SUSPENSION} from './forestLoop';
+import {markPosition,LOOP_MARKS,LOOP_GEOMETRY,ROUTES,LOOP_TREE,LOOP_FINAL,SUSPENSION} from './forestLoop';
 import type {TemporalWorld} from './temporalForest';
 import {TEMP_ECHO,TEMP_TREE,TEMP_ROOTS} from './temporalForest';
 import type {TreeWorld} from './treetopForest';
@@ -33,14 +33,14 @@ export function missionSnapshot(phase:MissionPhase,world:MissionWorld):MissionSn
  if(phase===1){
   const w=world as LoopWorld,route=ROUTES[w.layout].correct;
   const discovery:PartialBeat[]=[
-   part('mark-tree','DESCOBERTA',0,w.marks[0],LOOP_MARKS[0],'E',
+   part('mark-tree','DESCOBERTA',0,w.marks[0],markPosition(w,0),'E',
     'Encontrei uma marca escondida aqui dentro!',
     'Boa, Téo! Lia, investigue aquela pedra rachada!','LIA: INVESTIGUE A PEDRA RACHADA.'),
-   part('mark-stone','DESCOBERTA',1,w.marks[1],LOOP_MARKS[1],'J',
+   part('mark-stone','DESCOBERTA',1,w.marks[1],markPosition(w,1),'J',
     'Consegui! Tem outra marca aqui!',
     'Estamos perto! Nino, encontre o arco e use dash com E!',
     'NINO: ATIVE O ARCO DE MADEIRA.'),
-   part('mark-arch','DESCOBERTA',2,w.marks[2],LOOP_MARKS[2],'SHIFT + E',
+   part('mark-arch','DESCOBERTA',2,w.marks[2],markPosition(w,2),'SHIFT + E',
     'Funcionou! A passagem está aberta!',
     'TRILHAS LIBERADAS! Reúnam os três na passagem indicada pelo vento!',
     'REÚNAM OS TRÊS NA PASSAGEM CERTA.')];
