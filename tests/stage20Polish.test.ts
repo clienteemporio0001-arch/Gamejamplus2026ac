@@ -58,7 +58,8 @@ for(let i=1;i<=4;i++)assert.ok(pipo.includes('phase:'+i),'Pipo reads phase '+i);
 assert.ok(pipo.includes('lastAlertAt<6500'));
 assert.ok(pipo.includes('private hasRequested=false'));
 assert.ok(pipo.includes("this.depth=this.hasRequested?"),'first hint must be gentle');
-assert.ok(pipo.includes('view.height*.44'),'dialog is clamped away from compact top HUD');
+assert.ok(pipo.includes('pipoSpeechLayout(')&&pipo.includes('this.offscreenMarker.setVisible(layout.offscreen)'),
+ 'dialog follows camera-aware Pipo speech anchor and stays readable on compact screens');
 // The entire team, life, stamina and selected player remain visible in unified HUD.
 assert.ok(main.includes('loop-hearts-')&&main.includes('loop-energy-track-'));
 assert.ok(main.includes("loop-vital-'+seat")&&main.includes("'selected'"));
