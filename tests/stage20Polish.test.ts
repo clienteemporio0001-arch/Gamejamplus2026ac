@@ -94,8 +94,11 @@ assert.ok(soundtrack.includes("window.addEventListener(AUDIO_CHANGE_EVENT"));
 assert.ok(soundtrack.includes("audioLevel('music')")&&soundtrack.includes("audioLevel('sfx')"));
 assert.ok(main.includes("setAudioSettings({[id]:n})"));
 assert.ok(main.includes('setAudioSettings({muted:'));
-assert.ok(treeAudio.includes(AUDIO_CHANGE_EVENT));
-assert.ok(fireAudio.includes(AUDIO_CHANGE_EVENT));
+assert.equal(AUDIO_CHANGE_EVENT,'floresta-audio-changed');
+assert.ok(treeAudio.includes('window.addEventListener(AUDIO_CHANGE_EVENT,this.settingsChange)'),
+ 'treetop audio responds immediately to preference changes');
+assert.ok(fireAudio.includes('window.addEventListener(AUDIO_CHANGE_EVENT,this.settingsChange)'),
+ 'fire audio responds immediately to preference changes');
 assert.ok(treeAudio.includes("audioLevel('sfx')")&&fireAudio.includes("audioLevel('sfx')"));
 assert.ok(main.includes("net.on('vital-reply'"));
 assert.ok(main.includes("if(data.stage==='final')audio.play('victory')"));
