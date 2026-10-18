@@ -774,7 +774,7 @@ export class ForestLoopScene extends Phaser.Scene {
         });
         const dynamic=this.gusts.filter(p=>p.visible).length+
           this.art.visibleDecorationCount()+this.routeLeaves.flat().filter(p=>p.visible).length;
-        const objects=this.children.list.filter(p=>p.active&&p.visible).length;
+        const objects=this.children.list.filter(p=>p.active&&(p as typeof p & {visible?:boolean}).visible!==false).length;
         const renderer=this.game.renderer.type===Phaser.WEBGL?'WebGL':'Canvas';
         this.performanceLabel.setText([
           'DIAGNÓSTICO REAL · FASE 01 · '+(this.reducedGraphics?'REDUZIDO':'NORMAL'),
