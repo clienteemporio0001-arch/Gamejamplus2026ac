@@ -74,9 +74,10 @@ export class TreetopForestScene extends Phaser.Scene {
    const ring=this.add.circle(target.x,target.y-12,11,0xf2d899,.2)
     .setStrokeStyle(2,0xe1d59e,.82).setDepth(24);
    const names=stage==='tower'?'TÉO: E • CIPÓ':
+    stage==='bridge'&&owner===2?'NINO: APERTE E':
     owner===1?'LIA: DISPARO • A':owner===0?'TÉO: E • B':'NINO: DASH + E • C';
-   const label=stage==='tower'||stage==='time'?
-    this.caption(target.x,target.y-45,names,12,'#f7e5aa').setDepth(57):undefined;
+   const label=stage==='tower'||stage==='time'||stage==='bridge'&&owner===2?
+    this.caption(target.x,target.y-49,names,12,'#f7e5aa').setDepth(57):undefined;
    label?.setVisible(false);
    this.markers.push({ring,label,stage,seat:owner});
    this.tweens.add({targets:ring,alpha:.32,scale:1.16,duration:1450,yoyo:true,repeat:-1});

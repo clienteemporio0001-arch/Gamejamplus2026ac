@@ -80,10 +80,13 @@ party[2]={seat:2,x:3000,y:456,vx:0,vy:0};
 assert.equal(authority.interact(0,'lever',party,base+1000),true);
 assert.equal(authority.authorizeEnergy(1,'shoot',party,base+1200,1).ok,true);
 assert.equal(w.bridge[1],true);
-assert.equal(authority.interact(2,'switch',party,base+1300),false);
-assert.equal(authority.authorizeEnergy(2,'dash',party,base+1400,1).ok,true);
+assert.equal(authority.interact(2,'switch',party,base+1300),false,
+ 'Nino must be near the bridge switch to use E');
+assert.equal(w.dashAt,0,'no dash has been activated for the bridge');
 party[2]={seat:2,x:TREE_TARGETS.bridge.nino.x,y:TREE_TARGETS.bridge.nino.y,vx:0,vy:0};
-assert.equal(authority.interact(2,'switch',party,base+1850),true);
+assert.equal(authority.interact(2,'switch',party,base+1850),true,
+ 'Nino presses E without dash to finish the first bridge');
+assert.equal(w.dashAt,0,'bridge interaction does not require or trigger dash');
 assert.ok(w.bridgeOpen,'bridge is fully unlocked only by three participants');
 assert.ok(treePlatforms(w).some(p=>p.puzzle==='bridge'));
 party[2]={seat:2,x:TREE_TARGETS.tower.base.x,y:TREE_TARGETS.tower.base.y,vx:0,vy:0};

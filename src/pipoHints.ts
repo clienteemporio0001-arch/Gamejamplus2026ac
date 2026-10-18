@@ -158,7 +158,7 @@ export function pipoHint(source:HintSource):PipoHint{
   return guidance('ponte dos três',[
    'Eu tenho asas, vocês não! Olhem antes de saltar!',
    'A Ponte dos Três só desce quando cada amigo cumprir sua tarefa.',
-   who+'use E no galho alto; Lia atira na amarra; Nino usa dash e E na trava.'
+   who+'use E no galho alto; Lia atira na amarra; Nino chega à trava e aperta apenas E.'
   ]);
  }
  if(!w.ropeOpen)return guidance('cipó superior',[

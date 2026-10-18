@@ -166,7 +166,7 @@ export function treeWindVelocity(w:TreeWorld,pose:Pick<Pose,'x'|'y'>,
  return desired;
 }
 export function treeObjective(w:TreeWorld):{title:string;progress:string}{
- if(!w.bridgeOpen)return {title:'A Ponte dos Três: unam suas habilidades.',progress:w.bridge.filter(Boolean).length+'/3'};
+ if(!w.bridgeOpen)return {title:'A Ponte dos Três: ativem os três mecanismos.',progress:w.bridge.filter(Boolean).length+'/3'};
  if(!w.ropeOpen)return {title:'Téo: use salto duplo para soltar o cipó.',progress:(w.tower[2]?'1':'0')+'/1'};
  if(!w.finalOpen)return {title:'Os Galhos do Tempo: sigam o vento.',progress:w.time.filter(Boolean).length+'/3'};
  return {title:'A Última Copa: reúnam os três na saída.',progress:'Saída liberada'};
@@ -316,9 +316,10 @@ export class TreeAuthority{
    &&!windy&&(target.x-p.x)*facing>=0&&(target.x-p.x)*facing<=360
    &&Math.abs(p.y-18-target.y)<56;
   if(!w.bridgeOpen){
-   if(seat===2&&kind==='switch'&&!windy&&w.dashAt>0
-     &&now-w.dashAt<=2800&&p.x-w.dashX>=105
-     &&close(p,TREE_TARGETS.bridge.nino.x,TREE_TARGETS.bridge.nino.y,55,65))
+   // Nino's FIRST bridge switch is a normal E interaction. Dash remains an
+   // ability and is still required by later dedicated dash mechanisms.
+   if(seat===2&&kind==='switch'&&!w.bridge[2]
+     &&close(p,TREE_TARGETS.bridge.nino.x,TREE_TARGETS.bridge.nino.y,62,75))
      changed=w.bridge[2]=true;
    if(!w.bridge[1]&&shot(TREE_TARGETS.bridge.lia))changed=w.bridge[1]=true;
    if(seat===0&&kind==='lever'&&!windy
