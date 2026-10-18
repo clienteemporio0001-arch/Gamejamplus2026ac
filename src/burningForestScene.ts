@@ -11,7 +11,7 @@ import {BurningForestArt} from './burningForestArt';
 import {BurningForestAudio} from './burningForestAudio';
 import {
  FIRE_WIDTH,FIRE_HEIGHT,FIRE_START,FIRE_PLATFORMS,FIRE_TARGETS,
- firePlatforms,fireTreePhase,fireHeavySmoke,fireDamageZone,fireFlareActive,
+ firePlatforms,fireVisualTreePhase,fireHeavySmoke,fireDamageZone,fireFlareActive,
  type FireWorld
 } from './burningForest';
 
@@ -262,7 +262,7 @@ export class BurningForestScene extends Phaser.Scene {
    this.names[seatNo].setPosition(actor.x,actor.y-56)
     .setColor(seatNo===seat?'#fff4d3':['#a9f5a8','#f5bc85','#94d7ff'][seatNo]);
   }
-  const treePhase=fireTreePhase(w,now);
+  const treePhase=fireVisualTreePhase(w);
   if(treePhase!==this.lastTreePhase){
    this.lastTreePhase=treePhase;
    if(treePhase==='warning')this.pipo.warnDanger('Corram! Essa árvore vai cair!');
