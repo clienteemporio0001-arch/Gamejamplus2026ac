@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import {PipoGuide} from './pipoGuide';
+import {SUSPENSION,SUSPENSION_LANDING_Y} from './forestLoop';
 import {MissionDirector} from './missionDirector';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import { LOOP_WIDTH, LOOP_GEOMETRY, LOOP_MARKS, LOOP_TREE, LOOP_FINAL, ROUTES, barriers,
@@ -28,6 +29,9 @@ export class ForestLoopScene extends Phaser.Scene {
   private finalBarrier!:Phaser.GameObjects.Rectangle;
   private marks:Phaser.GameObjects.Container[]=[];
   private routeCurtains:Phaser.GameObjects.Container[]=[];
+  private suspension!:Phaser.GameObjects.Container;
+  private suspensionCollider!:Phaser.GameObjects.Rectangle;
+  private suspensionCables!:Phaser.GameObjects.Graphics;
   private contextText!:Phaser.GameObjects.Text;
    private pipo!:PipoGuide;private missions!:MissionDirector;
   private regionToast!:Phaser.GameObjects.Text;
@@ -82,16 +86,18 @@ export class ForestLoopScene extends Phaser.Scene {
   private background():void{
     this.art=new NightArt(this,LOOP_WIDTH,'forest');
     this.art.water(LOOP_GEOMETRY.chasm.start,LOOP_GEOMETRY.chasm.end,637);
-    this.clearingTree=this.add.image(1790,333,'loop-clearing-tree')
+    this.art.water(SUSPENSION.gapStart,SUSPENSION.gapEnd,637);
+    for(const [start,end] of [[2000,2260],[4100,4340],[6470,6700]])this.art.water(start,end,637);
+    this.clearingTree=this.add.image(5670,333,'loop-clearing-tree')
       .setDisplaySize(560,625).setDepth(-7).setAlpha(.91);
     const light=this.add.graphics().setDepth(-6);
     for(let i=7;i>=1;i--){
       light.fillStyle(0x83c5ad,.014);
-      light.fillEllipse(1850,330,145+i*45,190+i*45);
+      light.fillEllipse(5670,330,145+i*45,190+i*45);
     }
     this.shiftShade=this.add.rectangle(LOOP_WIDTH/2,350,LOOP_WIDTH,700,0x142c38,.03).setDepth(-5);
     for(let i=0;i<4;i++){
-      const root=this.add.ellipse(1450+i*100,632,135,29,0x224234,.30).setDepth(-2);
+      const root=this.add.ellipse(5250+i*100,632,135,29,0x224234,.30).setDepth(-2);
       this.movingRoots.push(root);
     }
     // All landmark sprites are rooted at the exact collision-ground level.
@@ -119,13 +125,13 @@ export class ForestLoopScene extends Phaser.Scene {
     }
     // Towering chasm tree is attached to its roots, while the narrow branch
     // at UPPER_BRANCH.centerY is the ONLY solid high landing for Téo.
-    this.add.image(2200,353,'loop-elevated-tree')
+    this.add.image(9400,353,'loop-elevated-tree')
       .setDisplaySize(500,590).setDepth(5);
     const root=this.add.graphics().setDepth(6);
     root.lineStyle(16,0x534937,.9);
-    root.beginPath();root.moveTo(2252,637);root.lineTo(2201,565);root.lineTo(2190,484);root.strokePath();
+    root.beginPath();root.moveTo(9452,637);root.lineTo(9401,565);root.lineTo(9390,484);root.strokePath();
     root.lineStyle(7,0x8d7755,.56);
-    root.beginPath();root.moveTo(2229,535);root.lineTo(2185,410);root.lineTo(2152,315);root.strokePath();
+    root.beginPath();root.moveTo(9429,535);root.lineTo(9385,410);root.lineTo(9352,315);root.strokePath();
     const ring=this.add.graphics().setDepth(14);
     ring.lineStyle(3,0xcfe9a8,.75);
     ring.strokeCircle(LOOP_TREE[0].x,LOOP_TREE[0].y-9,10);
@@ -159,7 +165,7 @@ export class ForestLoopScene extends Phaser.Scene {
       warning.lineTo(0,-118);warning.lineTo(36,-106);warning.strokePath();
       this.routeCurtains.push(this.add.container(x,638,[roots,warning]).setDepth(14));
     }
-    for(const x of [1080,2122,3400])
+    for(const x of [1300,7590,10600])
       this.add.rectangle(x,625,72,5,0x7cbed4,.7).setDepth(11);
   }
   private createTree():void{
@@ -174,12 +180,12 @@ export class ForestLoopScene extends Phaser.Scene {
       ink.fillStyle(0x2c543e,.96);ink.fillEllipse(x,y,w,h);
       ink.lineStyle(2,0x6d9365,.25);ink.strokeEllipse(x,y,w,h);
     }
-    this.tree=this.add.container(2265,637,[ink]).setDepth(16);
+    this.tree=this.add.container(9465,637,[ink]).setDepth(16);
     this.tree.setRotation(-1.16);
     for(let i=0;i<3;i++){
       const r=this.add.graphics().setDepth(15);
       r.lineStyle(4,[0x9febac,0xffd6a6,0x9ecdeb][i],.88);
-      r.lineBetween(LOOP_TREE[i].x,LOOP_TREE[i].y,2300,465+i*35);
+      r.lineBetween(LOOP_TREE[i].x,LOOP_TREE[i].y,9500,465+i*35);
       this.ropes.push(r);
     }
   }
@@ -187,8 +193,21 @@ export class ForestLoopScene extends Phaser.Scene {
     this.physics.world.setBounds(0,0,LOOP_WIDTH,900);
     this.physics.world.setBoundsCollision(true,true,false,false);
     this.background();
-    this.ground(1132,674,2265,72);
-    this.ground(3212,674,1175,72);
+    // Five genuine traversal gaps before the original tree bridge, not an enlarged empty floor.
+    for(const [left,right] of [[0,2000],[2260,4100],[4340,6470],
+      [6700,SUSPENSION.gapStart],[SUSPENSION.gapEnd,LOOP_GEOMETRY.chasm.start],
+      [LOOP_GEOMETRY.chasm.end,LOOP_WIDTH]]){
+      this.ground((left+right)/2,674,right-left,72);
+    }
+    // Jumpable natural ledges and temporary-looking stone shelves for traversal.
+    for(const [x,y,width] of [[2100,625,105],[4210,622,98],[6580,625,115],
+      [2570,590,155],[3800,587,140],[6000,587,125],
+      [7200,585,112],[7480,586,110],[8950,590,144],[10220,597,155]]){
+      const ledge=this.ground(x,y,width,22,'wood');
+      const body=ledge.body as Phaser.Physics.Arcade.StaticBody;
+      body.checkCollision.down=false;body.checkCollision.left=false;
+      body.checkCollision.right=false;body.checkCollision.up=true;
+    }
     // Hollow-tree cavity is served by an actual branch, not a floating plank.
     this.ground(LOOP_MARKS[0].x,546,165,20,'wood');
     // Physical stone collider matches the artwork's 155x104 silhouette;
@@ -211,7 +230,7 @@ export class ForestLoopScene extends Phaser.Scene {
     ledgeBody.checkCollision.left=false;
     ledgeBody.checkCollision.right=false;
     ledgeBody.checkCollision.up=true;
-    this.ground(3320,548,145,20,'wood');
+    this.ground(10520,548,145,20,'wood');
     this.bridge=this.ground(LOOP_GEOMETRY.bridge.x,LOOP_GEOMETRY.bridge.y,
       LOOP_GEOMETRY.bridge.width,LOOP_GEOMETRY.bridge.height,'wood');
     // Only the host's loop snapshot determines physical blockers.
@@ -248,7 +267,7 @@ export class ForestLoopScene extends Phaser.Scene {
     this.cameras.main.setBounds(0,0,LOOP_WIDTH,700);
     this.cameras.main.setZoom(cameraZoomFor({width:this.scale.gameSize.width,height:this.scale.gameSize.height},isCoarseDevice()));
     this.cameras.main.startFollow(this.local,false,.09,.1);
-    this.cameras.main.centerOn(1900,420);
+    this.cameras.main.centerOn(LOOP_START[1].x,420);
     this.cameras.main.setDeadzone(80,90);
     this.cursors=this.input.keyboard?.createCursorKeys();
     this.keys=this.input.keyboard?.addKeys('A,D,E') as Record<string,Phaser.Input.Keyboard.Key>|undefined;
@@ -362,7 +381,7 @@ export class ForestLoopScene extends Phaser.Scene {
     this.shiftShade.setFillStyle(tint).setAlpha([.035,.13,.10][w.layout]);
     this.clearingTree.setTint([0xffffff,0xc9e0d7,0xb4dfff][w.layout]);
     this.movingRoots.forEach((root,i)=>{
-      root.x=1430+i*105+[0,-34,43][w.layout];
+      root.x=5250+i*105+[0,-34,43][w.layout];
       root.setAlpha([.28,.45,.4][w.layout]);
     });
     this.marks.forEach((mark,i)=>{
@@ -395,7 +414,7 @@ export class ForestLoopScene extends Phaser.Scene {
       this.net.act({kind:'switch'});
     }
     // Physical co-op: Lia mounts stationary Nino, then Téo mounts Lia.
-    if((seat===0||seat===1)&&x>1930&&x<2230
+    if((seat===0||seat===1)&&((x>7550&&x<8000)||(x>9110&&x<9440))
       &&(seat!==0||!(allDone(w.marks)&&!w.tree[0]&&Math.abs(x-LOOP_TREE[0].x)<83&&Math.abs(y-LOOP_TREE[0].y)<86))){
       this.net.act({kind:w.supporting[seat]===null?'support':'detach'});
     }
