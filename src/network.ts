@@ -911,7 +911,7 @@ export class Network {
       const now=Date.now();
       const w=this.temporalAuthority.world;
       if(w.blackoutUntil>now||w.deadUntil>0||w.completed){
-        this.fallTracker.reset();
+        this.fallTracker.reset(w.blackoutUntil>now?now+900:0);
       }else{
         const hits=this.fallTracker.sample(this.poses,
           temporalFallSurfaces(w.layout,w.bridge),now,w.supporting);
@@ -932,7 +932,7 @@ export class Network {
       if(this.temporalAuthority.tickResources(this.poses,now))this.shareTemporal();
       const state=this.temporalAuthority.tick(this.poses,now);
       if(state.poses){
-        this.fallTracker.reset();
+        this.fallTracker.reset(now+900);
         this.poses=state.poses.map(p=>({...p}));
         for(const pose of this.poses){
           this.broadcast({t:'respawn',pose});this.emit('respawn',pose);
@@ -947,7 +947,7 @@ export class Network {
       const now=Date.now();
       const l=this.loopAuthority.world;
       if(blackoutActive(l,now)||l.deadUntil>0||l.completed){
-        this.fallTracker.reset();
+        this.fallTracker.reset(blackoutActive(l,now)?now+900:0);
       }else{
         const hits=this.fallTracker.sample(this.poses,loopFallSurfaces(l.layout,l.bridge,
           SUMMIT_BRANCH),now,l.supporting);
@@ -971,7 +971,7 @@ export class Network {
       if(this.loopAuthority.tickResources(this.poses,now))this.shareLoop();
       const state=this.loopAuthority.tick(this.poses,now);
       if(state.poses){
-        this.fallTracker.reset();
+        this.fallTracker.reset(now+900);
         this.poses=state.poses.map(p=>({...p}));
         for(const pose of this.poses){
           this.broadcast({t:'respawn',pose});this.emit('respawn',pose);

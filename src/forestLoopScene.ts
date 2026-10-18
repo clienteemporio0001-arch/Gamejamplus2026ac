@@ -283,7 +283,7 @@ export class ForestLoopScene extends Phaser.Scene {
       }else if(reply.kind==='shoot'){
         this.shots=this.time.now+510;
         const shot=this.add.circle(this.local.x+15,this.local.y-18,5,0xf0c184,.9).setDepth(25);
-        this.tweens.add({targets:shot,x:shot.x+this.facing*260,alpha:0,
+        this.tweens.add({targets:shot,x:shot.x+this.facing*365,alpha:0,
           duration:420,onComplete:()=>shot.destroy()});
       }else if(reply.kind==='dash'){
         this.dashes=this.time.now+1900;

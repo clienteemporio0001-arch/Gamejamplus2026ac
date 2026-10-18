@@ -40,7 +40,7 @@ export function loopContext(w:LoopWorld,seat:Seat,x:number,y:number,now=Date.now
     if(seat===0&&!w.tree[0]&&w.teoUpperReached&&!w.teoSummitReached&&near(UPPER_BRANCH.x,upperLandingY,100,20))return 'SALTO DUPLO NOVAMENTE · Galho superior';
     if(seat===0&&!w.tree[0]&&w.stackMilestone&&!w.teoUpperReached
       &&near(UPPER_BRANCH.x,520,115,66))return 'ESPAÇO → ESPAÇO · Salto duplo até o galho';
-    if(seat===1&&!w.tree[1]&&near(LOOP_TREE[1].x-150,606,115,85))return 'J · Acertar amarra';
+    if(seat===1&&!w.tree[1]&&near(LOOP_GEOMETRY.chasm.start-55,606,115,85))return 'J · Acertar amarra';
     if(seat===2&&!w.tree[2]&&near(LOOP_TREE[2].x-143,606,105,85))return 'SHIFT → E · Soltar raiz';
     if(!w.stackMilestone&&near(2090,605,150,110))return 'E · Lia sobe em Nino, depois Téo em Lia';
   }

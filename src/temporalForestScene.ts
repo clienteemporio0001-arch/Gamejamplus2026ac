@@ -271,7 +271,7 @@ export class TemporalForestScene extends Phaser.Scene {
    else if(result.kind==='shoot'){
     this.lastShot=this.time.now+510;
     const stone=this.add.circle(this.local.x,this.local.y-18,5,0xf9dfaa,.85).setDepth(56);
-    this.tweens.add({targets:stone,x:stone.x+this.facing*290,alpha:0,duration:430,
+    this.tweens.add({targets:stone,x:stone.x+this.facing*360,alpha:0,duration:430,
       onComplete:()=>stone.destroy()});
    }
   }));

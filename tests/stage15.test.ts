@@ -76,6 +76,10 @@ const teleport=new FallTracker();
 teleport.sample(persons(actor(88)),surface,1000);
 ok(teleport.sample(persons(actor(616)),surface,1050).length===0,
   'teleporte grande de posição é ignorado');
+const grace=new FallTracker();
+grace.reset(1700);
+ok(grace.sample(persons(actor(88)),surface,1600).length===0,'janela de segurança pós-apagão');
+ok(grace.sample(persons(actor(616)),surface,1650).length===0,'sem dano por correção técnica');
 const blackout=new FallTracker();
 blackout.sample(persons(actor(88)),surface,1000);
 blackout.reset();
@@ -127,6 +131,10 @@ l[0]={seat:0,x:2140,y:summitLandingY,vx:0,vy:0};
 ok(loop.tick(l,11600).changed&&loop.world.teoSummitReached,'segundo patamar registrado');
 ok(loop.act(0,{kind:'lever'},l,11700)&&loop.world.tree[0],
   'amarra de Téo exige os dois patamares');
+ok(readFileSync('src/forestLoopScene.ts','utf8').includes('x:shot.x+this.facing*365'),
+  'projétil visível da fase 1 percorre o mesmo alcance autoritativo');
+ok(readFileSync('src/forestLoopUI.ts','utf8').includes('LOOP_GEOMETRY.chasm.start-55'),
+  'dica de Lia fica na margem segura, não dentro do abismo');
 ok(LOOP_TREE[1].x===2560&&2560-2220<=365,
   'baladeira da primeira fase exige mira distante, mas cabe no alcance real');
 ok(2560>LOOP_GEOMETRY.chasm.start&&2220<LOOP_GEOMETRY.chasm.start,

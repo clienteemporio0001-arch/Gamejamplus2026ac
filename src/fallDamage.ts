@@ -42,12 +42,14 @@ type Tracked={ready:boolean;x:number;y:number;apex:number;grounded:boolean;lastA
 const blank=():Tracked=>({ready:false,x:0,y:0,apex:0,grounded:false,lastAt:0});
 /** Host-only sampler. No guest-authored "fall height" or damage packets. */
 export class FallTracker{
+ private suppressUntil=0;
  private states:[Tracked,Tracked,Tracked]=[blank(),blank(),blank()];
- reset():void{this.states=[blank(),blank(),blank()];}
+ reset(suppressUntil=0):void{this.states=[blank(),blank(),blank()];this.suppressUntil=suppressUntil;}
  resetSeat(seat:Seat):void{this.states[seat]=blank();}
  sample(poses:Pose[],surfaces:readonly FallSurface[],now:number,
    supported:readonly (Seat|null)[]=[null,null,null]):Seat[]{
   const hits:Seat[]=[];
+  if(now<this.suppressUntil){this.states=[blank(),blank(),blank()];return hits;}
   for(const seat of [0,1,2] as Seat[]){
    const pose=poses[seat],state=this.states[seat];
    if(!pose||supported[seat]!==null){this.resetSeat(seat);continue;}
