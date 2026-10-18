@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {PipoGuide} from './pipoGuide';
 import {CHARACTERS,type Network,type Seat,type Pose} from './network';
 import type {TouchInput} from './game';
 import {SoloBodies} from './soloBodies';
@@ -46,6 +47,7 @@ export class TemporalForestScene extends Phaser.Scene {
  private dark!:Phaser.GameObjects.Rectangle;
  private darkText!:Phaser.GameObjects.Text;
  private hint!:Phaser.GameObjects.Text;
+ private pipo!:PipoGuide;
  private region!:Phaser.GameObjects.Text;
  private regionId=-1;private regionEnds=0;
  private pending=new Map<number,{seat:Seat;kind:VitalAction}>();
@@ -233,7 +235,8 @@ export class TemporalForestScene extends Phaser.Scene {
   this.midRain=this.add.graphics().setDepth(26);
   this.frontRain=this.add.graphics().setDepth(55);
   this.ripples=this.add.graphics().setDepth(14);
-  this.hint=this.text(0,0,'',12,'#c6e9e0').setVisible(false).setDepth(66);
+  this.pipo=new PipoGuide(this,this.net);
+   this.hint=this.text(0,0,'',12,'#c6e9e0').setVisible(false).setDepth(66);
   this.region=this.text(this.scale.gameSize.width/2,110,'',14,'#d8ebed')
     .setScrollFactor(0).setDepth(100).setVisible(false);
   this.dark=this.add.rectangle(this.scale.gameSize.width/2,350,this.scale.gameSize.width+160,780,0x020d16)
@@ -424,14 +427,17 @@ export class TemporalForestScene extends Phaser.Scene {
     seat,x:this.local.x,y:this.local.y,
     vx:this.body.velocity.x,vy:this.body.velocity.y
   },now);
-  this.hint.setText(time<this.tiredUntil?'SEM ESTAMINA':guidance?.action??'')
+  this.hint.setText(time<this.tiredUntil?'SEM ESTAMINA':'')
    .setColor(time<this.tiredUntil?'#f8cb86':'#c6e9e0');
   this.hint.setVisible(Boolean(this.hint.text)).setPosition(this.local.x,this.local.y-81);
+  this.pipo.update(time,this.local.x,this.local.y,pause);
+  void guidance;
   this.echoLabels.forEach((label,i)=>{
     const marker=TEMP_ECHO[i];
     const nearby=!w.echo[i]&&seat===i&&
       Math.abs(this.local.x-marker.x)<230&&Math.abs(this.local.y-marker.y)<135;
-    label.setVisible(nearby&&!pause);
+    label.setVisible(false);
+    void nearby;
   });
   const regionIndex=this.local.x<700?0:this.local.x<1580?1:
     this.local.x<2560?2:this.local.x<3030?3:4;
