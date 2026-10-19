@@ -25,9 +25,27 @@ ok(network.includes("this.isSolo||this.players.every"),
 ok(network.includes("if(stage==='intro')this.introDone.clear()")&&
    network.includes('this.introDone.clear();'),
    'confirmações antigas não vazam entre sessões');
-ok(main.includes("video.addEventListener('ended',finish")&&
-   main.includes("skip.addEventListener('click',finish)"),
-   'a reprodução completa e o botão PULAR usam a mesma transição');
+ok(main.includes("video.addEventListener('ended',()=>complete(onComplete)")&&
+   main.includes("skip.addEventListener('click',()=>complete(onSkip))"),
+   'fim natural e PULAR possuem transições explícitas e independentes');
+ok(main.includes("video.controls=false")&&
+   main.includes("video.tabIndex=-1")&&
+   main.includes("video.disablePictureInPicture=true"),
+   'filme não oferece barra de progresso, seek ou controles nativos');
+ok(main.includes("if(allowSkip)holder.appendChild(skip);")&&
+   main.includes("playIntroVideo(()=>net.completeIntro(),canSkipIntro,()=>net.skipIntro())"),
+   'botão PULAR só é renderizado para anfitrião; convidado relata conclusão');
+ok(main.includes("if(canSkipIntro)ui.querySelector('#skip-intro')"),
+   'HUD do convidado também não exibe botão de pular');
+ok(network.includes("if(!this.isHost||this.stage!=='intro')return;")&&
+   network.includes("this.finishIntro();"),
+   'regra de autorização do PULAR fica no Network e afeta toda a sala');
+ok(network.includes("case 'intro-done': return value as Wire;")&&
+   network.includes("msg.t === 'intro-done'")&&
+   network.includes("this.message(this.hostConn,{t:'intro-done'})"),
+   'cliente remoto informa apenas fim natural, não solicita pular');
+ok(!network.includes("intro-skip"),
+   'não existe mais mensagem multiplayer que permita convidado pular');
 ok(main.includes("video.src=import.meta.env.BASE_URL+'introducao.mp4'"),
    'mídia respeita o caminho de publicação do GitHub Pages e itch.io');
 
@@ -48,8 +66,8 @@ ok(main.includes('startSoloAdventure(level);')&&
 ok(main.includes("net.startSolo(level,false,'loop')"),
    'fases 02 a 04 mantêm acesso direto');
 ok(main.includes("skip.textContent='⏭ PULAR INTRODUÇÃO'")&&
-   main.includes("video.addEventListener('ended',finish"),
-   'vídeo permite pular e avança automaticamente ao terminar');
+   main.includes("video.addEventListener('ended',()=>complete(onComplete)"),
+   'modo solo mantém PULAR e início automático ao final');
 ok(main.includes('introLayer?.remove();introLayer=null;')&&
    main.includes("if(introVideo!==video)return;"),
    'vídeo descarta a camada e ignora callbacks antigos');
