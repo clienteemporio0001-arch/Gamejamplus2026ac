@@ -2,12 +2,16 @@ import type {FireWorld} from './burningForest';
 import {AUDIO_CHANGE_EVENT,audioLevel} from './audioSettings';
 import {getSharedAudioContext} from './sharedAudio';
 import {fireVisualTreePhase} from './burningForest';
+import {FireballImpactTracker} from './fireballImpactAudio';
 /** Lightweight, opt-in-by-interaction procedural soundscape for the final act. */
 export class BurningForestAudio {
  private ctx?:AudioContext;
  private hiss?:AudioBufferSourceNode;
  private filter?:BiquadFilterNode;
  private master?:GainNode;
+ private explosionNoise?:AudioBuffer;
+ private explosionBus?:GainNode;
+ private impactTracker=new FireballImpactTracker();
  private phase:'calm'|'warning'|'impact'='calm';
  private wind:-1|1=1;
  private unlockHandler=()=>{void this.unlock();};
@@ -32,6 +36,15 @@ export class BurningForestAudio {
    const master=ctx.createGain();master.gain.value=0;
    hiss.connect(filter);filter.connect(master);master.connect(ctx.destination);
    hiss.start();this.ctx=ctx;this.hiss=hiss;this.filter=filter;this.master=master;
+   // One short reusable noise buffer and an independent low-volume SFX bus.
+   // Shared AudioContext stays owned by GameAudio.
+   const frames=Math.floor(ctx.sampleRate*.36);
+   const noise=ctx.createBuffer(1,frames,ctx.sampleRate);
+   const samples=noise.getChannelData(0);
+   for(let i=0;i<frames;i++)samples[i]=(Math.random()*2-1);
+   this.explosionNoise=noise;
+   const sfx=ctx.createGain();sfx.gain.value=.72;
+   sfx.connect(ctx.destination);this.explosionBus=sfx;
    this.mix(this.phase);
   }catch{/* browsers can block audio; the visible telegraph is mandatory */}
  }
@@ -57,8 +70,49 @@ export class BurningForestAudio {
   oscillator.connect(gain);gain.connect(ctx.destination);
   oscillator.start();oscillator.stop(ctx.currentTime+.27);
  }
- update(w:FireWorld,now:number):void{
-  const phase=fireVisualTreePhase(w);void now;
+ /** One crunchy burst plus a falling bass thump, spatially attenuated by
+  * distance. Runs only on a newly-entered impact, never on each render frame.
+  * The Settings SFX / mute control always takes priority.
+  */
+ private explosion(lane:number,distance:number):void{
+  const ctx=this.ctx,bus=this.explosionBus,noise=this.explosionNoise;
+  const volume=audioLevel('sfx');
+  if(!ctx||ctx.state!=='running'||!bus||!noise||volume<=0)return;
+  const proximity=Math.max(0,1-distance/1350);
+  if(proximity<=0)return; // out-of-earshot impacts don't crowd the mix
+  const strength=volume*Math.max(.08,proximity*proximity);
+  const now=ctx.currentTime;
+  const source=ctx.createBufferSource();source.buffer=noise;
+  source.playbackRate.value=.91+(lane%5)*.035;
+  const lowpass=ctx.createBiquadFilter();lowpass.type='lowpass';
+  lowpass.Q.value=.58;
+  lowpass.frequency.setValueAtTime(2100,now);
+  lowpass.frequency.exponentialRampToValueAtTime(270,now+.30);
+  const grit=ctx.createGain();
+  grit.gain.setValueAtTime(.0001,now);
+  grit.gain.exponentialRampToValueAtTime(Math.max(.0002,.15*strength),now+.009);
+  grit.gain.exponentialRampToValueAtTime(.0001,now+.33);
+  source.connect(lowpass);lowpass.connect(grit);grit.connect(bus);
+  source.start(now);source.stop(now+.35);
+  const bass=ctx.createOscillator();bass.type='triangle';
+  bass.frequency.setValueAtTime(116+(lane%4)*9,now);
+  bass.frequency.exponentialRampToValueAtTime(38,now+.27);
+  const thump=ctx.createGain();
+  thump.gain.setValueAtTime(.0001,now);
+  thump.gain.exponentialRampToValueAtTime(Math.max(.0002,.19*strength),now+.014);
+  thump.gain.exponentialRampToValueAtTime(.0001,now+.29);
+  bass.connect(thump);thump.connect(bus);
+  bass.start(now);bass.stop(now+.32);
+  // Release one-shot nodes promptly; ambient hiss and shared context persist.
+  source.onended=()=>{source.disconnect();lowpass.disconnect();grit.disconnect();};
+  bass.onended=()=>{bass.disconnect();thump.disconnect();};
+ }
+ update(w:FireWorld,now:number,listenerX=0):void{
+  // Every visible impact is sampled for both solo and guest clients from the
+  // same FireWorld state. The effect never changes game collision or health.
+  const impacts=this.impactTracker.sample(w,now);
+  for(const impact of impacts)this.explosion(impact.lane,Math.abs(impact.x-listenerX));
+  const phase=fireVisualTreePhase(w);
   if(phase!==this.phase){
    this.phase=phase;this.mix(phase);
    if(phase==='warning'||phase==='impact')this.crack();
@@ -74,6 +128,8 @@ export class BurningForestAudio {
   document.removeEventListener('keydown',this.unlockHandler);
   window.removeEventListener(AUDIO_CHANGE_EVENT,this.settingsChange);
   try{this.hiss?.stop();this.hiss?.disconnect();this.filter?.disconnect();this.master?.disconnect();}catch{/* already stopped */}
+  this.explosionBus?.disconnect();
+  this.explosionBus=undefined;this.explosionNoise=undefined;
   // Never close the context shared with music, SFX, and other biomes.
   this.ctx=undefined;
  }
