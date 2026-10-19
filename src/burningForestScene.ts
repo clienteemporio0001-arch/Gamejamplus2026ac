@@ -360,7 +360,7 @@ export class BurningForestScene extends Phaser.Scene {
    inFire?'⚠ CHAMAS ATIVAS':'';
   this.dangerText.setText(warning).setVisible(Boolean(warning)&&!pause);
   this.art.update(w,poses,time,now,this.net.isSolo);
-  this.audio.update(w,now);
+  this.audio.update(w,now,this.local.x);
   this.missions.update(time,pause);
    this.pipo.update(time,this.local.x,this.local.y,pause);
    this.exitArt?.update(w.logOpen&&w.smokeOpen&&w.treeOpen,this.net.poses,w.health,time);
