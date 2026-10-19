@@ -168,8 +168,8 @@ ok(net.includes("this.broadcast({t:'temporal',world:this.temporal})"),
   'estado, estamina e puzzles da fase 2 são replicados');
 ok(net.includes("startTemporalSolo():void{this.startSolo(2,false,'loop');}"),
   'modo solo pode iniciar diretamente Fase 2');
-ok(main.includes("button('dev-temporal','TESTAR FASE 02"),
-  'seletor de testes separado de Fase 2 clássica');
+ok(main.includes("data-phase")&&main.includes("net.startSolo(level,false,'loop')"),
+  'seletor de fases carrega Floresta Temporal sem a antiga aba clássica');
 ok(main.includes("mode === 'temporal' ? new TemporalForestScene"),
   'Phaser monta segundo mapa em cena independente');
 ok(main.includes('VOCÊS VENCERAM A TEMPESTADE!'),'fim da Fase 2 tem tela própria');

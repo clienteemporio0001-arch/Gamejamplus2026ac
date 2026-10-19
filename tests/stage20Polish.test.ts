@@ -16,7 +16,7 @@ const credits=readFileSync('docs/CREDITOS_E_LICENCAS.md','utf8');
 const guide=readFileSync('docs/REVISAO_DAS_FASES.md','utf8');
 // The normal player's main actions are obvious, tools remain secondary.
 for(const text of ['JOGAR SOZINHO','MULTIPLAYER ONLINE','COMO JOGAR',
- 'CONFIGURAÇÕES','CRÉDITOS','FERRAMENTAS DE DESENVOLVIMENTO','ENTRAR COM CÓDIGO'])
+ 'CONFIGURAÇÕES','CRÉDITOS','SELECIONAR FASE','ENTRAR COM CÓDIGO'])
  assert.ok(main.includes(text),'menu option '+text);
 assert.ok(main.includes('class="panel menu-panel"'),'main menu retains standard panel and cinematic modifier');
 assert.ok(main.includes('menu-atmosphere')&&css.includes('@keyframes menu-leaf'));
@@ -25,13 +25,13 @@ assert.ok(main.includes('function openPanel(kind:PanelKind)'));
 assert.ok(main.includes('aria-modal="true"')&&main.includes('aria-labelledby="fm-title"'));
 assert.ok(main.includes("document.addEventListener('keydown',overlayKey)"));
 assert.ok(main.includes("if(event.key==='Escape')"));
-for(const stage of ['dev-loop','dev-temporal','dev-treetop','dev-fire'])
- assert.ok(main.includes(stage),'developer selects '+stage);
+for(const stage of ['A BOCA DA NOITE','FLORESTA TEMPORAL','CAMINHO DAS ÁRVORES','FLORESTA EM CHAMAS'])
+ assert.ok(main.includes(stage),'map selector shows '+stage);
 for(const starter of ['startLoopSolo','startTemporalSolo','startTreetopSolo','startFireSolo'])
  assert.ok(net.includes(starter));
 assert.ok(main.includes("if(kind==='developer'&&(!devSession||!net.isSolo||!net.playing))return;"),
  'dev inspector cannot open in multiplayer or ordinary solo');
-assert.ok(main.includes("devSession=true;info='';net.startFireSolo();"));
+assert.ok(main.includes("net.startSolo(level,false,'loop')"),'map can load any stage in solo');
 assert.ok(main.includes("devSession=false;info='';net.startLoopSolo();"));
 assert.ok(main.includes("net.isSolo?'<details id=\"loop-dev\""));
 assert.ok(main.includes("devSession?'<button id=\"dev-inspect\""));
@@ -107,7 +107,7 @@ assert.ok(main.includes("if(data.stage==='final')audio.play('victory')"));
 assert.ok(net.includes("if(this.experience==='loop'&&this.level===3)"));
 assert.ok(net.includes("this.setPhase('playing',4)"));
 assert.ok(net.includes("this.setPhase('final',4)"));
-assert.ok(main.includes("button('dev-classic-'+level"));
+assert.ok(main.includes("button('select-phase'"),'public stage map replaced old tools');
 assert.ok(main.includes('NINGUÉM FICA PARA TRÁS. NEM A FLORESTA.'));
 assert.ok(main.includes("button('show-final-credits'"));
 assert.ok(credits.includes('Phaser')&&credits.includes('PeerJS')&&credits.includes('inteligência artificial'));
