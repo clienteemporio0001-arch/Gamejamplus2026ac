@@ -1,4 +1,5 @@
 import {readFileSync,existsSync} from 'node:fs';
+import {cleanName,formatTime,elapsedMs,addRecord,loadRecords,saveRecord} from '../src/speedrun';
 import {initLoop,LOOP_START,LOOP_CYCLE_MS,LOOP_GEOMETRY,LOOP_MARKS,markPosition} from '../src/forestLoop';
 import {loopObjective,loopContext,loopWind,regionTitle} from '../src/forestLoopUI';
 
@@ -10,6 +11,53 @@ const network=readFileSync('src/network.ts','utf8');
 const css=readFileSync('src/style.css','utf8');
 const pkg=JSON.parse(readFileSync('package.json','utf8'));
 ok(pkg.scripts.test==='npm run test:logic','npm test executa suíte oficial');
+
+/** Game Jam scoring regression: isolated pure logic and mocked local browser storage. */
+ok(cleanName('<Jo>    Ana', 'Anon')==='Jo Ana','nicknames are sanitized and normalized');
+ok(cleanName('   ','Explorador')==='Explorador','missing nickname has fallback');
+ok(formatTime(0)==='00:00'&&formatTime(61000)==='01:01'&&
+   formatTime(3601000)==='01:00:01','stopwatch formats hours/minutes/seconds');
+ok(elapsedMs(1000,65000)===64000&&elapsedMs(0,65000)===0,
+   'stopwatch starts at first gameplay event, not cinematic');
+const runA={id:'room-1',mode:'multiplayer' as const,name:'Equipe Mata',
+ players:['Téo: Ana','Lia: Bia','Nino: Leo'],durationMs:88000,finishedAt:1000};
+const runB={...runA,id:'room-2',name:'Outros',durationMs:72000,finishedAt:2000};
+ok(addRecord([runA],runB)[0].id==='room-2','fastest team finishes first');
+ok(addRecord([runA],runA).length===1,'duplicate finish events never double-count');
+let saved='';
+const fakeStorage={getItem:()=>saved||null,setItem:(_key:string,value:string)=>{saved=value;}};
+ok(saveRecord(runA,fakeStorage).best,'first run is a personal record');
+ok(!saveRecord({...runA,id:'room-3',durationMs:100000},fakeStorage).best,
+ 'slower replay is not a new best time');
+ok(loadRecords(fakeStorage).length===2,'records survive browser storage reload');
+ok(loadRecords({getItem:()=>'{invalid'}).length===0,'corrupted browser storage never crashes');
+const mainSpeedrun=readFileSync('src/speedrunUI.ts','utf8');
+ok(main.includes("update('run-clock'")&&main.includes('id="run-clock"'),
+ 'live stopwatch is part of phase HUD');
+ok(main.includes("button('show-ranking','🏆 MELHORES TEMPOS'")&&
+   main.includes("rankingSection('solo')+rankingSection('multiplayer')"),
+   'leaderboards distinguish solo and multiplayer records');
+ok(main.includes('victoryScore(net)')&&main.includes("recordVictory(net)"),
+   'win summary and one-time local record are wired');
+ok(mainSpeedrun.includes('if(!net.isHost||!net.rankedRun)return'),
+ 'only host saves multiplayer records; practice runs remain excluded');
+ok(network.includes("if(stage==='playing'&&level===1&&!this.runStartedAt)")&&
+   network.includes("if(stage==='final'&&level===4&&this.runStartedAt"),
+ 'time starts after intro and freezes on fourth phase victory');
+ok(network.includes("runStartedAt:this.runStartedAt,runFinishedAt:this.runFinishedAt")&&
+   network.includes("this.runStartedAt=msg.info.runStartedAt??0"),
+ 'host-authoritative start and finish times synchronize with guests');
+ok(network.includes("case 'profile':")&&network.includes("this.message(conn,{t:'profile',name:this.ownNickname})"),
+ 'multiplayer nickname travels through authenticated seat connection');
+ok(network.includes("this.teamName=cleanName(msg.teamName")&&
+   network.includes("this.broadcast({ t: 'roster', players: this.players, playing: this.playing,teamName:this.teamName })"),
+   'host team name reaches guests on roster snapshots');
+ok(main.includes("button('save-player','SALVAR NOME(S)'")&&
+   main.includes('nicknameInput()')&&main.includes('teamInput(net.teamName)'),
+   'lobby names can be entered before a match');
+ok(!mainSpeedrun.includes('fetch(')&&!mainSpeedrun.includes('supabase'),
+   'Game Jam ranking has no external database or API');
+
 
 // Kenney CC0 protagonists: sprites are build assets, never physics replacements.
 const spriteRenderer=readFileSync('src/kenneyCharacterSprites.ts','utf8');
