@@ -144,17 +144,17 @@ for(const [id,name] of [['loop-solo','JOGAR SOZINHO'],['create','MULTIPLAYER ONL
  ok(main.includes("button('"+id+"','"+name+"'"),'menu principal '+name);
 }
 ok(main.includes("void net.createRoom('loop')"),'multiplayer abre a floresta mutável');
-ok(main.includes("net.startLoopSolo()"),'solo abre a mesma aventura');
+ok(main.includes("net.startLoopSolo(avatars)"),'solo abre a mesma aventura');
 ok(main.includes("button('select-phase','SELECIONAR FASE'"),'acesso à seleção de fases');
 ok(main.includes('class="phase-trail"')&&main.includes('data-phase'),'mapa visual de quatro regiões');
-ok(main.includes("net.startSolo(level,false,'loop')"),'fase escolhida abre a aventura atual');
-ok(main.includes("ui.querySelector('#loop-solo')?.addEventListener('click',()=>{captureProfile();startSoloAdventure(1);})"),
+ok(main.includes("net.startSolo(level,false,'loop',avatars)"),'fase escolhida abre a aventura atual');
+ok(main.includes("ui.querySelector('#loop-solo')?.addEventListener('click',()=>{captureProfile();showSoloSelection(1);})"),
   'jogar sozinho usa o fluxo compartilhado com prólogo');
-ok(main.includes('startSoloAdventure(level);')&&
+ok(main.includes('showSoloSelection(level);')&&
    main.includes('if(level===1){')&&
-   main.includes('playIntroVideo(()=>{net.startLoopSolo();net.setNickname(profile.nickname);});'),
+   main.includes('playIntroVideo(()=>{net.startLoopSolo(avatars);net.setNickname(profile.nickname);});'),
    'selecionar Fase 01 também reproduz a introdução');
-ok(main.includes("net.startSolo(level,false,'loop')"),
+ok(main.includes("net.startSolo(level,false,'loop',avatars)"),
    'fases 02 a 04 mantêm acesso direto');
 ok(main.includes("'⏭ PULAR INTRODUÇÃO'")&&
    main.includes("video.addEventListener('ended',()=>complete(onComplete)"),
