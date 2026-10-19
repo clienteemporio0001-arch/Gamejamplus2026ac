@@ -210,6 +210,7 @@ export class TreetopForestScene extends Phaser.Scene {
    const layoutChanged=this.w.layout!==w.layout;
    if(layoutChanged)this.pipo?.warnDanger('Os galhos trocaram de lugar! Procurem abrigo!');
   this.w={...w,bridge:[...w.bridge],tower:[...w.tower],time:[...w.time],
+   fragileAt:[...w.fragileAt],
    supporting:[...w.supporting],health:[...w.health],stamina:[...w.stamina],
    safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent]};
   const active=new Set(treePlatforms(w));
