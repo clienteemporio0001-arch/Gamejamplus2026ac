@@ -669,6 +669,48 @@ function render(): void {
   }
   exitGame();
   const panelStart = '<main class="panel">';
+  if(net.role==='idle'&&soloSelectLevel!==null){
+    const level=soloSelectLevel;
+    const occupied=new Map<AvatarId,string>();
+    soloDraft.forEach((id,i)=>{if(i!==soloFocus)occupied.set(id,CHARACTERS[i].name);});
+    ui.innerHTML='<main class="panel skin-select-panel">'+
+      '<span class="kicker">A FLORESTA MENTE · MODO SOLO</span>'+
+      '<h2>ESCOLHA SEUS PERSONAGENS</h2>'+
+      '<p>Escolha três aparências diferentes. As habilidades dos papéis de Téo, Lia e Nino não mudam.</p>'+
+      '<div class="role-picker" role="group" aria-label="Qual papel deseja personalizar?">'+
+      ([0,1,2] as const).map(i=>'<button type="button" class="role-chip'+
+        (i===soloFocus?' role-chip-active':'')+'" data-role="'+i+'" aria-pressed="'+
+        (i===soloFocus)+'"><strong>'+safeText(CHARACTERS[i].name)+'</strong>'+
+        '<small>'+ROLE_SKILLS[i]+'</small><em>'+safeText(avatarInfo(soloDraft[i]).label)+'</em></button>').join('')+'</div>'+
+      '<p class="skin-selector-caption">PERSONALIZANDO: <strong>'+safeText(roleLabel(soloFocus))+'</strong></p>'+
+      avatarGrid(soloDraft[soloFocus],occupied,'solo')+
+      '<div class="actions">'+button('solo-confirm','▶ INICIAR AVENTURA')+
+      button('solo-back','VOLTAR',true)+'</div>'+
+      '<p class="skin-explainer">Só a aparência muda. Salto duplo, baladeira, dash, colisões e puzzles continuam iguais.</p></main>';
+    ui.querySelectorAll<HTMLButtonElement>('[data-role]').forEach(item=>
+      item.addEventListener('click',()=>{soloFocus=Number(item.dataset.role) as 0|1|2;render();}));
+    ui.querySelectorAll<HTMLButtonElement>('[data-solo-avatar]').forEach(item=>
+      item.addEventListener('click',()=>{
+        const candidate=item.dataset.soloAvatar;
+        if(!isAvatarId(candidate))return;
+        const next=selectSoloAvatar(soloDraft,soloFocus,candidate);
+        if(!next)return;
+        soloDraft=next;
+        if(soloFocus<2)soloFocus=(soloFocus+1) as 0|1|2;
+        render();
+      }));
+    ui.querySelector('#solo-back')?.addEventListener('click',()=>{
+      soloSelectLevel=null;phaseMapOpen=soloFromPhaseMap;render();
+    });
+    ui.querySelector('#solo-confirm')?.addEventListener('click',()=>{
+      if(!uniqueAvatars(soloDraft))return;
+      const chosen=[...soloDraft] as AvatarChoices;
+      saveSoloAvatars(chosen);
+      soloSelectLevel=null;
+      startSoloAdventure(level,chosen);
+    });
+    return;
+  }
   if(net.role==='idle'&&rankingsOpen){
     ui.innerHTML='<main class="panel rank-panel"><span class="kicker">GAME JAM · RECORDES DO NAVEGADOR</span>'+
       '<h2>🏆 MELHORES TEMPOS</h2>'+
