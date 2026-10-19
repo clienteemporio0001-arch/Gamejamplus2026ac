@@ -1,5 +1,6 @@
 import Peer, { type DataConnection } from 'peerjs';
 import {cleanName} from './speedrun';
+import {boulderEvent,boulderHit,tideSurface,tideHit} from './jamChallenges';
 import {multiplayerPoseBounds} from './multiplayerPoseBounds';
 import { PuzzleAuthority, initialWorld, validWorld, validAction, CHECKPOINTS, type WorldState, type PuzzleAction } from './puzzles';
 import { RiverAuthority, initialRiver, validRiver, RIVER_CHECKPOINTS, RIVER_SPAWNS, type RiverWorld } from './river';
@@ -1164,7 +1165,7 @@ export class Network {
     if(this.experience==='loop'&&this.level===4){
       const now=Date.now();
       if(this.fireAuthority.tickResources(this.poses,now))this.shareFire();
-      const result=this.fireAuthority.tick(this.poses,now,this.fireSafeUntil);
+      const result=this.fireAuthority.tick(this.poses,now,this.fireSafeUntil,this.isSolo);
       if(result.poses){
         this.fireSafeUntil=now+1800;
         this.poses=result.poses.map(p=>({...p}));
@@ -1193,6 +1194,11 @@ export class Network {
     if(this.experience==='loop'&&this.level===2){
       const now=Date.now();
       const w=this.temporalAuthority.world;
+      // New rising river is damaging only when the host authorizes contact.
+      const tide=tideSurface(w.cycleStart,now,w.bridge,w.blackoutUntil>now||w.deadUntil>0||w.completed);
+      for(const pose of this.poses){
+        if(tideHit(pose,tide)&&this.temporalAuthority.damage(pose.seat,now,false))this.shareTemporal();
+      }
       if(w.blackoutUntil>now||w.deadUntil>0||w.completed){
         this.fallTracker.reset(w.blackoutUntil>now?now+900:0);
       }else{
@@ -1229,6 +1235,10 @@ export class Network {
     if(this.experience==='loop'){
       const now=Date.now();
       const l=this.loopAuthority.world;
+      const boulder=boulderEvent(l.cycleStart,now,blackoutActive(l,now)||l.deadUntil>0||l.completed);
+      for(const pose of this.poses){
+        if(boulderHit(pose,boulder)&&this.loopAuthority.damage(pose.seat,now,false))this.shareLoop();
+      }
       if(blackoutActive(l,now)||l.deadUntil>0||l.completed){
         this.fallTracker.reset(blackoutActive(l,now)?now+900:0);
       }else{
