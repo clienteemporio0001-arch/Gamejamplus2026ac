@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import {paintHero} from './sharedCharacterArt';
 import {createKenneyCharacter,updateKenneyCharacter} from './kenneyCharacterSprites';
+import {escapeWallX} from './jamChallenges';
 import type {Seat,Pose} from './network';
 import {FIRE_WIDTH,FIRE_HEIGHT,FIRE_SMOKE_ZONE,FIRE_TREE_DANGER,FIRE_TARGETS,
  FIRE_PLATFORMS,FIRE_SHELTERS,fireballHazards,fireFlareActive,fireVisualTreePhase,
@@ -10,6 +11,8 @@ const hash=(a:number)=>{const n=Math.sin(a*127.1+14.58)*43758.5453;return n-Math
 type Figure={target:Phaser.GameObjects.Rectangle;ink:Phaser.GameObjects.Graphics;sprite:Phaser.GameObjects.Sprite|null;seat:Seat};
 export class BurningForestArt {
  private fire!:Phaser.GameObjects.Graphics;
+ private chase!:Phaser.GameObjects.Graphics;
+ private impactSprites=new Map<number,Phaser.GameObjects.Sprite>();
  private sparks!:Phaser.GameObjects.Graphics;
  private smokeInk!:Phaser.GameObjects.Graphics;
  private embers!:Phaser.GameObjects.Graphics;
@@ -20,6 +23,7 @@ export class BurningForestArt {
  private status!:Phaser.GameObjects.Text;
  constructor(private scene:Phaser.Scene){
   this.makeBackground();
+  this.chase=scene.add.graphics().setDepth(39);
  }
  private makeBackground():void{
   const back=this.scene.add.graphics().setDepth(-90);
@@ -185,9 +189,31 @@ export class BurningForestArt {
  private drawFigure(ink:Phaser.GameObjects.Graphics,seat:Seat,pose:Pose,ms:number):void{
   paintHero(ink,seat,ms,pose.vx,pose.vy);
  }
- update(w:FireWorld,poses:readonly Pose[],ms:number,now:number):void{
+ update(w:FireWorld,poses:readonly Pose[],ms:number,now:number,isSolo=false):void{
   this.fire.clear();this.sparks.clear();this.smokeInk.clear();this.embers.clear();
   this.fireballs.clear();
+  this.chase.clear();
+  const wall=escapeWallX(w.escapeAt,now,isSolo);
+  if(wall!==null){
+    // Entirely visual wall. Host authority calculates contact separately.
+    const active=now-w.escapeAt>=4500;
+    const opacity=active?.96:.42;
+    this.chase.fillStyle(0xb93318,.16*opacity);
+    this.chase.fillRect(4100,190,Math.max(0,wall-4100),520);
+    for(let i=0;i<16;i++){
+      const y=185+i*33;
+      const pulse=10*Math.sin(now*.009+i*2.33);
+      this.chase.fillStyle(i%3===0?0xffbd61:i%3===1?0xf56c28:0xd43b20,
+        (i%3===0?.89:.7)*opacity);
+      this.chase.fillTriangle(wall-40,y+36,wall+13,y+24,wall+pulse+17,y-39);
+      this.chase.fillStyle(0xffd38b,.3*opacity);
+      this.chase.fillEllipse(wall+5,y,22,65);
+    }
+    this.chase.lineStyle(4,0xffc56c,.75*opacity);
+    this.chase.lineBetween(wall+22,180,wall+22,700);
+  }
+  for(const sprite of this.impactSprites.values())sprite.setVisible(false);
+  const hasExplosion=this.scene.textures.exists('jam-explosion');
   // A soft ground warning precedes every fall, then a glowing projectile
   // and a brief impact burst. One batched Graphics object for performance.
   for(const b of fireballHazards(w,now)){
@@ -203,7 +229,23 @@ export class BurningForestArt {
     this.fireballs.fillStyle(0xee4d21,.47);this.fireballs.fillCircle(b.x,b.y,21);
     this.fireballs.fillStyle(0xffb347,.88);this.fireballs.fillCircle(b.x,b.y,14);
     this.fireballs.fillStyle(0xffeead,1);this.fireballs.fillCircle(b.x-3,b.y-4,7);
+   }else if(hasExplosion){
+    // Twelve exact frames of Ansimuz Explosion 4 in the existing 520ms
+    // damage window; no physics/hitboxes or projectile trajectories changed.
+    let sprite=this.impactSprites.get(b.lane);
+    if(!sprite){
+      sprite=this.scene.add.sprite(b.x,b.y,'jam-explosion',0)
+        .setDisplaySize(98,98).setOrigin(.5,.69).setDepth(50);
+      this.impactSprites.set(b.lane,sprite);
+    }
+    const delay=1200+(b.lane*977)%4300;
+    const elapsed=Math.max(0,now-w.cycleStart)-delay;
+    const phaseMs=((elapsed%5700)+5700)%5700;
+    const impactMs=Math.max(0,phaseMs-950-1450);
+    const frame=Math.max(0,Math.min(11,Math.floor(impactMs*12/520)));
+    sprite.setPosition(b.x,b.y+4).setFrame(frame).setVisible(true);
    }else{
+    // Safe procedural fallback while assets are unavailable or loading.
     this.fireballs.fillStyle(0xff7e25,.30);this.fireballs.fillEllipse(b.x,b.y,96,32);
     this.fireballs.lineStyle(4,0xffc36b,.8);this.fireballs.strokeEllipse(b.x,b.y,86,22);
     for(let k=0;k<5;k++){
