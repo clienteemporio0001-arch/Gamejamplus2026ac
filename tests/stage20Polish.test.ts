@@ -33,7 +33,7 @@ assert.ok(main.includes("if(kind==='developer'&&(!devSession||!net.isSolo||!net.
  'dev inspector cannot open in multiplayer or ordinary solo');
 assert.ok(main.includes("net.startSolo(level,false,'loop')"),'map can load any stage in solo');
 assert.ok(main.includes("startSoloAdventure(1)")&&
- main.includes("playIntroVideo(()=>net.startLoopSolo());"),
+ main.includes("playIntroVideo(()=>{net.startLoopSolo();net.setNickname(profile.nickname);});"),
  'JOGAR SOZINHO exibe a introdução antes de iniciar a primeira fase');
 assert.ok(main.includes("net.isSolo?'<details id=\"loop-dev\""));
 assert.ok(main.includes("devSession?'<button id=\"dev-inspect\""));
