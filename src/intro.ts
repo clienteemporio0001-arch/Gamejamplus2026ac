@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {preloadKenneyCharacters} from './kenneyCharacterSprites';
 import {paintHero} from './sharedCharacterArt';
 import { CHARACTERS } from './network';
 
@@ -19,6 +20,7 @@ export class IntroScene extends Phaser.Scene {
   private characters: Phaser.GameObjects.Container[] = [];
   constructor() { super({ key: 'IntroScene' }); }
 
+  preload():void{preloadKenneyCharacters(this);}
   create(): void {
     this.cameras.main.setBackgroundColor('#203e43');
     const g = this.add.graphics().setDepth(-20);
