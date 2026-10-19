@@ -231,7 +231,7 @@ export class TreetopForestScene extends Phaser.Scene {
    const active=new Set(treePlatforms(this.w));
    for(const index of FRAGILE_BRANCH_INDICES){
      const branch=TREE_PLATFORMS[index];
-     const phase=fragilePhase(this.w.cycleStart,now,index,paused);
+     const phase=fragilePhase(this.w.fragileAt[FRAGILE_BRANCH_INDICES.indexOf(index)],now,index,paused);
      const enabled=active.has(branch)&&phase!=='gone';
      const actor=this.platforms[index],body=actor.body as Phaser.Physics.Arcade.StaticBody;
      if(body.enable!==enabled){body.enable=enabled;if(enabled)body.updateFromGameObject();}
