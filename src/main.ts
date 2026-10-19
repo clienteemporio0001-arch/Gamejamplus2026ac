@@ -803,23 +803,38 @@ function render(): void {
   const readyButton=button('ready',ready?'✓ PRONTO — DESMARCAR':'✓ ESTOU PRONTO',
     ready,me===null||!isAvatarId(chosenAvatar));
   const startButton = net.isHost ? button('start', '▶ INICIAR JOGO', false, !net.canStart) : '';
-  ui.innerHTML = '<main class="panel lobby-panel"><div class="kicker">SALA COOPERATIVA · 3 JOGADORES</div>' +
-    '<h2>A equipe está se formando</h2>' +
-     (net.isHost?teamInput(net.teamName):'<p class="rank-team">Equipe: '+safeText(net.teamName)+'</p>')+
-     nicknameInput()+
-    '<div class="muted">Código da sala</div><div class="code-row"><div class="code">' + safeText(net.code) +
-    '</div>' + button('copy', 'COPIAR', true) + '</div>' +
-    '<div class="player-list">' + roster + '</div>' +
+  // Compact desktop/mobile layout: profile and three-seat roster share the
+  // same row, with the mandatory READY/START controls always visible below.
+  ui.innerHTML = '<main class="panel lobby-panel">'+
+    '<header class="lobby-header"><div class="kicker">SALA COOPERATIVA · 3 JOGADORES</div>'+
+    '<h2>A equipe está se formando</h2></header>'+
+    '<div class="lobby-overview">'+
+      '<section class="lobby-identity" aria-label="Identificação da equipe">'+
+        (net.isHost?teamInput(net.teamName):
+          '<p class="rank-team">Equipe: '+safeText(net.teamName)+'</p>')+
+        nicknameInput()+
+        '<div class="lobby-room"><div class="muted">CÓDIGO DA SALA</div>'+
+          '<div class="code-row"><div class="code">'+safeText(net.code)+'</div>'+
+          button('copy','COPIAR',true)+'</div></div>'+
+        '<div class="jam-profile-save">'+button('save-player','SALVAR NOME(S)',true)+'</div>'+
+      '</section>'+
+      '<section class="lobby-members" aria-label="Jogadores conectados">'+
+        '<div class="player-list">'+roster+'</div></section>'+
+    '</div>'+
     '<section class="multiplayer-skins"><h3>ESCOLHA SEU PERSONAGEM</h3>'+
-    '<p>Um visual por jogador. A aparência não muda as habilidades.</p>'+
-    (me===null?'':selectCards)+'</section>'+notice()+
-     '<div class="jam-profile-save">'+button('save-player','SALVAR NOME(S)',true)+'</div>'+
-    '<div class="actions">' + readyButton + startButton + button('leave-lobby', 'SAIR', true) + '</div>' +
-    '<div class="tip">' + (net.isHost ? 'Você tem o papel de Téo (SALTO DUPLO). Inicie após os três escolherem personagens diferentes e ficarem prontos.' :
-      'Você controla ' + (me === null ? 'seu personagem' : CHARACTERS[me].name) + '. Aguarde o anfitrião iniciar.') +
-    '</div><div class="rules"><b>COMPUTADOR:</b> A/D ou ←/→ para andar; ESPAÇO ou ↑ para pular e salto duplo; SHIFT = dash de Nino; J = baladeira de Lia; E = interagir.<br>' +
-    '<b>CELULAR:</b> setas na esquerda e PULAR na direita. Coloque na horizontal.<br>' +
-    '<b>OBJETIVO:</b> encontrem o Guia Indígena, apoiem-se uns nos outros, coletem 3 cipós e derrubem a árvore para atravessar juntos.</div></main>';
+      '<p>Um visual por jogador. A aparência não muda as habilidades.</p>'+
+      (me===null?'':selectCards)+'</section>'+
+    '<footer class="lobby-footer">'+notice()+
+      '<div class="actions">'+readyButton+startButton+button('leave-lobby','SAIR',true)+'</div>'+
+      '<div class="tip">'+(net.isHost?
+        'Papel: Téo · SALTO DUPLO. Inicie quando todos escolherem e estiverem prontos.':
+        'Seu papel: '+(me===null?'aguarde conexão':CHARACTERS[me].name)+
+        ' · '+(me===null?'':ROLE_SKILLS[me])+'. Aguarde o anfitrião iniciar.')+'</div>'+
+      '<details class="lobby-rules"><summary>CONTROLES E OBJETIVO</summary>'+
+        '<div class="rules"><b>COMPUTADOR:</b> A/D ou ←/→ para andar; ESPAÇO ou ↑ para pular; SHIFT = dash de Nino; J = baladeira de Lia; E = interagir.'+
+        '<p><b>CELULAR:</b> setas na esquerda e PULAR na direita. Coloque na horizontal.</p>'+
+        '<p><b>OBJETIVO:</b> encontrem o Guia Indígena, apoiem-se uns nos outros, coletem 3 cipós e derrubem a árvore para atravessar juntos.</p>'+
+        '</div></details></footer></main>';
   ui.querySelectorAll<HTMLButtonElement>('[data-avatar]').forEach(item=>
     item.addEventListener('click',()=>{
       const id=item.dataset.avatar;
