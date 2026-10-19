@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {preloadKenneyCharacters} from './kenneyCharacterSprites';
 import {preloadOfficialLandmarks,officialLandmark,LANDMARK_KEYS} from './officialLandmarks';
 import {PipoGuide} from './pipoGuide';
 import {CooperativeExitArt} from './cooperativeExitArt';
@@ -152,7 +153,7 @@ export class TemporalForestScene extends Phaser.Scene {
   this.art.water(TEMP_CHANNEL.start,TEMP_CHANNEL.end,638);
   this.text(2800,511,'CORRENTEZA PROFUNDA',14,'#efc6b3').setAlpha(.9);
  }
- preload():void{preloadOfficialLandmarks(this);}
+ preload():void{preloadOfficialLandmarks(this);preloadKenneyCharacters(this);}
  create():void{
   this.physics.world.setBounds(0,0,TEMP_WIDTH,900);
   this.physics.world.setBoundsCollision(true,true,false,false);
