@@ -47,7 +47,7 @@ export class BurningForestScene extends Phaser.Scene {
  private darkText!:Phaser.GameObjects.Text;
  private dangerText!:Phaser.GameObjects.Text;
  private lastTreePhase:'calm'|'warning'|'impact'='calm';
- private lastDanger='';private lastWarningAt=0;
+ private lastDanger='';private lastWarningAt=0;private escapeWarned=false;
  constructor(net:Network,touch:TouchInput,hud?:()=>void){
   super({key:'BurningForestScene'});this.net=net;this.touch=touch;this.hud=hud;
   this.world=net.fire;
@@ -338,8 +338,8 @@ export class BurningForestScene extends Phaser.Scene {
   const inSmoke=fireHeavySmoke(w,this.local,now);
   const inFire=fireDamageZone(w,this.local,now);
   const balls=fireballHazards(w,now);
-  if(w.escapeAt>0&&now-w.escapeAt<5200&&this.lastDanger!=='escape'){
-    this.lastDanger='escape';
+  if(w.escapeAt>0&&!this.escapeWarned){
+    this.escapeWarned=true;
     this.pipo.warnDanger('FUGA FINAL! O FOGO ESTÁ AVANÇANDO! CORRAM JUNTOS!');
   }
   const nearFireball=balls.some(b=>b.phase==='warning'&&
