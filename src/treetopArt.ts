@@ -1,12 +1,13 @@
 import Phaser from 'phaser';
 import {paintHero} from './sharedCharacterArt';
+import {createKenneyCharacter,updateKenneyCharacter} from './kenneyCharacterSprites';
 import type {TreePlatform,TreeShelter,TreeWindPhase} from './treetopForest';
 import type {Pose,Seat} from './network';
 
 /** Original, deterministic cinematic treetop illustration. No assets or ground colliders. */
 const noise=(n:number)=>{const f=Math.sin(n*127.1+6.3)*43758.5453;return f-Math.floor(f);};
 const pick=(n:number,a:number,b:number)=>a+noise(n)*(b-a);
-type Actor={target:Phaser.GameObjects.Rectangle;ink:Phaser.GameObjects.Graphics;shadow:Phaser.GameObjects.Ellipse;seat:Seat};
+type Actor={target:Phaser.GameObjects.Rectangle;ink:Phaser.GameObjects.Graphics;sprite:Phaser.GameObjects.Sprite|null;shadow:Phaser.GameObjects.Ellipse;seat:Seat};
 export class TreetopArt {
  private actors:Actor[]=[];
  private vines:Phaser.GameObjects.Graphics;
@@ -197,7 +198,9 @@ export class TreetopArt {
   const ink=this.scene.add.graphics().setDepth(42);
   const shadow=this.scene.add.ellipse(target.x,target.y+22,42,10,0x03150e,.52).setDepth(15);
   target.setFillStyle(0xffffff,.001).setStrokeStyle(1,0xffffff,.001);
-  this.actors.push({target,ink,shadow,seat});
+  const sprite=createKenneyCharacter(this.scene,target,seat,42.1);
+  if(sprite)ink.setVisible(false);
+  this.actors.push({target,ink,sprite,shadow,seat});
  }
  private drawActor(g:Phaser.GameObjects.Graphics,seat:Seat,time:number,pose:Pose):void{
   paintHero(g,seat,time,pose.vx,pose.vy);
@@ -207,7 +210,8 @@ export class TreetopArt {
   const intensity=phase==='gust'?1:phase==='warning'?.45:.16;
   for(const entry of this.actors){
    const actor=entry.target,pose=poses[entry.seat];
-   this.drawActor(entry.ink,entry.seat,time,pose);
+   if(!entry.sprite)this.drawActor(entry.ink,entry.seat,time,pose);
+   updateKenneyCharacter(entry.sprite,actor,time,pose.vx,pose.vy);
    entry.ink.setPosition(actor.x,actor.y);
    entry.shadow.setPosition(actor.x,actor.y+26);
    entry.shadow.setAlpha(Math.abs(pose?.vy??0)>120?.20:.5);
