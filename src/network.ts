@@ -739,6 +739,7 @@ export class Network {
       case 'treetop':
         this.treetop={...msg.world,bridge:[...msg.world.bridge] as TreeWorld['bridge'],
           tower:[...msg.world.tower] as TreeWorld['tower'],time:[...msg.world.time] as TreeWorld['time'],
+          fragileAt:[...msg.world.fragileAt] as TreeWorld['fragileAt'],
           supporting:[...msg.world.supporting] as TreeWorld['supporting'],
           health:[...msg.world.health] as TreeWorld['health'],
           stamina:[...msg.world.stamina] as TreeWorld['stamina'],
