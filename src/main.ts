@@ -803,7 +803,7 @@ function render(): void {
   const readyButton=button('ready',ready?'✓ PRONTO — DESMARCAR':'✓ ESTOU PRONTO',
     ready,me===null||!isAvatarId(chosenAvatar));
   const startButton = net.isHost ? button('start', '▶ INICIAR JOGO', false, !net.canStart) : '';
-  ui.innerHTML = panelStart + '<div class="kicker">SALA COOPERATIVA · 3 JOGADORES</div>' +
+  ui.innerHTML = '<main class="panel lobby-panel"><div class="kicker">SALA COOPERATIVA · 3 JOGADORES</div>' +
     '<h2>A equipe está se formando</h2>' +
      (net.isHost?teamInput(net.teamName):'<p class="rank-team">Equipe: '+safeText(net.teamName)+'</p>')+
      nicknameInput()+
