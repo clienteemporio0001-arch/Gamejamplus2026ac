@@ -233,6 +233,44 @@ function openPanel(kind:PanelKind):void{
  (wrapper.querySelector<HTMLElement>('#fm-close')??wrapper).focus();
 }
 
+/** HTML5 intro sourced from the committed repository video; no duplicate players. */
+let introVideo:HTMLVideoElement|null=null;
+function stopIntroVideo():void{
+ if(!introVideo)return;
+ introVideo.pause();introVideo.removeAttribute('src');introVideo.load();
+ introVideo.remove();introVideo=null;
+}
+function playIntroVideo(onComplete:()=>void):void{
+ stopIntroVideo();
+ const holder=document.createElement('div');
+ holder.id='video-intro';holder.className='video-intro';
+ const video=document.createElement('video');
+ introVideo=video;
+ video.src=import.meta.env.BASE_URL+'introducao.mp4';
+ video.playsInline=true;video.controls=true;video.preload='auto';
+ video.autoplay=true;video.setAttribute('aria-label','Vídeo de introdução A Floresta Mente');
+ const skip=document.createElement('button');
+ skip.type='button';skip.className='btn secondary video-skip';
+ skip.textContent='⏭ PULAR INTRODUÇÃO';
+ const finish=()=>{
+  if(introVideo!==video)return;
+  stopIntroVideo();holder.remove();onComplete();
+ };
+ skip.addEventListener('click',finish);
+ video.addEventListener('ended',finish,{once:true});
+ video.addEventListener('error',()=>{
+  skip.textContent='CONTINUAR PARA O JOGO';
+ },{once:true});
+ holder.append(video,skip);
+ document.body.appendChild(holder);
+ void video.play().catch(()=>{
+  // Browser autoplay policy: user can press the native Play control.
+  const prompt=document.createElement('button');
+  prompt.className='btn video-play';prompt.textContent='▶ REPRODUZIR INTRODUÇÃO';
+  prompt.addEventListener('click',()=>{void video.play().then(()=>prompt.remove()).catch(()=>{});});
+  holder.appendChild(prompt);
+ });
+}
 function enterGame(): void {
   const mode = net.stage === 'intro' ? 'intro' : net.experience==='loop'?(net.level===4?'fire':net.level===3?'treetop':net.level===2?'temporal':'loop'):('level' + net.level) as 'level1' | 'level2' | 'level3' | 'level4';
   if (game && activeMode === mode) return;
@@ -364,6 +402,7 @@ function refreshHud(): void {
 setInterval(refreshHud, 150);
 
 function render(): void {
+  if(net.stage!=='intro'&&net.role!=='idle')stopIntroVideo();
   gameKeys.setEnabled(net.playing);
   const showing = net.stage !== 'lobby' && net.role !== 'idle';
   document.body.classList.toggle('playing', net.playing);
@@ -380,7 +419,8 @@ function render(): void {
         ' · <span class="text-muted">os três verão o mesmo encerramento</span></div>' +
         '<div class="cinematic-actions">' + button('skip-intro', '⏭ PULAR INTRODUÇÃO', true) + '</div>' +
         (info ? '<div class="game-toast">' + safeText(info) + '</div>' : '');
-      ui.querySelector('#skip-intro')?.addEventListener('click', () => net.skipIntro());
+      ui.querySelector('#skip-intro')?.addEventListener('click', () => {stopIntroVideo();net.skipIntro();});
+      if(!introVideo)playIntroVideo(()=>net.skipIntro());
       return;
     }
     if (net.stage === 'transition'&&net.experience==='loop') {
@@ -587,7 +627,7 @@ function render(): void {
     });
     ui.querySelector('#create')?.addEventListener('click',()=>{devSession=false;info='';void net.createRoom('loop');});
     ui.querySelector('#create-classic')?.addEventListener('click',()=>{devSession=false;info='';void net.createRoom('classic');});
-    ui.querySelector('#loop-solo')?.addEventListener('click',()=>{devSession=false;info='';net.startLoopSolo();});
+    ui.querySelector('#loop-solo')?.addEventListener('click',()=>{devSession=false;info='';playIntroVideo(()=>net.startLoopSolo());});
     ui.querySelector('#join-menu')?.addEventListener('click',()=>{devSession=false;showJoin();});
     return;
   }
@@ -697,7 +737,7 @@ net.on('vital-reply',reply=>{
 gameKeys.bind();
 net.on('solo-seat',seat=>updateMobileCharacter(seat));
 net.on('change',()=>{
- if(net.role==='idle'){info='';devSession=false;closeOverlay();}
+ if(net.role==='idle'){info='';devSession=false;closeOverlay();stopIntroVideo();}
  render();
 });
 net.on('start', () => { info = ''; render(); });
