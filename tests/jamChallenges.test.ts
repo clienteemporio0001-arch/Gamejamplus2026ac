@@ -5,19 +5,32 @@ import type {Pose,Seat} from '../src/network';
 import {boulderEvent,boulderHit,BOULDER_ZONE,tideSurface,tideHit,
  TIDE_ZONE,FRAGILE_BRANCH_INDICES,fragilePhase,escapeWallX,escapeFireHit,
  ESCAPE_GRACE_MS,ESCAPE_START_X} from '../src/jamChallenges';
-import {TREE_PLATFORMS} from '../src/treetopForest';
+import {TREE_PLATFORMS,TreeAuthority,validTree,TREE_START} from '../src/treetopForest';
+import {LoopAuthority,LOOP_START,validLoop} from '../src/forestLoop';
 
 const base=5_000_000;
-assert.equal(boulderEvent(base,base+1200),null,'no sudden boulder near spawn');
-assert.equal(boulderEvent(base,base+4300)?.phase,'warning','rolling boulder warns first');
-const rolling=boulderEvent(base,base+6550)!;
+assert.equal(boulderEvent(0,base+1200),null,'no boulder before the host trigger');
+assert.equal(boulderEvent(base,base+1200)?.phase,'warning','stone alerts after approach');
+const rolling=boulderEvent(base,base+2500)!;
 assert.equal(rolling.phase,'active');
 assert.ok(rolling.x>=BOULDER_ZONE.from&&rolling.x<=BOULDER_ZONE.to);
 assert.equal(boulderHit({x:rolling.x,y:rolling.y},rolling),true);
 assert.equal(boulderHit({x:rolling.x,y:rolling.y-150},rolling),false,
  'jumping avoids boulder');
-assert.equal(boulderEvent(base,base+6550,true),null,'pause freezes hazard');
+assert.equal(boulderEvent(base,base+2500,true),null,'pause freezes hazard');
 assert.equal(boulderEvent(base,base+9100),null,'boulder dissipates and can be dodged');
+const stoneAuthority=new LoopAuthority();stoneAuthority.reset(base);
+assert.ok(validLoop(stoneAuthority.world));
+const approaching=LOOP_START.map(p=>({...p}));
+stoneAuthority.tick(approaching,base+100);
+assert.equal(stoneAuthority.world.boulderAt,0,'standing at spawn does not wake stone');
+approaching[0]={...approaching[0],x:6110,y:604};
+stoneAuthority.tick(approaching,base+200);
+assert.equal(stoneAuthority.world.boulderAt,base+200,'host triggers boulder on real approach');
+assert.ok(validLoop(stoneAuthority.world),'boulder timestamp remains valid for network');
+stoneAuthority.reset(base+100000);
+assert.equal(stoneAuthority.world.boulderAt,0,'death reset also resets stone');
+
 
 assert.equal(tideSurface(base,base+11000,false),null,'bridge puzzle never flooded prematurely');
 assert.equal(tideSurface(base,base+8300,true)?.phase,'warning');
@@ -35,11 +48,23 @@ for(const index of FRAGILE_BRANCH_INDICES){
  assert.equal(p.puzzle,undefined,'essential bridge cannot crumble');
  assert.equal(p.state,undefined,'rotating branches stay independent');
  assert.equal(fragilePhase(base,base+18000,index,true),'solid','blackout rescues platforms');
+ assert.equal(fragilePhase(0,base+2000,index),'solid','no cracking before player lands');
  const phases=new Set(Array.from({length:37},(_,i)=>fragilePhase(base,base+i*500,index)));
  assert.deepEqual([...phases].sort(),['cracking','gone','solid'].sort(),
   'each branch has visible warning, disappear and reappear');
 }
 assert.equal(fragilePhase(base,base+14000,0),'solid','unselected platforms always solid');
+const treeAuthority=new TreeAuthority();treeAuthority.reset(base);
+const treetops=TREE_START.map(p=>({...p}));
+treetops[0]={...treetops[0],x:TREE_PLATFORMS[5].x,
+ y:TREE_PLATFORMS[5].y-TREE_PLATFORMS[5].height/2-22,vx:0,vy:0};
+treeAuthority.tick(treetops,base+1200,base+999999);
+assert.equal(treeAuthority.world.fragileAt[0],base+1200,
+ 'host starts crack countdown only after player stands on branch');
+assert.ok(validTree(treeAuthority.world),'fragile timestamps are valid PeerJS world state');
+treeAuthority.reset(base+50000);
+assert.deepEqual(treeAuthority.world.fragileAt,[0,0,0],
+ 'death/reset restores all three branches');
 const treeScene=readFileSync('src/treetopForestScene.ts','utf8');
 assert.ok(treeScene.includes("this.updateFragileBranches(now,pause)")&&
  treeScene.includes("body.enable=enabled")&&
