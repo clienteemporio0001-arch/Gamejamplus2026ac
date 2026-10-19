@@ -1,4 +1,5 @@
 import Peer, { type DataConnection } from 'peerjs';
+import {cleanName} from './speedrun';
 import {multiplayerPoseBounds} from './multiplayerPoseBounds';
 import { PuzzleAuthority, initialWorld, validWorld, validAction, CHECKPOINTS, type WorldState, type PuzzleAction } from './puzzles';
 import { RiverAuthority, initialRiver, validRiver, RIVER_CHECKPOINTS, RIVER_SPAWNS, type RiverWorld } from './river';
@@ -18,19 +19,20 @@ import {FireAuthority,FIRE_START,FIRE_WIDTH,FIRE_HEIGHT,initFire,validFire,type 
 export type Stage = 'lobby' | 'intro' | 'playing' | 'transition' | 'final';
 export type Experience = 'classic' | 'loop';
 export type Level = 1 | 2 | 3 | 4;
-export type PhaseInfo = { stage: Stage; level: Level; since: number; until: number; mode?: Experience };
+export type PhaseInfo = { stage: Stage; level: Level; since: number; until: number; mode?: Experience; runStartedAt?:number; runFinishedAt?:number };
 
 export type Seat = 0 | 1 | 2;
 /** Safety net for failed or stalled video loads; never the normal end of the cutscene. */
 export const INTRO_WATCHDOG_MS=180_000;
-export type Slot = { seat: Seat; online: boolean; ready: boolean };
+export type Slot = { seat: Seat; online: boolean; ready: boolean; nickname?:string };
 export type Pose = { seat: Seat; x: number; y: number; vx: number; vy: number };
 type Wire =
   | { t: 'hello'; token: string }
   | { t: 'ready'; value: boolean }
+  | { t: 'profile'; name:string }
   | { t: 'pose'; x: number; y: number; vx: number; vy: number }
   | { t: 'welcome'; seat: Seat; code: string; mode?: Experience }
-  | { t: 'roster'; players: Slot[]; playing: boolean }
+  | { t: 'roster'; players: Slot[]; playing: boolean; teamName?:string }
   | { t: 'begin' }
   | { t: 'state'; poses: Pose[] }
   | { t: 'act'; action: PuzzleAction }
@@ -114,7 +116,8 @@ const validPose = (v: unknown): v is Pose => {
 const validSlot = (v: unknown): v is Slot => {
   if (!v || typeof v !== 'object') return false;
   const p = v as Record<string, unknown>;
-  return seatValid(p.seat) && typeof p.online === 'boolean' && typeof p.ready === 'boolean';
+  return seatValid(p.seat) && typeof p.online === 'boolean' && typeof p.ready === 'boolean' &&
+    (p.nickname===undefined||(typeof p.nickname==='string'&&p.nickname.length<=22));
 };
 function parseWire(value: unknown): Wire | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -122,13 +125,15 @@ function parseWire(value: unknown): Wire | null {
   switch (p.t) {
     case 'hello': return typeof p.token === 'string' && /^[a-f0-9-]{20,50}$/.test(p.token) ? value as Wire : null;
     case 'ready': return typeof p.value === 'boolean' ? value as Wire : null;
+    case 'profile': return typeof p.name==='string'&&p.name.length>0&&p.name.length<=22?value as Wire:null;
     case 'pose': return finite(p.x) && finite(p.y) && finite(p.vx) && finite(p.vy)
       && p.x >= 0 && p.x <= Math.max(FOREST_WIDTH,TREE_WIDTH,FIRE_WIDTH,LOOP_WIDTH) && p.y >= 0 && p.y <= TREE_HEIGHT
       && Math.abs(p.vx) <= 1200 && Math.abs(p.vy) <= 1500 ? value as Wire : null;
     case 'welcome': return seatValid(p.seat) && typeof p.code === 'string' && /^[A-Z0-9]{6}$/.test(p.code)
       && (p.mode === undefined || p.mode === 'classic' || p.mode === 'loop') ? value as Wire : null;
     case 'roster': return Array.isArray(p.players) && p.players.length === 3 && p.players.every(validSlot)
-      && p.players.every((s: Slot, i: number) => s.seat === i) && typeof p.playing === 'boolean' ? value as Wire : null;
+      && p.players.every((s: Slot, i: number) => s.seat === i) && typeof p.playing === 'boolean' &&
+      (p.teamName===undefined||(typeof p.teamName==='string'&&p.teamName.length<=28)) ? value as Wire : null;
     case 'state': return Array.isArray(p.poses) && p.poses.length === 3 && p.poses.every(validPose)
       && p.poses.every((pose: Pose, i: number) => pose.seat === i) ? value as Wire : null;
     case 'act': return validAction(p.action) ? value as Wire : null;
@@ -158,7 +163,9 @@ function parseWire(value: unknown): Wire | null {
       return i && typeof i === 'object' && ['lobby','intro','playing','transition','final'].includes(String(i.stage))
         && [1,2,3,4].includes(Number(i.level)) && finite(i.since) && finite(i.until)
         && i.since >= 0 && i.until >= 0
-        && (i.mode === undefined || i.mode === 'classic' || i.mode === 'loop') ? value as Wire : null;
+        && (i.mode === undefined || i.mode === 'classic' || i.mode === 'loop')
+        && (i.runStartedAt===undefined||(finite(i.runStartedAt)&&i.runStartedAt>=0))
+        && (i.runFinishedAt===undefined||(finite(i.runFinishedAt)&&i.runFinishedAt>=0)) ? value as Wire : null;
     }
     case 'intro-done': case 'final-done': case 'final-finished': return value as Wire;
     case 'reject': return typeof p.reason === 'string' && p.reason.length <= 130 ? value as Wire : null;
@@ -184,6 +191,10 @@ export class Network {
   private treetopSafeUntil=0;
   localSeat: Seat | null = null;
   players: Slot[] = slots();
+  teamName='Equipe da Mata';
+  private ownNickname='Explorador';
+  runStartedAt=0;
+  runFinishedAt=0;
   poses: Pose[] = SPAWNS.map(p => ({ ...p }));
   playing = false;
   completed = false;
@@ -245,6 +256,26 @@ export class Network {
   get isHost(): boolean { return this.role === 'host' || this.isSolo; }
   get everyoneConnected(): boolean { return this.players.every(p => p.online); }
   get canStart(): boolean { return this.isHost && this.stage === 'lobby' && this.players.every(p => p.online && p.ready); }
+  /** Names never alter fixed character seats: 0=Téo, 1=Lia, 2=Nino. */
+  setNickname(name:string):void{
+    this.ownNickname=cleanName(name);
+    if(this.localSeat===null)return;
+    if(this.isHost){
+      this.players[this.localSeat].nickname=this.ownNickname;
+      this.updateRoster();
+    }else if(this.stage==='lobby'){
+      this.message(this.hostConn,{t:'profile',name:this.ownNickname});
+    }
+  }
+  setTeamName(name:string):void{
+    if(this.role!=='host'||this.stage!=='lobby')return;
+    this.teamName=cleanName(name,'Equipe da Mata',28);
+    this.updateRoster();
+  }
+  get rankedRun():boolean{
+    return this.experience==='loop'&&this.level===4&&this.runStartedAt>0&&
+      this.runFinishedAt>this.runStartedAt;
+  }
   private message(conn: DataConnection | null, wire: Wire): void {
     if (conn?.open) {
       try { conn.send(wire); } catch { this.emit('notice', 'Falha ao enviar dados pela conexão.'); }
@@ -263,7 +294,7 @@ export class Network {
     this.temporalAuthority.reset();this.temporal=this.temporalAuthority.world;
     this.treetopAuthority.reset();this.treetop=this.treetopAuthority.world;this.treetopSafeUntil=Date.now()+1300;
     this.fireAuthority.reset();this.fire=this.fireAuthority.world;this.fireSafeUntil=Date.now()+1300;
-    this.players=([0,1,2] as Seat[]).map(seat=>({seat,online:true,ready:true}));
+    this.players=([0,1,2] as Seat[]).map(seat=>({seat,online:true,ready:true,nickname:seat===0?this.ownNickname:CHARACTERS[seat].name}));
     this.authority.reset();this.effectGate.reset();
     this.forestAuthority.reset();this.forest=this.forestAuthority.world;
     this.journeyAuthority.reset();this.journey=this.journeyAuthority.world;
@@ -344,7 +375,7 @@ export class Network {
     this.emit('notice','FASE REINICIADA: os três personagens retornaram ao início.');
   }
   private updateRoster(): void {
-    this.broadcast({ t: 'roster', players: this.players, playing: this.playing });
+    this.broadcast({ t: 'roster', players: this.players, playing: this.playing,teamName:this.teamName });
     this.emit('change', undefined);
   }
   async createRoom(mode:Experience='classic'): Promise<void> {
@@ -354,7 +385,7 @@ export class Network {
     const epoch=this.sessionEpoch;
     this.role = 'host';
     this.localSeat = 0;
-    this.players[0] = { seat: 0, online: true, ready: false };
+    this.players[0] = { seat: 0, online: true, ready: false, nickname:this.ownNickname };
     this.emit('change', undefined);
     for (let i = 0; i < 8; i++) {
       const code = createCode();
@@ -493,7 +524,7 @@ export class Network {
         this.grace.delete(seat);
         this.tokens[seat] = msg.token;
         this.conns.set(seat, conn);
-        this.players[seat] = { seat, online: true, ready: reserved >= 1 ? this.players[seat].ready : false };
+        this.players[seat] = { seat, online: true, ready: reserved >= 1 ? this.players[seat].ready : false, nickname:this.players[seat].nickname??CHARACTERS[seat].name };
         this.message(conn, { t: 'welcome', seat, code: this.code, mode:this.experience });
         this.updateRoster();
         this.message(conn, { t: 'puzzle', world: this.puzzle });
@@ -514,6 +545,10 @@ export class Network {
         return;
       }
       if (this.conns.get(seat) !== conn) return;
+      if (msg.t === 'profile' && this.stage==='lobby') {
+        this.players[seat].nickname=cleanName(msg.name);
+        this.updateRoster();
+      }
       if (msg.t === 'ready' && !this.playing) {
         this.players[seat].ready = msg.value;
         this.updateRoster();
@@ -596,10 +631,12 @@ export class Network {
         this.pendingRestore = this.playing && this.localSeat === msg.seat;
         this.localSeat = msg.seat;
         this.experience=msg.mode??'classic';
+        this.message(conn,{t:'profile',name:this.ownNickname});
         this.emit('change', undefined);
         break;
       case 'roster':
         this.players = msg.players.map(p => ({ ...p }));
+        this.teamName=cleanName(msg.teamName,'Equipe da Mata',28);
         this.emit('change', undefined);
         break;
       case 'begin':
@@ -612,6 +649,8 @@ export class Network {
         this.experience=msg.info.mode??this.experience;
         if(oldStage!==this.stage||oldLevel!==this.level)this.endingComplete=false;
         this.phaseSince = msg.info.since; this.phaseUntil = msg.info.until;
+        this.runStartedAt=msg.info.runStartedAt??0;
+        this.runFinishedAt=msg.info.runFinishedAt??0;
         this.playing = this.stage === 'playing'; this.completed = this.stage === 'final';
         if (this.stage === 'playing') this.pendingRestore = true;
         if (oldLevel !== this.level || (this.experience==='loop'&&oldStage!=='playing'&&this.stage==='playing'))
@@ -763,7 +802,8 @@ export class Network {
     } else this.message(this.hostConn, { t: 'ready', value });
   }
   phaseInfo(): PhaseInfo {
-    return { stage: this.stage, level: this.level, since: this.phaseSince, until: this.phaseUntil, mode:this.experience };
+    return { stage: this.stage, level: this.level, since: this.phaseSince, until: this.phaseUntil, mode:this.experience,
+      runStartedAt:this.runStartedAt,runFinishedAt:this.runFinishedAt };
   }
   private setPhase(stage: Stage, level: Level, until = 0): void {
     if(stage==='intro')this.introDone.clear();
@@ -772,6 +812,8 @@ export class Network {
       this.endingComplete=false;
       this.endingDone.clear();
     }
+    if(stage==='playing'&&level===1&&!this.runStartedAt)this.runStartedAt=Date.now();
+    if(stage==='final'&&level===4&&this.runStartedAt&&!this.runFinishedAt)this.runFinishedAt=Date.now();
     this.stage = stage; this.level = level;
     this.phaseSince = Date.now(); this.phaseUntil = until;
     this.playing = stage === 'playing'; this.completed = stage === 'final';
@@ -782,6 +824,7 @@ export class Network {
   }
   start(): void {
     if (!this.canStart) return;
+    this.runStartedAt=0;this.runFinishedAt=0;
     if(this.experience==='loop'){
       this.loopAuthority.reset();this.loop=this.loopAuthority.world;
       this.authority.reset();this.authority.world.unlocked=[true,true,true];this.sharePuzzle();
@@ -1369,6 +1412,7 @@ export class Network {
     this.players = slots(); this.poses = SPAWNS.map(p => ({ ...p }));
     this.playing = false; this.completed = false;
     this.stage = 'lobby'; this.level = 1; this.phaseSince = 0; this.phaseUntil = 0;
+    this.runStartedAt=0;this.runFinishedAt=0;this.teamName='Equipe da Mata';
     this.introDone.clear();this.endingDone.clear();this.endingComplete=false;
     this.riverAuthority.reset(); this.river = initialRiver();
     this.journeyAuthority.reset();this.journey=initialJourney();this.journeyMotion={logs:[3086,3224],now:0};this.lastJourneyMotionBroadcast=0;
