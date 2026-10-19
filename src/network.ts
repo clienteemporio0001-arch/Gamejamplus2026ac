@@ -1235,7 +1235,7 @@ export class Network {
     if(this.experience==='loop'){
       const now=Date.now();
       const l=this.loopAuthority.world;
-      const boulder=boulderEvent(l.cycleStart,now,blackoutActive(l,now)||l.deadUntil>0||l.completed);
+      const boulder=boulderEvent(l.boulderAt,now,blackoutActive(l,now)||l.deadUntil>0||l.completed);
       for(const pose of this.poses){
         if(boulderHit(pose,boulder)&&this.loopAuthority.damage(pose.seat,now,false))this.shareLoop();
       }
