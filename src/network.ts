@@ -1099,6 +1099,7 @@ export class Network {
   private shareTreetop():void{
     const w=this.treetopAuthority.world;
     this.treetop={...w,bridge:[...w.bridge],tower:[...w.tower],time:[...w.time],
+      fragileAt:[...w.fragileAt],
       supporting:[...w.supporting],health:[...w.health],stamina:[...w.stamina],
       safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent]};
     this.broadcast({t:'treetop',world:this.treetop});this.emit('treetop',this.treetop);
