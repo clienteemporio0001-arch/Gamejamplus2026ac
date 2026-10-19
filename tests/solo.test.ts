@@ -40,7 +40,7 @@ for(const label of ['JOGAR SOZINHO','MULTIPLAYER ONLINE','SELECIONAR FASE',
 ok(!ui.includes('FERRAMENTAS DE DESENVOLVIMENTO'),'ferramentas não visíveis no menu');
 ok(ui.includes("button('select-phase'"),'novo seletor disponível');
 ok(ui.includes("data-phase")&&ui.includes("phase-map"),'mapa visual das quatro fases');
-ok(ui.includes("net.startSolo(level,false,'loop')"),'fase escolhida inicia aventura atual');
+ok(ui.includes("net.startSolo(level,false,'loop',avatars)")&&ui.includes('showSoloSelection(level)'),'fase escolhida inicia aventura atual');
 for(const digit of ['Digit1','Digit2','Digit3'])ok(ui.includes(digit),'atalho '+digit);
 ok(ui.includes('net.selectSoloSeat'),'botões touch / teclado selecionam seat');
 ok(ui.includes('Tempos de cooperação adaptados'),'painel indica janelas especiais solo');
