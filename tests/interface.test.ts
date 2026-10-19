@@ -46,8 +46,9 @@ ok(network.includes("case 'intro-done': return value as Wire;")&&
    'cliente remoto informa apenas fim natural, não solicita pular');
 ok(!network.includes("intro-skip"),
    'não existe mais mensagem multiplayer que permita convidado pular');
-ok(main.includes("video.src=import.meta.env.BASE_URL+'introducao.mp4'"),
-   'mídia respeita o caminho de publicação do GitHub Pages e itch.io');
+ok(main.includes("video.src=import.meta.env.BASE_URL+file")&&
+   main.includes("file:'introducao.mp4'|'final.mp4'='introducao.mp4'"),
+   'vídeos usam caminho relativo do GitHub Pages e itch.io');
 
 for(const [id,name] of [['loop-solo','JOGAR SOZINHO'],['create','MULTIPLAYER ONLINE']]){
  ok(main.includes("button('"+id+"','"+name+"'"),'menu principal '+name);
@@ -65,7 +66,7 @@ ok(main.includes('startSoloAdventure(level);')&&
    'selecionar Fase 01 também reproduz a introdução');
 ok(main.includes("net.startSolo(level,false,'loop')"),
    'fases 02 a 04 mantêm acesso direto');
-ok(main.includes("skip.textContent='⏭ PULAR INTRODUÇÃO'")&&
+ok(main.includes("'⏭ PULAR INTRODUÇÃO'")&&
    main.includes("video.addEventListener('ended',()=>complete(onComplete)"),
    'modo solo mantém PULAR e início automático ao final');
 ok(main.includes('introLayer?.remove();introLayer=null;')&&
@@ -80,6 +81,38 @@ ok(readFileSync('.github/workflows/pages.yml','utf8').includes('cp introducao.mp
    'build inclui o MP4 na raiz do pacote publicado');
 ok(readFileSync('introducao.mp4').subarray(4,8).toString()==='ftyp',
    'vídeo MP4 real está versionado no repositório');
+
+/** Final scene is presentation-only; the authoritative stage-04 victory is untouched. */
+ok(readFileSync('final.mp4').subarray(4,8).toString()==='ftyp',
+   'final.mp4 é um vídeo MP4 real na branch main');
+ok(readFileSync('.github/workflows/pages.yml','utf8').includes('cp final.mp4 dist/final.mp4'),
+   'GitHub Pages e artefato itch.io incluem o vídeo de encerramento');
+ok(main.includes("net.stage==='final'&&net.level===4&&")&&
+   main.includes("net.experience==='loop'&&!net.endingComplete"),
+   'vídeo final é exclusivo da vitória na quarta fase');
+ok(main.includes("playIntroVideo(()=>net.completeEndingVideo(),net.isHost,")&&
+   main.includes("()=>net.skipEndingVideo(),'final.mp4')"),
+   'encerramento usa reprodução cinematográfica sem seek, salto só pelo host');
+ok(main.includes("if(!finalStageShown)")&&main.includes("finalStageShown=true;"),
+   'redesenhos de HUD e rede não reiniciam o vídeo final');
+ok(main.includes("if(!net.endingComplete)")&&
+   main.includes("button('show-final-credits','VER CRÉDITOS'"),
+   'vitória e créditos são exibidos após o encerramento');
+ok(network.includes("case 'final-done': case 'final-finished': return value as Wire;"),
+   'mensagens de vídeo final são validadas pelo parser de rede');
+ok(network.includes("msg.t === 'final-done'")&&
+   network.includes("this.endingDone.add(seat)")&&
+   network.includes("this.players.every(p=>this.endingDone.has(p.seat))"),
+   'anfitrião aguarda todos terminarem o vídeo');
+ok(network.includes("if(!this.isHost||this.stage!=='final'||this.level!==4")&&
+   network.includes("this.broadcast({t:'final-finished'})"),
+   'somente anfitrião pode dispensar o vídeo para todos');
+ok(network.includes("case 'final-finished':")&&
+   network.includes("this.endingComplete=true;"),
+   'convidados recebem confirmação sincronizada do encerramento');
+ok(network.includes("this.endingDone.clear();this.endingComplete=false;"),
+   'estado do vídeo final não vaza ao iniciar outra sessão');
+
 
 ok(main.includes("net.createRoom('loop')"),'multiplayer mantém a aventura principal');
 ok(!main.includes('<details id="dev-tools"'),'ferramentas não visíveis no menu público');
