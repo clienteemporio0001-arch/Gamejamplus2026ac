@@ -40,7 +40,7 @@ ok(main.includes("if(canSkipIntro)ui.querySelector('#skip-intro')"),
 ok(network.includes("if(!this.isHost||this.stage!=='intro')return;")&&
    network.includes("this.finishIntro();"),
    'regra de autorização do PULAR fica no Network e afeta toda a sala');
-ok(network.includes("case 'intro-done': return value as Wire;")&&
+ok(network.includes("case 'intro-done': case 'final-done': case 'final-finished': return value as Wire;")&&
    network.includes("msg.t === 'intro-done'")&&
    network.includes("this.message(this.hostConn,{t:'intro-done'})"),
    'cliente remoto informa apenas fim natural, não solicita pular');
