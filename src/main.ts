@@ -25,6 +25,8 @@ import {GameAudio,type SoundBiome} from './sharedAudio';
 import {scoreForStage} from './soundtrack';
 import {fireVisualTreePhase} from './burningForest';
 import {missionSnapshot} from './missionChapters';
+import {elapsedMs,formatTime,cleanName} from './speedrun';
+import {profile,captureProfile,nicknameInput,teamInput,rankingSection,recordVictory,victoryScore} from './speedrunUI';
 
 const net = new Network();
 const ui = document.querySelector<HTMLDivElement>('#ui')!;
@@ -34,6 +36,7 @@ let game: Phaser.Game | null = null;
 let activeMode: 'none' | 'intro' | 'level1' | 'level2' | 'level3' | 'level4' | 'loop' | 'temporal' | 'treetop' | 'fire' = 'none';
 let info = '';
 let phaseMapOpen=false;
+let rankingsOpen=false;
 let devSession=false;
 const audio=new GameAudio();
 let lastStepAt=0;
@@ -302,10 +305,10 @@ function playIntroVideo(onComplete:()=>void,allowSkip=true,onSkip=onComplete,
 function startSoloAdventure(level:1|2|3|4):void{
  phaseMapOpen=false;devSession=false;info='';
  if(level===1){
-  playIntroVideo(()=>net.startLoopSolo());
+  playIntroVideo(()=>{net.startLoopSolo();net.setNickname(profile.nickname);});
   return;
  }
- net.startSolo(level,false,'loop');
+ net.startSolo(level,false,'loop');net.setNickname(profile.nickname);
 }
 function enterGame(): void {
   const mode = net.stage === 'intro' ? 'intro' : net.experience==='loop'?(net.level===4?'fire':net.level===3?'treetop':net.level===2?'temporal':'loop'):('level' + net.level) as 'level1' | 'level2' | 'level3' | 'level4';
@@ -363,6 +366,7 @@ function refreshHud(): void {
         :Math.max(0,Math.ceil(((net.level===3?TREE_CYCLE:net.level===2?TEMP_CYCLE:LOOP_CYCLE_MS)-
            Math.max(0,Date.now()-world.cycleStart))/1000));
     update('loop-state',['A','B','C'][world.layout]);
+    update('run-clock',net.runStartedAt?'⏱ '+formatTime(elapsedMs(net.runStartedAt,net.runFinishedAt)):'⏱ TREINO');
     update('loop-timer',net.level===4?(net.fire.blackoutUntil>Date.now()?'FLORESTA SE TRANSFORMANDO · ':'FLORESTA MUDA EM ')+remaining+'s':
       (world.blackoutUntil>Date.now()?'FLORESTA SE TRANSFORMANDO · ':'FLORESTA MUDA EM ')+remaining+'s');
     update('loop-objective',currentMission().objective);
@@ -511,7 +515,7 @@ function render(): void {
         '<h2>A FLORESTA MENTE. MAS O FOGO TAMBÉM.</h2>'+ 
         '<p>Os três chegaram exaustos à margem do rio. Pipo pousou ao lado deles.</p>'+ 
         '<strong>NINGUÉM FICA PARA TRÁS. NEM A FLORESTA.</strong>'+ 
-        '<p>A AVENTURA FOI CONCLUÍDA!</p>'+ 
+        '<p>A AVENTURA FOI CONCLUÍDA!</p>'+victoryScore(net)+
         button('show-final-credits','VER CRÉDITOS',true)+
         button('leave-final','VOLTAR AO MENU')+'</div>';
       ui.querySelector('#leave-final')?.addEventListener('click',()=>net.shutdown());
@@ -551,7 +555,7 @@ function render(): void {
       const object=net.level===4?fireObjective(net.fire):net.level===3?treeObjective(net.treetop):net.level===2?temporalObjective(net.temporal):loopObjective(net.loop);
       ui.innerHTML='<div class="loop-top-left" aria-label="Estado da floresta">'+
         '<span class="loop-state">'+(net.level===4?'FASE 04 · FLORESTA EM CHAMAS':net.level===3?'FASE 03 · CAMINHO DAS ÁRVORES':net.level===2?'FASE 02 · FLORESTA TEMPORAL':'FASE 01 · A BOCA DA NOITE')+' · <strong id="loop-state">'+(['A','B','C'][net.level===4?net.fire.layout:net.level===3?net.treetop.layout:net.level===2?net.temporal.layout:net.loop.layout])+'</strong></span>'+
-        '<span id="loop-timer">FLORESTA MUDA EM —</span></div>'+
+        '<span id="loop-timer">FLORESTA MUDA EM —</span><span id="run-clock" class="run-clock">⏱ 00:00</span></div>'+
         '<div class="loop-top-right" aria-live="polite"><strong id="loop-objective">'+safeText(currentMission().objective)+'</strong>'+
         '<small id="loop-progress">'+safeText(object.progress)+'</small></div>'+
         '<div class="loop-wind" id="loop-wind" aria-label="Direção do vento"></div>'+
@@ -648,6 +652,15 @@ function render(): void {
   }
   exitGame();
   const panelStart = '<main class="panel">';
+  if(net.role==='idle'&&rankingsOpen){
+    ui.innerHTML='<main class="panel rank-panel"><span class="kicker">GAME JAM · RECORDES DO NAVEGADOR</span>'+
+      '<h2>🏆 MELHORES TEMPOS</h2>'+
+      '<p>Ranking local deste dispositivo. Não é uma classificação mundial do itch.io.</p>'+
+      rankingSection('solo')+rankingSection('multiplayer')+
+      button('ranking-back','VOLTAR AO MENU',true)+'</main>';
+    ui.querySelector('#ranking-back')?.addEventListener('click',()=>{rankingsOpen=false;render();});
+    return;
+  }
   if(net.role==='idle'&&phaseMapOpen){
     const names=['A BOCA DA NOITE','FLORESTA TEMPORAL','CAMINHO DAS ÁRVORES','FLORESTA EM CHAMAS'];
     const icons=['🌙','⛈️','🌳','🔥'];
@@ -668,6 +681,7 @@ function render(): void {
   }
   if (net.role === 'idle') {
     ui.innerHTML = '<main class="panel menu-panel">' + banner() + notice() +
+      nicknameInput()+
       '<div class="actions primary-play">'+
       button('loop-solo','JOGAR SOZINHO')+
       button('create','MULTIPLAYER ONLINE')+'</div>'+ 
