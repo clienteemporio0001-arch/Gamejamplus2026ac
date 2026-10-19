@@ -1,12 +1,13 @@
 import Phaser from 'phaser';
 import {paintHero} from './sharedCharacterArt';
+import {createKenneyCharacter,updateKenneyCharacter} from './kenneyCharacterSprites';
 import type {Seat,Pose} from './network';
 import {FIRE_WIDTH,FIRE_HEIGHT,FIRE_SMOKE_ZONE,FIRE_TREE_DANGER,FIRE_TARGETS,
  FIRE_PLATFORMS,FIRE_SHELTERS,fireballHazards,fireFlareActive,fireVisualTreePhase,
  type FirePlatform,type FireWorld} from './burningForest';
 
 const hash=(a:number)=>{const n=Math.sin(a*127.1+14.58)*43758.5453;return n-Math.floor(n)};
-type Figure={target:Phaser.GameObjects.Rectangle;ink:Phaser.GameObjects.Graphics;seat:Seat};
+type Figure={target:Phaser.GameObjects.Rectangle;ink:Phaser.GameObjects.Graphics;sprite:Phaser.GameObjects.Sprite|null;seat:Seat};
 export class BurningForestArt {
  private fire!:Phaser.GameObjects.Graphics;
  private sparks!:Phaser.GameObjects.Graphics;
@@ -176,7 +177,10 @@ export class BurningForestArt {
  }
  character(target:Phaser.GameObjects.Rectangle,seat:Seat):void{
   target.setFillStyle(0xffffff,.001).setStrokeStyle(1,0xffffff,.001);
-  this.figures.push({target,ink:this.scene.add.graphics().setDepth(42),seat});
+  const ink=this.scene.add.graphics().setDepth(42);
+  const sprite=createKenneyCharacter(this.scene,target,seat,42.1);
+  if(sprite)ink.setVisible(false);
+  this.figures.push({target,ink,sprite,seat});
  }
  private drawFigure(ink:Phaser.GameObjects.Graphics,seat:Seat,pose:Pose,ms:number):void{
   paintHero(ink,seat,ms,pose.vx,pose.vy);
@@ -264,7 +268,8 @@ export class BurningForestArt {
   }
   for(const entry of this.figures){
    const pose=poses[entry.seat];
-   this.drawFigure(entry.ink,entry.seat,pose,ms);
+   if(!entry.sprite)this.drawFigure(entry.ink,entry.seat,pose,ms);
+   updateKenneyCharacter(entry.sprite,entry.target,ms,pose.vx,pose.vy);
    entry.ink.setPosition(entry.target.x,entry.target.y).setAlpha(entry.target.alpha);
   }
   for(const [i,shadow] of this.shadows.entries()){
