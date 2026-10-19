@@ -235,20 +235,29 @@ function openPanel(kind:PanelKind):void{
 
 /** HTML5 intro sourced from the committed repository video; no duplicate players. */
 let introVideo:HTMLVideoElement|null=null;
+let introLayer:HTMLDivElement|null=null;
+let introStageShown=false;
 function stopIntroVideo():void{
- if(!introVideo)return;
- introVideo.pause();introVideo.removeAttribute('src');introVideo.load();
- introVideo.remove();introVideo=null;
+ const video=introVideo;
+ introVideo=null;
+ if(video){
+  video.pause();video.removeAttribute('src');video.load();
+ }
+ introLayer?.remove();introLayer=null;
 }
 function playIntroVideo(onComplete:()=>void):void{
  stopIntroVideo();
  const holder=document.createElement('div');
+ introLayer=holder;
  holder.id='video-intro';holder.className='video-intro';
  const video=document.createElement('video');
  introVideo=video;
  video.src=import.meta.env.BASE_URL+'introducao.mp4';
  video.playsInline=true;video.controls=true;video.preload='auto';
  video.autoplay=true;video.setAttribute('aria-label','Vídeo de introdução A Floresta Mente');
+ const preferences=getAudioSettings();
+ video.volume=preferences.music/100;
+ video.muted=preferences.muted||preferences.musicMuted;
  const skip=document.createElement('button');
  skip.type='button';skip.className='btn secondary video-skip';
  skip.textContent='⏭ PULAR INTRODUÇÃO';
@@ -263,13 +272,25 @@ function playIntroVideo(onComplete:()=>void):void{
  },{once:true});
  holder.append(video,skip);
  document.body.appendChild(holder);
+ // Only the movie's soundtrack should be heard during the prologue.
+ audio.setScore('none');
  void video.play().catch(()=>{
+  if(introVideo!==video)return;
   // Browser autoplay policy: user can press the native Play control.
   const prompt=document.createElement('button');
   prompt.className='btn video-play';prompt.textContent='▶ REPRODUZIR INTRODUÇÃO';
   prompt.addEventListener('click',()=>{void video.play().then(()=>prompt.remove()).catch(()=>{});});
   holder.appendChild(prompt);
  });
+}
+/** One safe entry point for both solo menus. The film runs only for phase 01. */
+function startSoloAdventure(level:1|2|3|4):void{
+ phaseMapOpen=false;devSession=false;info='';
+ if(level===1){
+  playIntroVideo(()=>net.startLoopSolo());
+  return;
+ }
+ net.startSolo(level,false,'loop');
 }
 function enterGame(): void {
   const mode = net.stage === 'intro' ? 'intro' : net.experience==='loop'?(net.level===4?'fire':net.level===3?'treetop':net.level===2?'temporal':'loop'):('level' + net.level) as 'level1' | 'level2' | 'level3' | 'level4';
@@ -402,6 +423,7 @@ function refreshHud(): void {
 setInterval(refreshHud, 150);
 
 function render(): void {
+  if(net.stage!=='intro')introStageShown=false;
   if(net.stage!=='intro'&&net.role!=='idle')stopIntroVideo();
   gameKeys.setEnabled(net.playing);
   const showing = net.stage !== 'lobby' && net.role !== 'idle';
@@ -409,7 +431,7 @@ function render(): void {
   if(!net.playing)unmountMobileControls();
   audio.setBiome(net.playing&&net.experience==='loop'?(['none','night','rain','treetop','fire'] as const)[net.level]:
     net.stage==='intro'?'night':'none');
-  audio.setScore(scoreForStage(net.stage,net.level,net.experience));
+  audio.setScore(introVideo?'none':scoreForStage(net.stage,net.level,net.experience));
   applyViewport();
   ui.classList.toggle('in-game', showing);
   if (showing) {
@@ -420,7 +442,10 @@ function render(): void {
         '<div class="cinematic-actions">' + button('skip-intro', '⏭ PULAR INTRODUÇÃO', true) + '</div>' +
         (info ? '<div class="game-toast">' + safeText(info) + '</div>' : '');
       ui.querySelector('#skip-intro')?.addEventListener('click', () => {stopIntroVideo();net.skipIntro();});
-      if(!introVideo)playIntroVideo(()=>net.skipIntro());
+      if(!introVideo&&!introStageShown){
+        introStageShown=true;
+        playIntroVideo(()=>net.skipIntro());
+      }
       return;
     }
     if (net.stage === 'transition'&&net.experience==='loop') {
@@ -602,8 +627,7 @@ function render(): void {
     ui.querySelectorAll<HTMLButtonElement>('[data-phase]').forEach(item=>
       item.addEventListener('click',()=>{
         const level=Number(item.dataset.phase) as 1|2|3|4;
-        phaseMapOpen=false;devSession=false;info='';
-        net.startSolo(level,false,'loop');
+        startSoloAdventure(level);
       }));
     return;
   }
@@ -627,7 +651,7 @@ function render(): void {
     });
     ui.querySelector('#create')?.addEventListener('click',()=>{devSession=false;info='';void net.createRoom('loop');});
     ui.querySelector('#create-classic')?.addEventListener('click',()=>{devSession=false;info='';void net.createRoom('classic');});
-    ui.querySelector('#loop-solo')?.addEventListener('click',()=>{devSession=false;info='';playIntroVideo(()=>net.startLoopSolo());});
+    ui.querySelector('#loop-solo')?.addEventListener('click',()=>startSoloAdventure(1));
     ui.querySelector('#join-menu')?.addEventListener('click',()=>{devSession=false;showJoin();});
     return;
   }
@@ -737,7 +761,8 @@ net.on('vital-reply',reply=>{
 gameKeys.bind();
 net.on('solo-seat',seat=>updateMobileCharacter(seat));
 net.on('change',()=>{
- if(net.role==='idle'){info='';devSession=false;closeOverlay();stopIntroVideo();}
+ if(net.role==='idle'){info='';devSession=false;closeOverlay();}
+ if(net.role==='idle')stopIntroVideo();
  render();
 });
 net.on('start', () => { info = ''; render(); });
@@ -757,5 +782,5 @@ window.addEventListener('keydown', event => {
   }
   if (net.playing && ['ArrowLeft', 'ArrowRight'].includes(event.code)) event.preventDefault();
 });
-window.addEventListener('beforeunload', () => {audio.destroy();net.shutdown();});
+window.addEventListener('beforeunload', () => {stopIntroVideo();audio.destroy();net.shutdown();});
 render();
