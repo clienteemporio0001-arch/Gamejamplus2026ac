@@ -7,11 +7,10 @@ export const BOULDER_ZONE={from:5800,to:6390,y:604,radius:33} as const;
 export function boulderEvent(cycleStart:number,now:number,
  paused=false):{phase:TimedHazard;x:number;y:number}|null{
  if(paused||cycleStart<=0)return null;
- const t=Math.max(0,now-cycleStart)%19000;
- if(t<3300)return null;
- if(t<5100)return {phase:'warning',x:BOULDER_ZONE.to,y:BOULDER_ZONE.y};
- if(t>=8650)return null;
- const fraction=Math.max(0,Math.min(1,(t-5100)/3550));
+ const t=Math.max(0,now-cycleStart);
+ if(t<1800)return {phase:'warning',x:BOULDER_ZONE.to,y:BOULDER_ZONE.y};
+ if(t>=5350)return null;
+ const fraction=Math.max(0,Math.min(1,(t-1800)/3550));
  return {phase:'active',x:BOULDER_ZONE.to-
   fraction*(BOULDER_ZONE.to-BOULDER_ZONE.from),y:BOULDER_ZONE.y};
 }
