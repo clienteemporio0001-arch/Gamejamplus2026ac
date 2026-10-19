@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import {preloadKenneyCharacters} from './kenneyCharacterSprites';
+import {preloadKenneyCharacters,KENNEY_KEYS} from './kenneyCharacterSprites';
 import {paintHero} from './sharedCharacterArt';
 import { CHARACTERS } from './network';
 
@@ -51,7 +51,14 @@ export class IntroScene extends Phaser.Scene {
       const name = this.add.text(0, -98, CHARACTERS[i].name, {
         fontFamily: 'Arial', fontSize: '17px', color: CHARACTERS[i].hex, fontStyle: 'bold'
       }).setOrigin(.5);
-      avatar.add([hero,name]);this.characters.push(avatar);
+      avatar.add([hero,name]);
+      if(this.textures.exists(KENNEY_KEYS[i])){
+        hero.setVisible(false);
+        const sprite=this.add.sprite(0,0,KENNEY_KEYS[i],'idle')
+          .setOrigin(.5,1).setDisplaySize(56,74);
+        avatar.add(sprite);
+      }
+      this.characters.push(avatar);
       this.tweens.add({ targets: avatar, y: 580, yoyo: true, repeat: -1, duration: 510 + i * 110, ease: 'Sine.easeInOut' });
     }
     this.night = this.add.rectangle(600, 350, 1200, 700, 0x020d22, 0).setDepth(7);
