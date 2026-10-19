@@ -1,5 +1,6 @@
 import Peer, { type DataConnection } from 'peerjs';
 import {cleanName} from './speedrun';
+import {avatarAvailable,DEFAULT_AVATARS,isAvatarId,uniqueAvatars,type AvatarChoices,type AvatarId} from './avatarCatalog';
 import {boulderEvent,boulderHit,tideSurface,tideHit} from './jamChallenges';
 import {multiplayerPoseBounds} from './multiplayerPoseBounds';
 import { PuzzleAuthority, initialWorld, validWorld, validAction, CHECKPOINTS, type WorldState, type PuzzleAction } from './puzzles';
@@ -25,12 +26,13 @@ export type PhaseInfo = { stage: Stage; level: Level; since: number; until: numb
 export type Seat = 0 | 1 | 2;
 /** Safety net for failed or stalled video loads; never the normal end of the cutscene. */
 export const INTRO_WATCHDOG_MS=180_000;
-export type Slot = { seat: Seat; online: boolean; ready: boolean; nickname?:string };
+export type Slot = { seat: Seat; online: boolean; ready: boolean; nickname?:string; avatar?:AvatarId|null };
 export type Pose = { seat: Seat; x: number; y: number; vx: number; vy: number };
 type Wire =
   | { t: 'hello'; token: string }
   | { t: 'ready'; value: boolean }
   | { t: 'profile'; name:string }
+  | { t: 'avatar'; id:AvatarId }
   | { t: 'pose'; x: number; y: number; vx: number; vy: number }
   | { t: 'welcome'; seat: Seat; code: string; mode?: Experience }
   | { t: 'roster'; players: Slot[]; playing: boolean; teamName?:string }
@@ -118,7 +120,8 @@ const validSlot = (v: unknown): v is Slot => {
   if (!v || typeof v !== 'object') return false;
   const p = v as Record<string, unknown>;
   return seatValid(p.seat) && typeof p.online === 'boolean' && typeof p.ready === 'boolean' &&
-    (p.nickname===undefined||(typeof p.nickname==='string'&&p.nickname.length<=22));
+    (p.nickname===undefined||(typeof p.nickname==='string'&&p.nickname.length<=22))&&
+    (p.avatar===undefined||p.avatar===null||isAvatarId(p.avatar));
 };
 function parseWire(value: unknown): Wire | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -127,6 +130,7 @@ function parseWire(value: unknown): Wire | null {
     case 'hello': return typeof p.token === 'string' && /^[a-f0-9-]{20,50}$/.test(p.token) ? value as Wire : null;
     case 'ready': return typeof p.value === 'boolean' ? value as Wire : null;
     case 'profile': return typeof p.name==='string'&&p.name.length>0&&p.name.length<=22?value as Wire:null;
+    case 'avatar': return isAvatarId(p.id)?value as Wire:null;
     case 'pose': return finite(p.x) && finite(p.y) && finite(p.vx) && finite(p.vy)
       && p.x >= 0 && p.x <= Math.max(FOREST_WIDTH,TREE_WIDTH,FIRE_WIDTH,LOOP_WIDTH) && p.y >= 0 && p.y <= TREE_HEIGHT
       && Math.abs(p.vx) <= 1200 && Math.abs(p.vy) <= 1500 ? value as Wire : null;
@@ -194,6 +198,7 @@ export class Network {
   players: Slot[] = slots();
   teamName='Equipe da Mata';
   private ownNickname='Explorador';
+  private soloAvatars:AvatarChoices=[...DEFAULT_AVATARS];
   runStartedAt=0;
   runFinishedAt=0;
   poses: Pose[] = SPAWNS.map(p => ({ ...p }));
@@ -256,7 +261,38 @@ export class Network {
   get isSolo(): boolean { return this.role === 'solo'; }
   get isHost(): boolean { return this.role === 'host' || this.isSolo; }
   get everyoneConnected(): boolean { return this.players.every(p => p.online); }
-  get canStart(): boolean { return this.isHost && this.stage === 'lobby' && this.players.every(p => p.online && p.ready); }
+  get canStart(): boolean {
+    return this.isHost&&this.role==='host'&&this.stage==='lobby'&&
+      this.players.every(p=>p.online&&p.ready&&isAvatarId(p.avatar))&&
+      uniqueAvatars(this.players.map(p=>p.avatar));
+  }
+  /** Cosmetic choice only: seat controls a fixed skill and puzzle identity. */
+  avatarForSeat(seat:Seat):AvatarId{
+    const id=this.players[seat]?.avatar;
+    return isAvatarId(id)?id:this.soloAvatars[seat];
+  }
+  selectAvatar(id:AvatarId):void{
+    if(!isAvatarId(id)||this.stage!=='lobby'||this.localSeat===null||this.role==='solo')return;
+    if(this.role==='host')this.tryAssignAvatar(this.localSeat,id);
+    else if(this.role==='guest')this.message(this.hostConn,{t:'avatar',id});
+  }
+  /** Host serializes all claims: no two online seats may own the same skin. */
+  private tryAssignAvatar(seat:Seat,id:AvatarId):void{
+    if(this.role!=='host'||this.stage!=='lobby'||!this.players[seat].online)return;
+    if(!avatarAvailable(id,seat,this.players)){
+      const warning='Personagem indisponível. Escolha outro.';
+      if(seat===0)this.emit('notice',warning);
+      else this.message(this.conns.get(seat)??null,{t:'reject',reason:warning});
+      return;
+    }
+    this.players[seat].avatar=id;
+    this.players[seat].ready=false; // a new selection requires new ready confirmation
+    this.updateRoster();
+  }
+  private applySoloAvatars(choices:readonly AvatarId[]):void{
+    this.soloAvatars=uniqueAvatars(choices)?[...choices]:[...DEFAULT_AVATARS];
+    for(const seat of [0,1,2] as Seat[])this.players[seat].avatar=this.soloAvatars[seat];
+  }
   /** Names never alter fixed character seats: 0=Téo, 1=Lia, 2=Nino. */
   setNickname(name:string):void{
     this.ownNickname=cleanName(name);
@@ -286,7 +322,7 @@ export class Network {
     for (const conn of this.conns.values()) this.message(conn, wire);
   }
   /** Local session: three physical players, zero Peer instances / DataChannels. */
-  startSolo(level: Level = 1, showIntro = false, mode:Experience = 'classic'): void {
+  startSolo(level: Level = 1, showIntro = false, mode:Experience = 'classic', avatars:readonly AvatarId[] = DEFAULT_AVATARS): void {
     this.shutdown();
     this.shuttingDown=false;
     this.role='solo';this.code='SOLO';this.experience=mode;this.localSeat=0;
@@ -296,6 +332,7 @@ export class Network {
     this.treetopAuthority.reset();this.treetop=this.treetopAuthority.world;this.treetopSafeUntil=Date.now()+1300;
     this.fireAuthority.reset();this.fire=this.fireAuthority.world;this.fireSafeUntil=Date.now()+1300;
     this.players=([0,1,2] as Seat[]).map(seat=>({seat,online:true,ready:true,nickname:seat===0?this.ownNickname:CHARACTERS[seat].name}));
+    this.applySoloAvatars(avatars);
     this.authority.reset();this.effectGate.reset();
     this.forestAuthority.reset();this.forest=this.forestAuthority.world;
     this.journeyAuthority.reset();this.journey=this.journeyAuthority.world;
@@ -311,7 +348,7 @@ export class Network {
     this.setPhase(showIntro&&level===1?'intro':'playing',level,
       showIntro&&level===1?Date.now()+INTRO_WATCHDOG_MS:0);
   }
-  startLoopSolo():void{this.startSolo(1,false,'loop');}
+  startLoopSolo(avatars:readonly AvatarId[]=DEFAULT_AVATARS):void{this.startSolo(1,false,'loop',avatars);}
   startTemporalSolo():void{this.startSolo(2,false,'loop');}
   startTreetopSolo():void{this.startSolo(3,false,'loop');}
   startFireSolo():void{this.startSolo(4,false,'loop');}
@@ -386,7 +423,7 @@ export class Network {
     const epoch=this.sessionEpoch;
     this.role = 'host';
     this.localSeat = 0;
-    this.players[0] = { seat: 0, online: true, ready: false, nickname:this.ownNickname };
+    this.players[0] = { seat: 0, online: true, ready: false, nickname:this.ownNickname,avatar:null };
     this.emit('change', undefined);
     for (let i = 0; i < 8; i++) {
       const code = createCode();
@@ -525,7 +562,7 @@ export class Network {
         this.grace.delete(seat);
         this.tokens[seat] = msg.token;
         this.conns.set(seat, conn);
-        this.players[seat] = { seat, online: true, ready: reserved >= 1 ? this.players[seat].ready : false, nickname:this.players[seat].nickname??CHARACTERS[seat].name };
+        this.players[seat] = { seat, online: true, ready: reserved >= 1 ? this.players[seat].ready : false, nickname:this.players[seat].nickname??CHARACTERS[seat].name,avatar:reserved>=1?this.players[seat].avatar??null:null };
         this.message(conn, { t: 'welcome', seat, code: this.code, mode:this.experience });
         this.updateRoster();
         this.message(conn, { t: 'puzzle', world: this.puzzle });
@@ -550,7 +587,14 @@ export class Network {
         this.players[seat].nickname=cleanName(msg.name);
         this.updateRoster();
       }
-      if (msg.t === 'ready' && !this.playing) {
+      if (msg.t === 'avatar' && this.stage==='lobby'){
+        this.tryAssignAvatar(seat,msg.id);
+      }
+      if (msg.t === 'ready' && this.stage==='lobby') {
+        if(msg.value&&!isAvatarId(this.players[seat].avatar)){
+          this.message(conn,{t:'reject',reason:'Escolha seu personagem antes de marcar PRONTO.'});
+          return;
+        }
         this.players[seat].ready = msg.value;
         this.updateRoster();
       }
@@ -598,6 +642,7 @@ export class Network {
       this.conns.delete(seat);
       this.players[seat].online = false;
       this.players[seat].ready = false;
+      if(this.stage==='lobby')this.players[seat].avatar=null;
       this.emit('notice', CHARACTERS[seat].name + ' desconectou. Vaga reservada por 30 segundos.');
       this.updateRoster();
       const timer = setTimeout(() => {
@@ -799,9 +844,17 @@ export class Network {
     const seat = this.localSeat;
     if (seat === null || this.stage !== 'lobby') return;
     if (this.isHost) {
+      if(value&&!isAvatarId(this.players[seat].avatar)){
+        this.emit('notice','Escolha seu personagem antes de marcar PRONTO.');return;
+      }
       this.players[seat].ready = value;
       this.updateRoster();
-    } else this.message(this.hostConn, { t: 'ready', value });
+    } else {
+      if(value&&!isAvatarId(this.players[seat].avatar)){
+        this.emit('notice','Escolha seu personagem antes de marcar PRONTO.');return;
+      }
+      this.message(this.hostConn, { t: 'ready', value });
+    }
   }
   phaseInfo(): PhaseInfo {
     return { stage: this.stage, level: this.level, since: this.phaseSince, until: this.phaseUntil, mode:this.experience,
@@ -1422,6 +1475,7 @@ export class Network {
     this.fireAuthority.reset();this.fire=this.fireAuthority.world;this.fireSafeUntil=0;
     this.journeyAuthority.solo=false;this.chapterAuthority.solo=false;
     this.players = slots(); this.poses = SPAWNS.map(p => ({ ...p }));
+    this.soloAvatars=[...DEFAULT_AVATARS];
     this.playing = false; this.completed = false;
     this.stage = 'lobby'; this.level = 1; this.phaseSince = 0; this.phaseUntil = 0;
     this.runStartedAt=0;this.runFinishedAt=0;this.teamName='Equipe da Mata';
