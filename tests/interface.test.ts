@@ -100,11 +100,11 @@ ok(main.includes("net.startLoopSolo()"),'solo abre a mesma aventura');
 ok(main.includes("button('select-phase','SELECIONAR FASE'"),'acesso à seleção de fases');
 ok(main.includes('class="phase-trail"')&&main.includes('data-phase'),'mapa visual de quatro regiões');
 ok(main.includes("net.startSolo(level,false,'loop')"),'fase escolhida abre a aventura atual');
-ok(main.includes("ui.querySelector('#loop-solo')?.addEventListener('click',()=>startSoloAdventure(1))"),
+ok(main.includes("ui.querySelector('#loop-solo')?.addEventListener('click',()=>{captureProfile();startSoloAdventure(1);})"),
   'jogar sozinho usa o fluxo compartilhado com prólogo');
 ok(main.includes('startSoloAdventure(level);')&&
    main.includes('if(level===1){')&&
-   main.includes('playIntroVideo(()=>net.startLoopSolo());'),
+   main.includes('playIntroVideo(()=>{net.startLoopSolo();net.setNickname(profile.nickname);});'),
    'selecionar Fase 01 também reproduz a introdução');
 ok(main.includes("net.startSolo(level,false,'loop')"),
    'fases 02 a 04 mantêm acesso direto');
