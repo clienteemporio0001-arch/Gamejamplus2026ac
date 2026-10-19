@@ -52,6 +52,8 @@ type Wire =
   | { t: 'hazard'; jaguar: Jaguar }
   | { t: 'phase'; info: PhaseInfo }
   | { t: 'intro-done' }
+  | { t: 'final-done' }
+  | { t: 'final-finished' }
   | { t: 'win' }
   | { t: 'reject'; reason: string }
   | { t: 'closed' };
@@ -158,7 +160,7 @@ function parseWire(value: unknown): Wire | null {
         && i.since >= 0 && i.until >= 0
         && (i.mode === undefined || i.mode === 'classic' || i.mode === 'loop') ? value as Wire : null;
     }
-    case 'intro-done': return value as Wire;
+    case 'intro-done': case 'final-done': case 'final-finished': return value as Wire;
     case 'reject': return typeof p.reason === 'string' && p.reason.length <= 130 ? value as Wire : null;
     case 'begin': case 'win': case 'closed': return value as Wire;
     default: return null;
@@ -185,6 +187,8 @@ export class Network {
   poses: Pose[] = SPAWNS.map(p => ({ ...p }));
   playing = false;
   completed = false;
+  /** Final cinematic is presentation state only, separate from gameplay victory. */
+  endingComplete = false;
   puzzle: WorldState = initialWorld();
   forest: ForestWorld = initialForest();
   private forestAuthority = new ForestAuthority();
@@ -206,6 +210,7 @@ export class Network {
   private lastAction = new Map<string, number>();
   /** Completed playback or manually skipped, per authoritative multiplayer seat. */
   private introDone = new Set<Seat>();
+  private endingDone = new Set<Seat>();
   private effectGate = new SkillFxGate();
   private peer: Peer | null = null;
   private hostConn: DataConnection | null = null;
@@ -503,6 +508,8 @@ export class Network {
         this.message(conn, { t: 'chapter', world: this.chapter });
         this.message(conn, { t: 'hazard', jaguar: this.jaguar });
         this.message(conn, { t: 'phase', info: this.phaseInfo() });
+        if(this.stage==='final'&&this.level===4&&this.endingComplete)
+          this.message(conn,{t:'final-finished'});
         if (this.stage !== 'lobby') this.message(conn, { t: 'state', poses: this.poses });
         return;
       }
@@ -516,6 +523,12 @@ export class Network {
       if (msg.t === 'intro-done' && this.stage === 'intro' && this.everyoneConnected) {
         this.introDone.add(seat);
         this.tryFinishIntro();
+      }
+      // A guest may only confirm natural playback; the host owns the skip.
+      if (msg.t === 'final-done' && this.stage === 'final' && this.level===4 &&
+          this.experience==='loop' && this.everyoneConnected) {
+        this.endingDone.add(seat);
+        this.tryFinishEndingVideo();
       }
       if (msg.t === 'act' && this.playing && this.everyoneConnected) {
         this.hostAction(seat, msg.action);
@@ -597,6 +610,7 @@ export class Network {
         const oldStage = this.stage, oldLevel = this.level;
         this.stage = msg.info.stage; this.level = msg.info.level;
         this.experience=msg.info.mode??this.experience;
+        if(oldStage!==this.stage||oldLevel!==this.level)this.endingComplete=false;
         this.phaseSince = msg.info.since; this.phaseUntil = msg.info.until;
         this.playing = this.stage === 'playing'; this.completed = this.stage === 'final';
         if (this.stage === 'playing') this.pendingRestore = true;
@@ -607,6 +621,12 @@ export class Network {
         this.emit('change', undefined);
         break;
       }
+      case 'final-finished':
+        if(this.stage==='final'&&this.level===4&&this.experience==='loop'&&!this.endingComplete){
+          this.endingComplete=true;
+          this.emit('change',undefined);
+        }
+        break;
       case 'state':
         if (this.playing) {
           this.poses = msg.poses.map(p => ({ ...p }));
@@ -747,6 +767,11 @@ export class Network {
   }
   private setPhase(stage: Stage, level: Level, until = 0): void {
     if(stage==='intro')this.introDone.clear();
+    // Victory already happened; synchronize only the ending presentation.
+    if(stage==='final'&&level===4&&this.experience==='loop'){
+      this.endingComplete=false;
+      this.endingDone.clear();
+    }
     this.stage = stage; this.level = level;
     this.phaseSince = Date.now(); this.phaseUntil = until;
     this.playing = stage === 'playing'; this.completed = stage === 'final';
@@ -810,6 +835,36 @@ export class Network {
       this.broadcast({ t: 'state', poses: this.poses });
       this.setPhase('playing', 1);
     }
+  }
+  /** Local ending video completed naturally (or media could not load).
+   * Guests report only completion. They cannot end the room's cinematic.
+   */
+  completeEndingVideo():void{
+    if(this.stage!=='final'||this.level!==4||this.experience!=='loop'||
+       this.endingComplete||this.localSeat===null)return;
+    if(this.isHost){
+      this.endingDone.add(this.localSeat);
+      this.tryFinishEndingVideo();
+    }else this.message(this.hostConn,{t:'final-done'});
+  }
+  /** Only the host or solo player can skip the final cutscene for everyone. */
+  skipEndingVideo():void{
+    if(!this.isHost||this.stage!=='final'||this.level!==4||
+       this.experience!=='loop'||this.endingComplete)return;
+    this.finishEndingVideo();
+  }
+  private tryFinishEndingVideo():void{
+    if(this.isHost&&this.stage==='final'&&this.level===4&&
+       !this.endingComplete&&this.everyoneConnected&&
+       (this.isSolo||this.players.every(p=>this.endingDone.has(p.seat))))
+      this.finishEndingVideo();
+  }
+  private finishEndingVideo():void{
+    if(!this.isHost||this.stage!=='final'||this.level!==4||
+       this.experience!=='loop'||this.endingComplete||!this.everyoneConnected)return;
+    this.endingComplete=true;
+    this.broadcast({t:'final-finished'});
+    this.emit('change',undefined);
   }
   private advanceLevel(): void {
     if (!this.isHost || this.stage !== 'transition' || !this.everyoneConnected) return;
@@ -1314,7 +1369,7 @@ export class Network {
     this.players = slots(); this.poses = SPAWNS.map(p => ({ ...p }));
     this.playing = false; this.completed = false;
     this.stage = 'lobby'; this.level = 1; this.phaseSince = 0; this.phaseUntil = 0;
-    this.introDone.clear();
+    this.introDone.clear();this.endingDone.clear();this.endingComplete=false;
     this.riverAuthority.reset(); this.river = initialRiver();
     this.journeyAuthority.reset();this.journey=initialJourney();this.journeyMotion={logs:[3086,3224],now:0};this.lastJourneyMotionBroadcast=0;
     this.chapterAuthority.reset(3);this.chapter=initialEyes();this.jaguar=defaultJaguar();this.lastHazardBroadcast=0;
