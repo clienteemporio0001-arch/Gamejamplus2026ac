@@ -823,6 +823,7 @@ net.on('change',()=>{
 net.on('start', () => { info = ''; render(); });
 net.on('phase', data => {
  info='';closeOverlay();
+ if(data.stage==='final'&&data.level===4)recordVictory(net);
  if(data.stage==='transition')audio.play('transition');
  if(data.stage==='final')audio.play('victory');
  render();
