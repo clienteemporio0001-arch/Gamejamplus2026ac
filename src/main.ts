@@ -33,7 +33,7 @@ const touch: TouchInput = { left: false, right: false, jump: false, interact: fa
 let game: Phaser.Game | null = null;
 let activeMode: 'none' | 'intro' | 'level1' | 'level2' | 'level3' | 'level4' | 'loop' | 'temporal' | 'treetop' | 'fire' = 'none';
 let info = '';
-let devToolsOpen=false;
+let phaseMapOpen=false;
 let devSession=false;
 const audio=new GameAudio();
 let lastStepAt=0;
@@ -548,6 +548,25 @@ function render(): void {
   }
   exitGame();
   const panelStart = '<main class="panel">';
+  if(net.role==='idle'&&phaseMapOpen){
+    const names=['A BOCA DA NOITE','FLORESTA TEMPORAL','CAMINHO DAS ÁRVORES','FLORESTA EM CHAMAS'];
+    const icons=['🌙','⛈️','🌳','🔥'];
+    ui.innerHTML='<main class="panel phase-map"><span class="kicker">EXPEDIÇÃO AMAZÔNICA</span>'+
+      '<h2>SELECIONE SUA FASE</h2><p>Escolha uma região para iniciar uma nova aventura solo.</p>'+
+      '<div class="phase-trail">'+names.map((name,i)=>
+        '<button class="phase-stop" type="button" data-phase="'+(i+1)+'">'+
+        '<span class="phase-icon">'+icons[i]+'</span><strong>0'+(i+1)+' — '+name+
+        '</strong><small>INICIAR FASE</small></button>').join('')+'</div>'+
+      button('phase-back','VOLTAR AO MENU',true)+'</main>';
+    ui.querySelector('#phase-back')?.addEventListener('click',()=>{phaseMapOpen=false;render();});
+    ui.querySelectorAll<HTMLButtonElement>('[data-phase]').forEach(item=>
+      item.addEventListener('click',()=>{
+        const level=Number(item.dataset.phase) as 1|2|3|4;
+        phaseMapOpen=false;devSession=false;info='';
+        net.startSolo(level,false,'loop');
+      }));
+    return;
+  }
   if (net.role === 'idle') {
     ui.innerHTML = '<main class="panel menu-panel">' + banner() + notice() +
       '<div class="actions primary-play">'+
@@ -558,34 +577,17 @@ function render(): void {
       '<button id="show-how" type="button">COMO JOGAR</button>'+
       '<button id="show-settings" type="button">CONFIGURAÇÕES</button>'+
       '<button id="show-credits" type="button">CRÉDITOS</button></nav>'+
-      '<details id="dev-tools" class="dev-tools" '+(devToolsOpen?'open':'')+'>'+
-      '<summary>FERRAMENTAS DE DESENVOLVIMENTO</summary>'+
-      '<p>Início direto das fases da nova aventura em modo solo. Os protótipos clássicos ficam separados.</p>'+
-      '<div class="dev-tools-actions">'+
-      button('dev-loop','TESTAR FASE 01 · BOCA DA NOITE',true)+
-      button('dev-temporal','TESTAR FASE 02 · FLORESTA TEMPORAL',true)+
-      button('dev-treetop','TESTAR FASE 03 · CAMINHO DAS ÁRVORES',true)+
-      button('dev-fire','TESTAR FASE 04 · FLORESTA EM CHAMAS',true)+
-      button('dev-loop-online','CRIAR SALA MULTIPLAYER · DIAGNÓSTICO',true)+
-      ([1,2,3,4] as const).map(level=>button('dev-classic-'+level,'TESTAR FASE CLÁSSICA '+level,true)).join('')+
-      button('create-classic','CRIAR SALA CLÁSSICA',true)+'</div></details>'+
+      button('select-phase','SELECIONAR FASE',true)+
       '<p class="menu-footnote">Multiplayer: três pessoas entram na mesma sala pelo código.</p></main>';
     ui.querySelector('#show-how')?.addEventListener('click',()=>openPanel('how'));
     ui.querySelector('#show-settings')?.addEventListener('click',()=>openPanel('settings'));
     ui.querySelector('#show-credits')?.addEventListener('click',()=>openPanel('credits'));
-    ui.querySelector('#dev-tools')?.addEventListener('toggle',()=>{
-      devToolsOpen=(ui.querySelector<HTMLDetailsElement>('#dev-tools')?.open??false);
+    ui.querySelector('#select-phase')?.addEventListener('click',()=>{
+      phaseMapOpen=true;render();
     });
     ui.querySelector('#create')?.addEventListener('click',()=>{devSession=false;info='';void net.createRoom('loop');});
     ui.querySelector('#create-classic')?.addEventListener('click',()=>{devSession=false;info='';void net.createRoom('classic');});
     ui.querySelector('#loop-solo')?.addEventListener('click',()=>{devSession=false;info='';net.startLoopSolo();});
-    ui.querySelector('#dev-loop')?.addEventListener('click',()=>{devSession=true;info='';net.startLoopSolo();});
-    ui.querySelector('#dev-temporal')?.addEventListener('click',()=>{devSession=true;info='';net.startTemporalSolo();});
-    ui.querySelector('#dev-treetop')?.addEventListener('click',()=>{devSession=true;info='';net.startTreetopSolo();});
-    ui.querySelector('#dev-fire')?.addEventListener('click',()=>{devSession=true;info='';net.startFireSolo();});
-    ui.querySelector('#dev-loop-online')?.addEventListener('click',()=>{devSession=true;info='';void net.createRoom('loop');});
-    ([1,2,3,4] as const).forEach(level=>
-      ui.querySelector('#dev-classic-'+level)?.addEventListener('click',()=>{devSession=false;info='';net.startSolo(level);}));
     ui.querySelector('#join-menu')?.addEventListener('click',()=>{devSession=false;showJoin();});
     return;
   }
