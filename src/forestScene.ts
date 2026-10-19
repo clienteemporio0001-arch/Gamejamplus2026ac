@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {preloadKenneyCharacters} from './kenneyCharacterSprites';
 import { gameKeys } from './keyboard';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import { FOREST_WIDTH, FOREST_SPAWNS, FOREST_VINES, CABO_X, TREE_ACTIONS,
@@ -103,6 +104,7 @@ export class ForestScene extends Phaser.Scene {
     this.label(3700,493,'ABISMO · DERRUBEM A ÁRVORE PARA CRUZAR',16,'#f2c7a2');
     this.label(4170,515,'CASA · REÚNAM OS TRÊS',16);
   }
+  preload():void{preloadKenneyCharacters(this);}
   create():void {
     this.physics.world.setBounds(0,0,FOREST_WIDTH,900);
     this.physics.world.setBoundsCollision(true,true,false,false);
