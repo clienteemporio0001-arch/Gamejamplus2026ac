@@ -779,14 +779,29 @@ function render(): void {
     return;
   }
   const roster = net.players.map((p, i) => {
-    const persona = CHARACTERS[i];
-    return '<div class="player"><div class="avatar" style="background:' + persona.hex + '"></div>' +
-      '<strong>' + persona.name + '</strong><small>'+safeText(cleanName(p.nickname,persona.name))+'</small><small><span class="dot ' + (p.online ? 'online' : '') + '"></span>' +
-      (p.online ? (p.ready ? 'Pronto ✓' : 'Conectado') : 'Aguardando...') + '</small></div>';
+    const persona=CHARACTERS[i],chosen=isAvatarId(p.avatar)?avatarInfo(p.avatar):null;
+    const portrait=chosen?
+      '<img class="roster-skin" src="'+import.meta.env.BASE_URL+
+      'characters/kenney/preview-'+chosen.file+'.png" alt="'+safeText(chosen.label)+'" width="42" height="56"/>':
+      '<span class="roster-skin-empty">?</span>';
+    return '<div class="player">'+portrait+
+      '<strong>'+persona.name+' · '+ROLE_SKILLS[i]+'</strong>'+
+      '<small>'+safeText(cleanName(p.nickname,persona.name))+'</small>'+
+      '<small>'+(chosen?safeText(chosen.label):'Ainda não escolheu')+'</small>'+
+      '<small><span class="dot '+(p.online?'online':'')+'"></span>'+
+      (p.online?(p.ready?'PRONTO ✓':'ESCOLHENDO'):'AGUARDANDO...')+'</small></div>';
   }).join('');
   const me = net.localSeat;
   const ready = me === null ? false : net.players[me].ready;
-  const readyButton = button('ready', ready ? '✓ PRONTO — DESMARCAR' : '✓ ESTOU PRONTO', ready);
+  const chosenAvatar=me===null?null:net.players[me].avatar;
+  const occupied=new Map<AvatarId,string>();
+  net.players.forEach((p,i)=>{
+    if(i!==me&&p.online&&isAvatarId(p.avatar))
+      occupied.set(p.avatar,cleanName(p.nickname,CHARACTERS[i].name));
+  });
+  const selectCards=avatarGrid(isAvatarId(chosenAvatar)?chosenAvatar:null,occupied,'multiplayer');
+  const readyButton=button('ready',ready?'✓ PRONTO — DESMARCAR':'✓ ESTOU PRONTO',
+    ready,me===null||!isAvatarId(chosenAvatar));
   const startButton = net.isHost ? button('start', '▶ INICIAR JOGO', false, !net.canStart) : '';
   ui.innerHTML = panelStart + '<div class="kicker">SALA COOPERATIVA · 3 JOGADORES</div>' +
     '<h2>A equipe está se formando</h2>' +
@@ -794,14 +809,26 @@ function render(): void {
      nicknameInput()+
     '<div class="muted">Código da sala</div><div class="code-row"><div class="code">' + safeText(net.code) +
     '</div>' + button('copy', 'COPIAR', true) + '</div>' +
-    '<div class="player-list">' + roster + '</div>' + notice() +
+    '<div class="player-list">' + roster + '</div>' +
+    '<section class="multiplayer-skins"><h3>ESCOLHA SEU PERSONAGEM</h3>'+
+    '<p>Um visual por jogador. A aparência não muda as habilidades.</p>'+
+    (me===null?'':selectCards)+'</section>'+notice()+
      '<div class="jam-profile-save">'+button('save-player','SALVAR NOME(S)',true)+'</div>'+
     '<div class="actions">' + readyButton + startButton + button('leave-lobby', 'SAIR', true) + '</div>' +
-    '<div class="tip">' + (net.isHost ? 'Você é Téo, anfitrião. Inicie somente com os 3 prontos.' :
+    '<div class="tip">' + (net.isHost ? 'Você tem o papel de Téo (SALTO DUPLO). Inicie após os três escolherem personagens diferentes e ficarem prontos.' :
       'Você controla ' + (me === null ? 'seu personagem' : CHARACTERS[me].name) + '. Aguarde o anfitrião iniciar.') +
     '</div><div class="rules"><b>COMPUTADOR:</b> A/D ou ←/→ para andar; ESPAÇO ou ↑ para pular e salto duplo; SHIFT = dash de Nino; J = baladeira de Lia; E = interagir.<br>' +
     '<b>CELULAR:</b> setas na esquerda e PULAR na direita. Coloque na horizontal.<br>' +
     '<b>OBJETIVO:</b> encontrem o Guia Indígena, apoiem-se uns nos outros, coletem 3 cipós e derrubem a árvore para atravessar juntos.</div></main>';
+  ui.querySelectorAll<HTMLButtonElement>('[data-avatar]').forEach(item=>
+    item.addEventListener('click',()=>{
+      const id=item.dataset.avatar;
+      if(!isAvatarId(id))return;
+      captureProfile();
+      net.setNickname(profile.nickname);
+      if(net.role==='host')net.setTeamName(profile.teamName);
+      net.selectAvatar(id);
+    }));
   ui.querySelector('#copy')?.addEventListener('click', () => {
     navigator.clipboard?.writeText(net.code).then(() => { info = 'Código copiado!'; render(); })
       .catch(() => { info = 'Copie este código: ' + net.code; render(); });
