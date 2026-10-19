@@ -58,7 +58,13 @@ export class BurningForestScene extends Phaser.Scene {
    fontStyle:'bold',color,stroke:'#19161a',strokeThickness:4,align:'center'})
    .setOrigin(.5).setDepth(53);
  }
- preload():void{preloadOfficialLandmarks(this);preloadKenneyCharacters(this);}
+ preload():void{
+  preloadOfficialLandmarks(this);preloadKenneyCharacters(this);
+  if(!this.textures.exists('jam-explosion'))
+    this.load.spritesheet('jam-explosion',
+      import.meta.env.BASE_URL+'assets/fx/explosion-4.png',
+      {frameWidth:128,frameHeight:128});
+ }
 
  create():void{
   this.physics.world.setBounds(0,0,FIRE_WIDTH,FIRE_HEIGHT+200);
@@ -332,6 +338,10 @@ export class BurningForestScene extends Phaser.Scene {
   const inSmoke=fireHeavySmoke(w,this.local,now);
   const inFire=fireDamageZone(w,this.local,now);
   const balls=fireballHazards(w,now);
+  if(w.escapeAt>0&&now-w.escapeAt<5200&&this.lastDanger!=='escape'){
+    this.lastDanger='escape';
+    this.pipo.warnDanger('FUGA FINAL! O FOGO ESTÁ AVANÇANDO! CORRAM JUNTOS!');
+  }
   const nearFireball=balls.some(b=>b.phase==='warning'&&
    Math.abs(this.local.x-b.x)<150&&Math.abs(this.local.y-b.impactY)<105);
   const protectedFromFire=fireSheltered(this.local);
@@ -349,7 +359,7 @@ export class BurningForestScene extends Phaser.Scene {
    protectedFromFire?'✦ ABRIGADO DO FOGO':
    inFire?'⚠ CHAMAS ATIVAS':'';
   this.dangerText.setText(warning).setVisible(Boolean(warning)&&!pause);
-  this.art.update(w,poses,time,now);
+  this.art.update(w,poses,time,now,this.net.isSolo);
   this.audio.update(w,now);
   this.missions.update(time,pause);
    this.pipo.update(time,this.local.x,this.local.y,pause);
