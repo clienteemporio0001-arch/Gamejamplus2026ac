@@ -6,7 +6,9 @@ export function isMobilePortrait(view:ViewSize,coarse:boolean):boolean{
 }
 export function cameraZoomFor(view:ViewSize,coarse:boolean):number{
   if(coarse)return Math.max(.72,Math.min(1.02,Math.min(view.height/440,view.width/850)));
-  return Math.max(.85,Math.min(1.16,view.height/700));
+  // Desktop embeds and tall monitors: the old 1.16 zoom cap left a large
+  // empty strip below the world ground. Leave the mobile branch unchanged.
+  return Math.max(.75,Math.min(1.58,view.height/720));
 }
 export function viewportSize(win:{innerWidth:number;innerHeight:number;
   visualViewport?:{width:number;height:number}|null}):ViewSize{

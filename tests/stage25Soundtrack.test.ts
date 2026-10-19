@@ -29,6 +29,7 @@ for(const [level,expected] of [[1,'night'],[2,'rain'],[3,'treetop'],[4,'fire']] 
 }
 assert.equal(scoreForStage('final',4,'loop'),'ending');
 assert.equal(scoreForStage('lobby',1,'loop'),'menu');
+assert.equal(scoreForStage('idle',1,'classic'),'menu','initial menu music plays before game mode chosen');
 assert.equal(scoreForStage('intro',1,'loop'),'menu');
 assert.equal(scoreForStage('playing',1,'classic'),'none');
 assert.equal(scoreForStage('playing',4,'loop'),'fire');

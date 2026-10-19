@@ -14,6 +14,9 @@ export type ScoreCue=keyof typeof SCORE_CATALOG|'none'|'menu';
 
 /** Pure router: stages are authoritative, current animation/pose is irrelevant. */
 export function scoreForStage(stage:string,level:number,experience:string):ScoreCue{
+ // The menu starts before a game mode is chosen; play the existing quiet
+ // suspense theme only after a real user gesture unlocks browser audio.
+ if(stage==='idle'||stage==='lobby')return 'menu';
  if(experience!=='loop')return 'none';
  if(stage==='final'&&level===4)return 'ending';
  if(stage==='transition')return (['none','rain','treetop','fire','ending'] as const)[level]??'none';

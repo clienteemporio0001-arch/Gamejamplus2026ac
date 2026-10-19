@@ -13,7 +13,7 @@ import {MissionDirector} from './missionDirector';
 import {BurningForestArt} from './burningForestArt';
 import {BurningForestAudio} from './burningForestAudio';
 import {
- FIRE_WIDTH,FIRE_HEIGHT,FIRE_START,FIRE_PLATFORMS,FIRE_TARGETS,FIRE_SHIFT_ROOTS,
+ FIRE_WIDTH,FIRE_HEIGHT,FIRE_FLOOR_Y,FIRE_START,FIRE_PLATFORMS,FIRE_TARGETS,FIRE_SHIFT_ROOTS,
  firePlatforms,fireVisualTreePhase,fireHeavySmoke,fireDamageZone,fireFlareActive,
  fireSheltered,fireballHazards,
  type FireWorld
@@ -133,10 +133,12 @@ export class BurningForestScene extends Phaser.Scene {
     this.jumps=0;this.pendingJump=false;this.dashUntil=0;this.hud?.();
    }));
   }
-  this.cameras.main.setBounds(0,0,FIRE_WIDTH,FIRE_HEIGHT);
-  this.cameras.main.setZoom(Math.max(.72,Math.min(1.06,
-   cameraZoomFor({width:this.scale.gameSize.width,height:this.scale.gameSize.height},
-    isCoarseDevice())*1.0)));
+  // Fatal fall space below the floor is not part of the visible camera framing.
+  // This prevents the entire desktop scene riding up inside a tall itch iframe.
+  this.cameras.main.setBounds(0,0,FIRE_WIDTH,FIRE_FLOOR_Y+35);
+  this.cameras.main.setZoom(cameraZoomFor({
+   width:this.scale.gameSize.width,height:this.scale.gameSize.height
+  },isCoarseDevice()));
   this.cameras.main.startFollow(this.local,false,.085,.10,0,-24);
   this.cameras.main.setDeadzone(Math.min(155,this.scale.gameSize.width*.17),Math.min(100,this.scale.gameSize.height*.18));
   this.cursors=this.input.keyboard?.createCursorKeys();
@@ -189,9 +191,8 @@ export class BurningForestScene extends Phaser.Scene {
    }
   }));
   const onResize=(size:Phaser.Structs.Size)=>{
-   this.cameras.main.setZoom(Math.max(.72,Math.min(1.06,
-    cameraZoomFor({width:size.width,height:size.height},isCoarseDevice())*1.0)));
-   this.cameras.main.setBounds(0,0,FIRE_WIDTH,FIRE_HEIGHT);
+   this.cameras.main.setZoom(cameraZoomFor({width:size.width,height:size.height},isCoarseDevice()));
+   this.cameras.main.setBounds(0,0,FIRE_WIDTH,FIRE_FLOOR_Y+35);
    this.cameras.main.setDeadzone(Math.min(155,size.width*.17),Math.min(100,size.height*.18));
    this.dark.setPosition(size.width/2,size.height/2).setSize(size.width+150,size.height+150);
    this.darkText.setPosition(size.width/2,size.height/2);

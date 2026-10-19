@@ -33,11 +33,14 @@ for(const path of ['src/forestScene.ts','src/journeyScene.ts','src/lateScene.ts'
  for(const token of ['new SoloBodies(this,',"this.net.on('solo-seat'",'this.solo?.beforeFrame(', 'this.solo?.report()'])
    ok(s.includes(token),path+' integra '+token);
 }
-for(const label of ['JOGAR SOZINHO','MULTIPLAYER ONLINE','FERRAMENTAS DE DESENVOLVIMENTO',
-  'TESTAR FASE 01 · BOCA DA NOITE','REINICIAR TENTATIVA','VOLTAR AO MENU'])
+for(const label of ['JOGAR SOZINHO','MULTIPLAYER ONLINE','SELECIONAR FASE',
+  'A BOCA DA NOITE','FLORESTA TEMPORAL','CAMINHO DAS ÁRVORES','FLORESTA EM CHAMAS',
+  'REINICIAR TENTATIVA','VOLTAR AO MENU'])
  ok(ui.includes(label),'interface '+label);
-ok(ui.includes("button('dev-classic-'+level"),'seletor clássico dentro do desenvolvimento');
-ok(ui.includes('net.startSolo(level)'),'fases antigas continuam testáveis');
+ok(!ui.includes('FERRAMENTAS DE DESENVOLVIMENTO'),'ferramentas não visíveis no menu');
+ok(ui.includes("button('select-phase'"),'novo seletor disponível');
+ok(ui.includes("data-phase")&&ui.includes("phase-map"),'mapa visual das quatro fases');
+ok(ui.includes("net.startSolo(level,false,'loop')"),'fase escolhida inicia aventura atual');
 for(const digit of ['Digit1','Digit2','Digit3'])ok(ui.includes(digit),'atalho '+digit);
 ok(ui.includes('net.selectSoloSeat'),'botões touch / teclado selecionam seat');
 ok(ui.includes('Tempos de cooperação adaptados'),'painel indica janelas especiais solo');
