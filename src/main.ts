@@ -27,6 +27,10 @@ import {fireVisualTreePhase} from './burningForest';
 import {missionSnapshot} from './missionChapters';
 import {elapsedMs,formatTime,cleanName} from './speedrun';
 import {profile,captureProfile,nicknameInput,teamInput,rankingSection,recordVictory,victoryScore} from './speedrunUI';
+import {AVATAR_CATALOG,DEFAULT_AVATARS,avatarInfo,isAvatarId,uniqueAvatars,
+ loadSoloAvatars,saveSoloAvatars,selectSoloAvatar,type AvatarChoices,type AvatarId} from './avatarCatalog';
+import {avatarGrid,roleLabel,ROLE_SKILLS} from './avatarSelectionUI';
+import {setActiveAvatarSelections} from './kenneyCharacterSprites';
 
 const net = new Network();
 const ui = document.querySelector<HTMLDivElement>('#ui')!;
@@ -37,6 +41,18 @@ let activeMode: 'none' | 'intro' | 'level1' | 'level2' | 'level3' | 'level4' | '
 let info = '';
 let phaseMapOpen=false;
 let rankingsOpen=false;
+let soloSelectLevel:1|2|3|4|null=null;
+let soloDraft:AvatarChoices=loadSoloAvatars();
+let soloFocus:0|1|2=0;
+let soloFromPhaseMap=false;
+function showSoloSelection(level:1|2|3|4):void{
+  soloDraft=loadSoloAvatars();
+  soloFocus=0;soloSelectLevel=level;
+  soloFromPhaseMap=phaseMapOpen;
+  phaseMapOpen=false;
+  captureProfile();
+  render();
+}
 let devSession=false;
 const audio=new GameAudio();
 let lastStepAt=0;
@@ -302,15 +318,16 @@ function playIntroVideo(onComplete:()=>void,allowSkip=true,onSkip=onComplete,
  });
 }
 /** One safe entry point for both solo menus. The film runs only for phase 01. */
-function startSoloAdventure(level:1|2|3|4):void{
+function startSoloAdventure(level:1|2|3|4,avatars:AvatarChoices=loadSoloAvatars()):void{
  phaseMapOpen=false;devSession=false;info='';
  if(level===1){
-  playIntroVideo(()=>{net.startLoopSolo();net.setNickname(profile.nickname);});
+  playIntroVideo(()=>{net.startLoopSolo(avatars);net.setNickname(profile.nickname);});
   return;
  }
- net.startSolo(level,false,'loop');net.setNickname(profile.nickname);
+ net.startSolo(level,false,'loop',avatars);net.setNickname(profile.nickname);
 }
 function enterGame(): void {
+  setActiveAvatarSelections(([0,1,2] as const).map(seat=>net.avatarForSeat(seat)));
   const mode = net.stage === 'intro' ? 'intro' : net.experience==='loop'?(net.level===4?'fire':net.level===3?'treetop':net.level===2?'temporal':'loop'):('level' + net.level) as 'level1' | 'level2' | 'level3' | 'level4';
   if (game && activeMode === mode) return;
   exitGame();
