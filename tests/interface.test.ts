@@ -18,6 +18,30 @@ ok(main.includes("net.startLoopSolo()"),'solo abre a mesma aventura');
 ok(main.includes("button('select-phase','SELECIONAR FASE'"),'acesso à seleção de fases');
 ok(main.includes('class="phase-trail"')&&main.includes('data-phase'),'mapa visual de quatro regiões');
 ok(main.includes("net.startSolo(level,false,'loop')"),'fase escolhida abre a aventura atual');
+ok(main.includes("ui.querySelector('#loop-solo')?.addEventListener('click',()=>startSoloAdventure(1))"),
+  'jogar sozinho usa o fluxo compartilhado com prólogo');
+ok(main.includes('startSoloAdventure(level);')&&
+   main.includes('if(level===1){')&&
+   main.includes('playIntroVideo(()=>net.startLoopSolo());'),
+   'selecionar Fase 01 também reproduz a introdução');
+ok(main.includes("net.startSolo(level,false,'loop')"),
+   'fases 02 a 04 mantêm acesso direto');
+ok(main.includes("skip.textContent='⏭ PULAR INTRODUÇÃO'")&&
+   main.includes("video.addEventListener('ended',finish"),
+   'vídeo permite pular e avança automaticamente ao terminar');
+ok(main.includes('introLayer?.remove();introLayer=null;')&&
+   main.includes("if(introVideo!==video)return;"),
+   'vídeo descarta a camada e ignora callbacks antigos');
+ok(main.includes('introStageShown=true;')&&main.includes('if(!introVideo&&!introStageShown)'),
+   're-render não reinicia intro multiplayer após conclusão');
+ok(main.includes("audio.setScore('none');")&&
+   main.includes("video.muted=preferences.muted||preferences.musicMuted"),
+   'trilha do menu não sobrepõe áudio do filme e preferências são respeitadas');
+ok(readFileSync('.github/workflows/pages.yml','utf8').includes('cp introducao.mp4 dist/introducao.mp4'),
+   'build inclui o MP4 na raiz do pacote publicado');
+ok(readFileSync('introducao.mp4').subarray(4,8).toString()==='ftyp',
+   'vídeo MP4 real está versionado no repositório');
+
 ok(main.includes("net.createRoom('loop')"),'multiplayer mantém a aventura principal');
 ok(!main.includes('<details id="dev-tools"'),'ferramentas não visíveis no menu público');
 ok(main.includes('<details id="loop-dev"'),'reiniciar/adiantar ficam em menu de opções');
