@@ -107,7 +107,7 @@ export type LoopWorld=Vitals & {
   climbReady:boolean;teoUpperReached:boolean;teoSummitReached:boolean;
   final:[boolean,boolean,boolean];exit:boolean;
   lastRoute:'none'|'wrong'|'right'; routeAt:number;routeCount:number;
-  deadUntil:number;resetId:number; completed:boolean;
+  deadUntil:number;resetId:number; completed:boolean;boulderAt:number;
 };
 const bool3=(value:unknown):value is [boolean,boolean,boolean]=>Array.isArray(value)&&value.length===3&&value.every(x=>typeof x==='boolean');
 const nonNegative=(value:unknown):value is number=>typeof value==='number'&&Number.isFinite(value)&&value>=0;
@@ -119,7 +119,7 @@ export const initLoop=(now=Date.now()):LoopWorld=>({
   suspensionStacked:false,suspensionClimbReady:false,
   supporting:[null,null,null],stackMilestone:false,climbReady:false,teoUpperReached:false,teoSummitReached:false,
   final:[false,false,false],exit:false,lastRoute:'none',routeAt:0,routeCount:0,
-  deadUntil:0,resetId:0,completed:false,...initVitals()
+  deadUntil:0,resetId:0,completed:false,boulderAt:0,...initVitals()
 });
 export function validLoop(value:unknown):value is LoopWorld{
   if(!value||typeof value!=='object'||Array.isArray(value))return false;
@@ -127,7 +127,7 @@ export function validLoop(value:unknown):value is LoopWorld{
   return (w.layout===0||w.layout===1||w.layout===2)
     &&nonNegative(w.cycle)&&Number.isInteger(w.cycle)
     &&['cycleStart','blackoutUntil','treeFallAt','routeAt','routeCount','deadUntil','resetId',
-      'suspendedX','suspendedFrom','suspendedTo','suspendedAt'].every(k=>nonNegative(w[k]))
+      'suspendedX','suspendedFrom','suspendedTo','suspendedAt','boulderAt'].every(k=>nonNegative(w[k]))
     &&['observed','bridge','exit','completed','stackMilestone','climbReady','teoUpperReached','teoSummitReached',
       'suspendedOpen','suspensionStacked','suspensionClimbReady'].every(k=>typeof w[k]==='boolean')
     &&Array.isArray(w.supporting)&&w.supporting.length===3
@@ -498,6 +498,11 @@ export class LoopAuthority{
   /** One host clock for all players; secure route teleports are whole-party only. */
   tick(poses:Pose[],now=Date.now()):Tick{
     const w=this.world;
+    // Host awakens the rolling stone when players approach the trigger.
+    if(w.boulderAt===0&&!w.completed&&w.deadUntil===0&&!blackoutActive(w,now)&&
+      poses.some(p=>p.x>=6040&&p.x<=6240&&p.y>=545)){
+      w.boulderAt=now;return {changed:true};
+    }
     // A legal ascent is a two-stage event: detach from an actual human tower,
     // then arrive stably on the one-way elevated branch. Proximity alone cannot
     // claim success. The ledge is not reachable with a ground double-jump.
