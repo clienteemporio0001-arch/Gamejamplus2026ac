@@ -6,6 +6,7 @@ import {CooperativeExitArt} from './cooperativeExitArt';
 import {MissionDirector} from './missionDirector';
 import {animateForestProps} from './forestTransformFX';
 import {TreetopArt} from './treetopArt';
+import {FRAGILE_BRANCH_INDICES,fragilePhase} from './jamChallenges';
 import {TreetopWindAudio} from './treetopWindAudio';
 import {CHARACTERS,type Network,type Seat} from './network';
 import type {TouchInput} from './game';
@@ -219,6 +220,33 @@ export class TreetopForestScene extends Phaser.Scene {
    if(active.has(p))body.updateFromGameObject();
   });
  }
+ private fragileInk?:Phaser.GameObjects.Graphics;
+ /** Only three named ordinary branches crumble; mandatory puzzles stay solid.
+  * Host and guests derive the same phase from the broadcast cycle clock.
+  */
+ private updateFragileBranches(now:number,paused:boolean):void{
+   const ink=this.fragileInk??(this.fragileInk=this.add.graphics().setDepth(25));
+   ink.clear();
+   const active=new Set(treePlatforms(this.w));
+   for(const index of FRAGILE_BRANCH_INDICES){
+     const branch=TREE_PLATFORMS[index];
+     const phase=fragilePhase(this.w.cycleStart,now,index,paused);
+     const enabled=active.has(branch)&&phase!=='gone';
+     const actor=this.platforms[index],body=actor.body as Phaser.Physics.Arcade.StaticBody;
+     if(body.enable!==enabled){body.enable=enabled;if(enabled)body.updateFromGameObject();}
+     actor.setVisible(enabled);this.skins[index].setVisible(enabled);
+     if(!active.has(branch)||phase==='solid')continue;
+     const pulse=.53+.4*Math.abs(Math.sin(now*.012));
+     ink.lineStyle(phase==='cracking'?3:2,
+       phase==='cracking'?0xffc17b:0xff9e63,phase==='cracking'?pulse:.33);
+     ink.strokeRoundedRect(branch.x-branch.width/2,branch.y-12,branch.width,24,6);
+     if(phase==='cracking'){
+       ink.lineBetween(branch.x-branch.width/2+12,branch.y-5,branch.x-9,branch.y+4);
+       ink.lineBetween(branch.x-9,branch.y+4,branch.x+12,branch.y-7);
+       ink.lineBetween(branch.x+12,branch.y-7,branch.x+branch.width/2-12,branch.y+5);
+     }
+   }
+ }
  private request(kind:VitalAction,seat:Seat):void{
   const id=this.net.requestVital(kind,this.facing);
   if(id!==null)this.pending.set(id,{seat,kind});
@@ -261,6 +289,7 @@ export class TreetopForestScene extends Phaser.Scene {
   }
   const seat=this.net.localSeat,w=this.w,now=Date.now();
   const pause=w.blackoutUntil>now||w.deadUntil>0||!this.net.everyoneConnected;
+  this.updateFragileBranches(now,pause);
   if(pause!==this.paused){
    this.paused=pause;
    if(pause){this.physics.pause();this.pending.clear();gameKeys.clear();clearTouch(this.touch);}
