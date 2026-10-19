@@ -1,5 +1,6 @@
 import {exitPresence} from './sharedExit';
 import type {Pose,Seat} from './network';
+import {escapeWallX,escapeFireHit} from './jamChallenges';
 import {initVitals,validVitals,spendVital,regenVitals,damageVitals,VITALS,
  type VitalAction,type Vitals} from './loopVitals';
 
@@ -88,7 +89,7 @@ export function fireShiftLayout(w:FireWorld,now:number):0|1|2{
 }
 export type FireWind=-1|1;
 export type FireWorld=Vitals&{
- cycleStart:number;phaseStart:number;resetId:number;deadUntil:number;
+ cycleStart:number;phaseStart:number;resetId:number;deadUntil:number;escapeAt:number;
  layout:0|1|2;cycle:number;blackoutUntil:number;
  log:[boolean,boolean,boolean];logOpen:boolean;
  smoke:[boolean,boolean,boolean];smokeOpen:boolean;
@@ -100,7 +101,7 @@ export type FireWorld=Vitals&{
  collapseCycle:number;completed:boolean;damageCause:'fire'|'smoke'|'tree'|'fall'|'fireball'|'none';
 };
 export function initFire(now=Date.now()):FireWorld{return {
- cycleStart:now,phaseStart:now,resetId:0,deadUntil:0,
+ cycleStart:now,phaseStart:now,resetId:0,deadUntil:0,escapeAt:0,
  layout:0,cycle:0,blackoutUntil:0,
  log:[false,false,false],logOpen:false,
  smoke:[false,false,false],smokeOpen:false,
@@ -115,7 +116,7 @@ export function validFire(value:unknown):value is FireWorld{
  const w=value as Record<string,unknown>;
  const finite=(v:unknown)=>typeof v==='number'&&Number.isFinite(v)&&v>=0;
  const bool=(v:unknown)=>typeof v==='boolean';
- return ['cycleStart','phaseStart','resetId','deadUntil','treeFallAt','flare',
+ return ['cycleStart','phaseStart','resetId','deadUntil','treeFallAt','flare','escapeAt',
    'cycle','blackoutUntil','layout',
    'treeWarningUntil','treeImpactUntil'].every(k=>finite(w[k]))
   &&[0,1,2].includes(Number(w.layout))
@@ -282,7 +283,7 @@ export class FireAuthority {
   }
   return changed;
  }
- tick(poses:Pose[],now=Date.now(),safeUntil=0):
+ tick(poses:Pose[],now=Date.now(),safeUntil=0,isSolo=false):
  {changed:boolean;poses?:Pose[];won?:boolean;respawn?:boolean}{
   const w=this.world;
   if(w.deadUntil){
@@ -323,6 +324,13 @@ export class FireAuthority {
    changed=true;
    if(adjusted.some((p,i)=>p.x!==poses[i].x))return {changed:true,poses:adjusted};
   }
+  // Trigger only after all players have crossed the completed cooperative
+  // puzzles. Timing is broadcast in the existing FireWorld snapshot.
+  if(w.escapeAt===0&&w.logOpen&&w.smokeOpen&&w.treeOpen&&
+     poses.every(p=>p.x>=4270)){
+    w.escapeAt=now;changed=true;
+  }
+  const escapeWall=escapeWallX(w.escapeAt,now,isSolo);
   const treePhase=fireTreePhase(w,now);
   if(treePhase!==w.treeStatus){w.treeStatus=treePhase;changed=true;}
   const remaining=Math.max(0,now-w.cycleStart)%FIRE_COLLAPSE_PERIOD;
@@ -342,6 +350,7 @@ export class FireAuthority {
    for(const p of poses){
     let cause:FireWorld['damageCause']='none';
     if(p.y>=FIRE_DEATH_Y)cause='fall';
+    else if(escapeFireHit(p,escapeWall,w.escapeAt,now))cause='fire';
     else if(fireballHit(w,p,now))cause='fireball';
     else if(fireDamageZone(w,p,now))cause='fire';
     else if(treePhase==='impact'&&Math.abs(p.x-FIRE_TREE_DANGER.x)<FIRE_TREE_DANGER.radius
