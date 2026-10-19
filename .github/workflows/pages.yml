@@ -21,8 +21,10 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run build
       - run: npm run test
-      - name: Incluir vídeo da introdução no pacote HTML5
-        run: cp introducao.mp4 dist/introducao.mp4
+      - name: Incluir vídeos de abertura e encerramento no pacote HTML5
+        run: |
+          cp introducao.mp4 dist/introducao.mp4
+          cp final.mp4 dist/final.mp4
       - name: Disponibilizar ZIP HTML5, mesmo sem Pages
         uses: actions/upload-artifact@v4
         with:
