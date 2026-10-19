@@ -1,0 +1,27 @@
+name: Importar explosao Ansimuz CC0
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/vendor-explosion.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Verificar ZIP original e importar somente a Explosion 4
+        run: python3 scripts/vendor_explosion.py
+      - name: Versionar arte e licenca no repositorio
+        run: |
+          git add public/assets/fx/explosion-4.png public/assets/fx/LICENSE-ANSIMUZ.txt
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "assets: vendor Ansimuz CC0 Explosion 4 spritesheet"
+            git push origin HEAD:main
+          fi
