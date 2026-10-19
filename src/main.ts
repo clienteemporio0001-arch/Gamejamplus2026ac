@@ -691,17 +691,19 @@ function render(): void {
       '<button id="show-settings" type="button">CONFIGURAÇÕES</button>'+
       '<button id="show-credits" type="button">CRÉDITOS</button></nav>'+
       button('select-phase','SELECIONAR FASE',true)+
+       button('show-ranking','🏆 MELHORES TEMPOS',true)+
       '<p class="menu-footnote">Multiplayer: três pessoas entram na mesma sala pelo código.</p></main>';
     ui.querySelector('#show-how')?.addEventListener('click',()=>openPanel('how'));
     ui.querySelector('#show-settings')?.addEventListener('click',()=>openPanel('settings'));
     ui.querySelector('#show-credits')?.addEventListener('click',()=>openPanel('credits'));
-    ui.querySelector('#select-phase')?.addEventListener('click',()=>{
-      phaseMapOpen=true;render();
+    ui.querySelector('#show-ranking')?.addEventListener('click',()=>{captureProfile();rankingsOpen=true;render();});
+     ui.querySelector('#select-phase')?.addEventListener('click',()=>{
+      captureProfile();phaseMapOpen=true;render();
     });
-    ui.querySelector('#create')?.addEventListener('click',()=>{devSession=false;info='';void net.createRoom('loop');});
+    ui.querySelector('#create')?.addEventListener('click',()=>{captureProfile();devSession=false;info='';void net.createRoom('loop');net.setNickname(profile.nickname);});
     ui.querySelector('#create-classic')?.addEventListener('click',()=>{devSession=false;info='';void net.createRoom('classic');});
-    ui.querySelector('#loop-solo')?.addEventListener('click',()=>startSoloAdventure(1));
-    ui.querySelector('#join-menu')?.addEventListener('click',()=>{devSession=false;showJoin();});
+    ui.querySelector('#loop-solo')?.addEventListener('click',()=>{captureProfile();startSoloAdventure(1);});
+    ui.querySelector('#join-menu')?.addEventListener('click',()=>{captureProfile();devSession=false;showJoin();});
     return;
   }
   if (net.role === 'guest' && net.localSeat === null) {
