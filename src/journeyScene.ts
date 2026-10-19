@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {preloadKenneyCharacters} from './kenneyCharacterSprites';
 import { gameKeys } from './keyboard';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import { JOURNEY, JOURNEY_SPAWNS, MATERIALS, RIVER_WIDTH,
@@ -97,6 +98,7 @@ export class JourneyScene extends Phaser.Scene {
     this.text(3970,496,'PONTE FINAL · OS TRÊS JUNTOS',15,'#e5cbb2');
     this.text(4180,482,'SAÍDA →',17);
   }
+  preload():void{preloadKenneyCharacters(this);}
   create():void {
     this.physics.world.setBounds(0,0,RIVER_WIDTH,900);
     this.physics.world.setBoundsCollision(true,true,false,false);
