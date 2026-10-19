@@ -1,6 +1,7 @@
 import {exitPresence} from './sharedExit';
 import type {Pose,Seat} from './network';
 import {initVitals,validVitals,spendVital,regenVitals,VITALS,type VitalAction,type Vitals} from './loopVitals';
+import {FRAGILE_BRANCH_INDICES} from './jamChallenges';
 
 /** Fase 03 da NOVA aventura. Independente da terceira fase clássica. */
 /** Distances obey gravity 850, jump -465, walking 235: 127px rise / 257px flat travel. */
@@ -83,13 +84,14 @@ export type TreeWorld=Vitals&{
  tower:[boolean,boolean,boolean];ropeOpen:boolean;
  time:[boolean,boolean,boolean];finalOpen:boolean;completed:boolean;
  supporting:[Seat|null,Seat|null,Seat|null];dashAt:number;dashX:number;
+ fragileAt:[number,number,number];
  windPhase:TreeWindPhase;windDirection:-1|1;windUntil:number;gustCount:number;deathByGust:boolean;
 };
 export function initTree(now=Date.now()):TreeWorld{return {
  layout:0,cycle:0,cycleStart:now,blackoutUntil:0,deadUntil:0,resetId:0,
  bridge:[false,false,false],bridgeOpen:false,tower:[false,false,false],ropeOpen:false,
  time:[false,false,false],finalOpen:false,completed:false,supporting:[null,null,null],
- dashAt:0,dashX:0,windPhase:'calm',windDirection:1,windUntil:0,gustCount:0,deathByGust:false,
+ dashAt:0,dashX:0,fragileAt:[0,0,0],windPhase:'calm',windDirection:1,windUntil:0,gustCount:0,deathByGust:false,
  ...initVitals()
 };}
 /** Synchronize host poses of stacked friends with their base, rather than old ground positions. */
@@ -111,6 +113,7 @@ export function validTree(value:unknown):value is TreeWorld{
  &&['calm','warning','gust'].includes(String(w.windPhase))
  &&(w.windDirection===1||w.windDirection===-1)
  &&['bridge','tower','time'].every(k=>Array.isArray(w[k])&&(w[k] as unknown[]).length===3&&(w[k] as unknown[]).every(v=>typeof v==='boolean'))
+ &&Array.isArray(w.fragileAt)&&w.fragileAt.length===3&&w.fragileAt.every(v=>typeof v==='number'&&Number.isFinite(v)&&v>=0)
  &&Array.isArray(w.supporting)&&w.supporting.length===3
  &&w.supporting.every((v,i)=>v===null||(i===0&&v===1)||(i===1&&v===2))
  &&validVitals(w);
@@ -270,6 +273,19 @@ export class TreeAuthority{
    w.blackoutUntil=now+TREE_BLACKOUT;w.windPhase='calm';w.windUntil=0;
    return {changed:true};
   }
+  // Each of the three optional branches cracks only AFTER a character
+  // stands on it. Host timestamps are shared with all WebRTC guests.
+  let fragileChanged=false;
+  for(const [slot,index] of FRAGILE_BRANCH_INDICES.entries()){
+   const branch=TREE_PLATFORMS[index];
+   const last=w.fragileAt[slot];
+   if(last>0&&now-last<8800)continue;
+   const landed=poses.some(p=>w.supporting[p.seat]===null&&
+     Math.abs(p.x-branch.x)<branch.width/2-15&&
+     Math.abs(p.y-(branch.y-branch.height/2-22))<=11&&
+     Math.abs(p.vy)<105);
+   if(landed){w.fragileAt[slot]=now;fragileChanged=true;}
+  }
   if(poses.some(p=>treeFatal(p,now,w,protectedUntil))){
    w.deathByGust=w.windPhase==='gust';w.deadUntil=now+1500;w.health=[0,0,0];
    return {changed:true};
@@ -284,7 +300,7 @@ export class TreeAuthority{
    if(startedGust)w.gustCount++;
    return {changed:true};
   }
-  return {changed:false};
+  return {changed:fragileChanged};
  }
  /** All puzzle actions use the host's validated positions and actual skill events. */
  interact(seat:Seat,kind:'lever'|'switch'|'shoot'|'support'|'detach'|'dash',
