@@ -44,9 +44,8 @@ export function fragilePhase(cycleStart:number,now:number,index:number,
  paused=false):FragilePhase{
  if(paused||cycleStart<=0||!FRAGILE_BRANCH_INDICES.includes(index as 5|8|16))
   return 'solid';
- const offset=FRAGILE_BRANCH_INDICES.indexOf(index as 5|8|16)*4100;
- const t=(Math.max(0,now-cycleStart)+offset)%17800;
- return t<10400?'solid':t<13300?'cracking':t<15600?'gone':'solid';
+ const t=Math.max(0,now-cycleStart);
+ return t<1300?'cracking':t<3550?'gone':'solid';
 }
 export const ESCAPE_START_X=4100,ESCAPE_FINISH_X=5140,ESCAPE_GRACE_MS=4500;
 export function escapeWallX(chaseAt:number,now:number,isSolo:boolean):number|null{
