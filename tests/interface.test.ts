@@ -1,4 +1,4 @@
-import {readFileSync} from 'node:fs';
+import {readFileSync,existsSync} from 'node:fs';
 import {initLoop,LOOP_START,LOOP_CYCLE_MS,LOOP_GEOMETRY,LOOP_MARKS,markPosition} from '../src/forestLoop';
 import {loopObjective,loopContext,loopWind,regionTitle} from '../src/forestLoopUI';
 
@@ -10,6 +10,48 @@ const network=readFileSync('src/network.ts','utf8');
 const css=readFileSync('src/style.css','utf8');
 const pkg=JSON.parse(readFileSync('package.json','utf8'));
 ok(pkg.scripts.test==='npm run test:logic','npm test executa suíte oficial');
+
+// Kenney CC0 protagonists: sprites are build assets, never physics replacements.
+const spriteRenderer=readFileSync('src/kenneyCharacterSprites.ts','utf8');
+const atlasNames=['teo','lia','nino'];
+for(const name of atlasNames){
+ const base='public/characters/kenney/'+name;
+ ok(existsSync(base+'.png')&&existsSync(base+'.xml'),
+   'sprite PNG + XML of '+name+' are tracked in repository');
+ const image=readFileSync(base+'.png');
+ ok(image.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])),
+   'real PNG signature for '+name);
+ const xml=readFileSync(base+'.xml','utf8');
+ for(const frame of ['idle','jump','fall','run0','run1','run2',
+   'walk0','walk1','walk2','walk3','walk4','walk5','walk6','walk7']){
+   ok(xml.includes('name="'+frame+'"'),name+' includes animation pose '+frame);
+ }
+}
+ok(readFileSync('public/characters/kenney/LICENSE.txt','utf8').includes('CC0'),
+  'source CC0 license is bundled with game');
+ok(spriteRenderer.includes("scene.load.atlasXML(")&&
+   spriteRenderer.includes('createKenneyCharacter(')&&
+   spriteRenderer.includes('updateKenneyCharacter('),
+   'atlases load into render-only Phaser sprites');
+ok(spriteRenderer.includes('.setDisplaySize(56,74)')&&
+   spriteRenderer.includes('target.x,target.y+24'),
+   'visual alignment is independent of the fixed 30x44 collision rectangle');
+for(const filename of ['forestLoopScene','temporalForestScene','treetopForestScene',
+ 'burningForestScene','forestScene','journeyScene','lateScene','intro']){
+ ok(readFileSync('src/'+filename+'.ts','utf8').includes('preloadKenneyCharacters(this)'),
+   'scene '+filename+' preloads sprite atlases before creating game actors');
+}
+for(const filename of ['visuals','treetopArt','burningForestArt']){
+ const art=readFileSync('src/'+filename+'.ts','utf8');
+ ok(art.includes('createKenneyCharacter(')&&art.includes('updateKenneyCharacter('),
+   'rendering module '+filename+' animates the cosmetic sprite overlay');
+ ok(art.includes('paintHero('),
+   'rendering module '+filename+' retains procedural fallback');
+}
+ok(readFileSync('src/forestLoopScene.ts','utf8').includes('30,44,CHARACTERS[seat].color')&&
+   readFileSync('src/treetopForestScene.ts','utf8').includes('30,44,CHARACTERS[seat].color'),
+   'game physics bodies remain the existing 30x44 rectangles');
+
 
 /** 27s cutscene regression: never advance the multiplayer room at 24 seconds. */
 ok(network.includes('export const INTRO_WATCHDOG_MS=180_000'),
