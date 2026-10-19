@@ -932,3 +932,22 @@ body.playing{overflow:hidden;touch-action:none;overscroll-behavior:none}
  .lobby-panel .avatar-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
  .lobby-overview{grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr)}
 }
+
+/* Tiny portrait devices: avoid overlapping player names and status badges. */
+@media(max-width:700px) and (orientation:portrait){
+ .lobby-panel .player{
+  display:grid;grid-template-columns:24px minmax(0,1fr);grid-template-rows:repeat(4,min-content);
+  text-align:left;align-content:center;align-items:center;gap:1px 3px;
+  min-height:56px;padding:3px 4px;
+ }
+ .lobby-panel .roster-skin,.lobby-panel .roster-skin-empty{
+  grid-column:1;grid-row:1 / 5;align-self:center;justify-self:center;
+  width:23px;height:31px;
+ }
+ .lobby-panel .player strong,.lobby-panel .player small{
+  grid-column:2;max-width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;line-height:1.15;
+ }
+ .lobby-panel .player strong{font-size:9px}
+ .lobby-panel .player small{font-size:8px}
+}
