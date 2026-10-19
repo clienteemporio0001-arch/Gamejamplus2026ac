@@ -10,6 +10,27 @@ const network=readFileSync('src/network.ts','utf8');
 const css=readFileSync('src/style.css','utf8');
 const pkg=JSON.parse(readFileSync('package.json','utf8'));
 ok(pkg.scripts.test==='npm run test:logic','npm test executa suíte oficial');
+
+/** 27s cutscene regression: never advance the multiplayer room at 24 seconds. */
+ok(network.includes('export const INTRO_WATCHDOG_MS=180_000'),
+  'introdução tem watchdog de segurança, não temporizador de 24 segundos');
+ok(!network.includes('Date.now()+24000')&&!network.includes('Date.now() + 24000'),
+  'timer antigo não pode cortar o vídeo');
+ok(network.includes("this.introDone.add(seat)")&&
+   network.includes("this.introDone.add(this.localSeat)")&&
+   network.includes("this.players.every(p=>this.introDone.has(p.seat))"),
+   'anfitrião aguarda vídeo concluído ou pulado de cada convidado');
+ok(network.includes("this.isSolo||this.players.every"),
+   'o modo solo não aguarda três confirmações remotas');
+ok(network.includes("if(stage==='intro')this.introDone.clear()")&&
+   network.includes('this.introDone.clear();'),
+   'confirmações antigas não vazam entre sessões');
+ok(main.includes("video.addEventListener('ended',finish")&&
+   main.includes("skip.addEventListener('click',finish)"),
+   'a reprodução completa e o botão PULAR usam a mesma transição');
+ok(main.includes("video.src=import.meta.env.BASE_URL+'introducao.mp4'"),
+   'mídia respeita o caminho de publicação do GitHub Pages e itch.io');
+
 for(const [id,name] of [['loop-solo','JOGAR SOZINHO'],['create','MULTIPLAYER ONLINE']]){
  ok(main.includes("button('"+id+"','"+name+"'"),'menu principal '+name);
 }
