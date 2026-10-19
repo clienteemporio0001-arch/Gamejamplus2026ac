@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {preloadKenneyCharacters} from './kenneyCharacterSprites';
 import {preloadOfficialLandmarks,officialLandmark} from './officialLandmarks';
 import type {Network,Seat,Pose} from './network';
 import type {TouchInput} from './game';
@@ -57,7 +58,7 @@ export class BurningForestScene extends Phaser.Scene {
    fontStyle:'bold',color,stroke:'#19161a',strokeThickness:4,align:'center'})
    .setOrigin(.5).setDepth(53);
  }
- preload():void{preloadOfficialLandmarks(this);}
+ preload():void{preloadOfficialLandmarks(this);preloadKenneyCharacters(this);}
 
  create():void{
   this.physics.world.setBounds(0,0,FIRE_WIDTH,FIRE_HEIGHT+200);
