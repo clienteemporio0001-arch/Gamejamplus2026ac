@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {preloadKenneyCharacters} from './kenneyCharacterSprites';
 import {preloadOfficialLandmarks,officialLandmark} from './officialLandmarks';
 import {PipoGuide} from './pipoGuide';
 import {CooperativeExitArt} from './cooperativeExitArt';
@@ -52,7 +53,7 @@ export class TreetopForestScene extends Phaser.Scene {
   return this.add.text(x,y,value,{fontFamily:'Arial',fontSize:size+'px',fontStyle:'bold',
    color,stroke:'#071c1b',strokeThickness:4,align:'center'}).setOrigin(.5).setDepth(55);
  }
- preload():void{preloadOfficialLandmarks(this);}
+ preload():void{preloadOfficialLandmarks(this);preloadKenneyCharacters(this);}
 
  private makeEnvironment():void{
   this.art=new TreetopArt(this,TREE_WIDTH,TREE_HEIGHT);
