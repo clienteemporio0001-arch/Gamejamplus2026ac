@@ -867,6 +867,7 @@ export class ForestLoopScene extends Phaser.Scene {
     }
     this.exitArt?.update(w.exit,this.net.poses,w.health,time);
     this.art.update(time);
+    this.art.drawBoulder(w.cycleStart,now,blackoutActive(w,now)||w.deadUntil>0||w.completed);
     if(this.frameMetricsOn){
       const end=performance.now();
       this.frameProfiler.record({now:end,updateMs:end-perfStart,
