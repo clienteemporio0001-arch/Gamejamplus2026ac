@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import {paintHero} from './sharedCharacterArt';
 import {createKenneyCharacter,updateKenneyCharacter} from './kenneyCharacterSprites';
+import {boulderEvent,tideSurface,TIDE_ZONE} from './jamChallenges';
 
 export type Biome = 'forest' | 'river' | 'eyes' | 'trail';
 export type Material = 'earth' | 'wood' | 'stone' | 'root' | 'gate' | 'bridge' | 'log';
@@ -27,6 +28,7 @@ export class NightArt {
   private lowPower = isLowPower();
   private parallaxChunks:Array<{ink:Phaser.GameObjects.Graphics;from:number;to:number;scroll:number}>=[];
   private lastPaint=0;
+  private jamInk?:Phaser.GameObjects.Graphics;
 
   setReducedVisuals(reduced:boolean):void{this.lowPower=reduced;}
   /** Number of visible, animated, purely decorative objects; excludes physics. */
@@ -271,6 +273,53 @@ export class NightArt {
     this.actors.push({target,ink,sprite,shadow,seat,lastX:target.x,lastY:target.y});
   }
 
+  /** Extra visual challenges are decorative: host still owns all damage. */
+  drawBoulder(cycleStart:number,now:number,paused:boolean):void{
+    const ink=this.jamInk??(this.jamInk=this.scene.add.graphics().setDepth(27));
+    ink.clear();
+    const b=boulderEvent(cycleStart,now,paused);
+    if(!b)return;
+    if(b.phase==='warning'){
+      const pulse=.6+.25*Math.sin(now*.013);
+      ink.lineStyle(4,0xffad6b,pulse);
+      ink.strokeEllipse(b.x,638,91,17);
+      ink.fillStyle(0xffbe7b,.14);
+      ink.fillEllipse(b.x,626,100,33);
+      return;
+    }
+    ink.fillStyle(0x171a1b,.35);ink.fillEllipse(b.x+6,640,86,15);
+    ink.lineStyle(5,0xf4a96b,.93);ink.strokeCircle(b.x,b.y,36);
+    ink.fillStyle(0x3a3b3d,1);ink.fillCircle(b.x,b.y,32);
+    ink.fillStyle(0x88827a,.88);ink.fillCircle(b.x-8,b.y-10,17);
+    ink.fillStyle(0x655952,.8);ink.fillCircle(b.x+15,b.y+9,12);
+    ink.lineStyle(3,0x262c2d,.9);
+    const rotation=now*.007;
+    for(let i=0;i<5;i++){
+      const theta=rotation+i*1.26;
+      ink.lineBetween(b.x+Math.cos(theta)*8,b.y+Math.sin(theta)*8,
+        b.x+Math.cos(theta)*28,b.y+Math.sin(theta)*28);
+    }
+  }
+  drawTide(cycleStart:number,now:number,bridge:boolean,paused:boolean):void{
+    const ink=this.jamInk??(this.jamInk=this.scene.add.graphics().setDepth(16));
+    ink.clear();
+    const t=tideSurface(cycleStart,now,bridge,paused);
+    if(!t)return;
+    if(t.phase==='warning'){
+      ink.lineStyle(3,0x9de0e9,.35+.2*Math.sin(now*.009));
+      ink.lineBetween(TIDE_ZONE.from,650,TIDE_ZONE.to,650);
+      return;
+    }
+    const width=TIDE_ZONE.to-TIDE_ZONE.from;
+    ink.fillGradientStyle(0x3aa6c5,0x7dcdd6,0x143d63,0x143d63,.66);
+    ink.fillRect(TIDE_ZONE.from,t.y,width,710-t.y);
+    ink.lineStyle(4,0xb6f4f1,.9);
+    for(let i=0;i<8;i++){
+      const x=TIDE_ZONE.from+i*width/8;
+      ink.lineBetween(x,t.y+Math.sin(now*.006+i)*3,
+        x+width/8,t.y+Math.sin(now*.006+i+1)*3);
+    }
+  }
   /** Same view bounds are used only for decoration, NEVER to disable physics. */
   private visibleRange():{left:number;right:number}{
     const cam=this.scene.cameras.main;
