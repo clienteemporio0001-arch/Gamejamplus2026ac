@@ -33,6 +33,7 @@ type Wire =
   | { t: 'ready'; value: boolean }
   | { t: 'profile'; name:string }
   | { t: 'avatar'; id:AvatarId }
+  | { t: 'avatar-denied'; reason:string }
   | { t: 'pose'; x: number; y: number; vx: number; vy: number }
   | { t: 'welcome'; seat: Seat; code: string; mode?: Experience }
   | { t: 'roster'; players: Slot[]; playing: boolean; teamName?:string }
@@ -131,6 +132,7 @@ function parseWire(value: unknown): Wire | null {
     case 'ready': return typeof p.value === 'boolean' ? value as Wire : null;
     case 'profile': return typeof p.name==='string'&&p.name.length>0&&p.name.length<=22?value as Wire:null;
     case 'avatar': return isAvatarId(p.id)?value as Wire:null;
+    case 'avatar-denied': return typeof p.reason==='string'&&p.reason.length<=130?value as Wire:null;
     case 'pose': return finite(p.x) && finite(p.y) && finite(p.vx) && finite(p.vy)
       && p.x >= 0 && p.x <= Math.max(FOREST_WIDTH,TREE_WIDTH,FIRE_WIDTH,LOOP_WIDTH) && p.y >= 0 && p.y <= TREE_HEIGHT
       && Math.abs(p.vx) <= 1200 && Math.abs(p.vy) <= 1500 ? value as Wire : null;
@@ -282,7 +284,7 @@ export class Network {
     if(!avatarAvailable(id,seat,this.players)){
       const warning='Personagem indisponível. Escolha outro.';
       if(seat===0)this.emit('notice',warning);
-      else this.message(this.conns.get(seat)??null,{t:'reject',reason:warning});
+      else this.message(this.conns.get(seat)??null,{t:'avatar-denied',reason:warning});
       return;
     }
     this.players[seat].avatar=id;
@@ -592,7 +594,7 @@ export class Network {
       }
       if (msg.t === 'ready' && this.stage==='lobby') {
         if(msg.value&&!isAvatarId(this.players[seat].avatar)){
-          this.message(conn,{t:'reject',reason:'Escolha seu personagem antes de marcar PRONTO.'});
+          this.message(conn,{t:'avatar-denied',reason:'Escolha seu personagem antes de marcar PRONTO.'});
           return;
         }
         this.players[seat].ready = msg.value;
@@ -828,6 +830,9 @@ export class Network {
         break;
       case 'win':
         this.completed = true; this.emit('win', undefined); this.emit('change', undefined);
+        break;
+      case 'avatar-denied':
+        this.emit('notice',msg.reason);
         break;
       case 'reject':
         this.emit('notice', msg.reason);
