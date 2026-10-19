@@ -237,6 +237,8 @@ function openPanel(kind:PanelKind):void{
 let introVideo:HTMLVideoElement|null=null;
 let introLayer:HTMLDivElement|null=null;
 let introStageShown=false;
+/** Prevent replay during phase snapshots, Pipo updates and video buffering. */
+let finalStageShown=false;
 function stopIntroVideo():void{
  const video=introVideo;
  introVideo=null;
@@ -248,19 +250,20 @@ function stopIntroVideo():void{
 /** Cinematic media only: native seek/pause/PiP controls are never exposed.
  * A guest can report natural completion, but only a host can skip the movie.
  */
-function playIntroVideo(onComplete:()=>void,allowSkip=true,onSkip=onComplete):void{
+function playIntroVideo(onComplete:()=>void,allowSkip=true,onSkip=onComplete,
+  file:'introducao.mp4'|'final.mp4'='introducao.mp4'):void{
  stopIntroVideo();
  const holder=document.createElement('div');
  introLayer=holder;
  holder.id='video-intro';holder.className='video-intro';
  const video=document.createElement('video');
  introVideo=video;
- video.src=import.meta.env.BASE_URL+'introducao.mp4';
+ video.src=import.meta.env.BASE_URL+file;
  video.playsInline=true;video.controls=false;video.preload='auto';
  video.autoplay=true;video.tabIndex=-1;
  video.disablePictureInPicture=true;
  video.setAttribute('controlsList','nodownload nofullscreen noplaybackrate noremoteplayback');
- video.setAttribute('aria-label','Introdução cinematográfica A Floresta Mente');
+ video.setAttribute('aria-label',file==='final.mp4'?'Encerramento cinematográfico A Floresta Mente':'Introdução cinematográfica A Floresta Mente');
  const preferences=getAudioSettings();
  video.volume=preferences.music/100;
  video.muted=preferences.muted||preferences.musicMuted;
@@ -272,7 +275,7 @@ function playIntroVideo(onComplete:()=>void,allowSkip=true,onSkip=onComplete):vo
  const skip=document.createElement('button');
  if(allowSkip){
   skip.type='button';skip.className='btn secondary video-skip';
-  skip.textContent='⏭ PULAR INTRODUÇÃO';
+  skip.textContent=file==='final.mp4'?'⏭ PULAR ENCERRAMENTO':'⏭ PULAR INTRODUÇÃO';
   skip.addEventListener('click',()=>complete(onSkip));
  }
  video.addEventListener('ended',()=>complete(onComplete),{once:true});
@@ -436,7 +439,10 @@ setInterval(refreshHud, 150);
 
 function render(): void {
   if(net.stage!=='intro')introStageShown=false;
-  if(net.stage!=='intro'&&net.role!=='idle')stopIntroVideo();
+  const showingFinalMovie=net.stage==='final'&&net.level===4&&
+    net.experience==='loop'&&!net.endingComplete;
+  if(!showingFinalMovie)finalStageShown=false;
+  if(net.stage!=='intro'&&!showingFinalMovie&&net.role!=='idle')stopIntroVideo();
   gameKeys.setEnabled(net.playing);
   const showing = net.stage !== 'lobby' && net.role !== 'idle';
   document.body.classList.toggle('playing', net.playing);
@@ -488,6 +494,19 @@ function render(): void {
       return;
     }
     if (net.stage === 'final' && net.experience==='loop'&&net.level===4) {
+      // Do not render the victory buttons until the entire video is finished
+      // on every connected player, or the host skips it for the whole room.
+      if(!net.endingComplete){
+        ui.innerHTML='<div class="interlevel final-cinematic-wait"><h2>AVENTURA CONCLUÍDA!</h2>'+
+          '<p>Encerramento da floresta em reprodução.</p>'+
+          '<strong>AGUARDANDO OS AMIGOS...</strong></div>';
+        if(!finalStageShown){
+          finalStageShown=true;
+          playIntroVideo(()=>net.completeEndingVideo(),net.isHost,
+            ()=>net.skipEndingVideo(),'final.mp4');
+        }
+        return;
+      }
       ui.innerHTML='<div class="victory fire-victory"><div class="fire-finale-symbol">🌱</div>'+ 
         '<h2>A FLORESTA MENTE. MAS O FOGO TAMBÉM.</h2>'+ 
         '<p>Os três chegaram exaustos à margem do rio. Pipo pousou ao lado deles.</p>'+ 
