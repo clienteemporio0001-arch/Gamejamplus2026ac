@@ -182,7 +182,7 @@ assert.ok(network.includes("if(this.experience==='loop'&&this.level===4)"));
 assert.ok(network.includes("this.broadcast({t:'fire',world:this.fire})"));
 assert.ok(network.includes("this.setPhase('final',4)"));
 assert.ok(main.includes('FLORESTA EM CHAMAS')&&main.includes("data-phase"));
-assert.ok(main.includes("net.startSolo(level,false,'loop')"),'Fase 04 selecionável no mapa solo');
+assert.ok(main.includes("net.startSolo(level,false,'loop',avatars)"),'Fase 04 selecionável no mapa solo');
 assert.ok(!main.includes('FERRAMENTAS DE DESENVOLVIMENTO'),'developer menu removed from public');
 assert.ok(main.includes('NINGUÉM FICA PARA TRÁS. NEM A FLORESTA.'));
 assert.ok(scene.includes('new SoloBodies(')&&scene.includes("consumeTouch(this.touch,'jump')"));
