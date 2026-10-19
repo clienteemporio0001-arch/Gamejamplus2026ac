@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import {paintHero} from './sharedCharacterArt';
+import {createKenneyCharacter,updateKenneyCharacter} from './kenneyCharacterSprites';
 
 export type Biome = 'forest' | 'river' | 'eyes' | 'trail';
 export type Material = 'earth' | 'wood' | 'stone' | 'root' | 'gate' | 'bridge' | 'log';
@@ -18,6 +19,7 @@ const isLowPower = (): boolean => typeof window !== 'undefined' &&
 export class NightArt {
   private skins: { target: Phaser.GameObjects.Rectangle; ink: Phaser.GameObjects.Graphics }[] = [];
   private actors: { target: Phaser.GameObjects.Rectangle; ink: Phaser.GameObjects.Graphics;
+    sprite:Phaser.GameObjects.Sprite|null;
     shadow: Phaser.GameObjects.Ellipse; seat:0|1|2; lastX:number; lastY:number }[] = [];
   private lights: { dot: Phaser.GameObjects.Arc; originX: number; originY: number; seed: number }[] = [];
   private fog: { shape: Phaser.GameObjects.Ellipse; x: number; seed: number }[] = [];
@@ -263,8 +265,10 @@ export class NightArt {
     const ink=this.scene.add.graphics().setDepth(target.depth+.25);
     const shadow=this.scene.add.ellipse(target.x,target.y+26,39,11,0x020c0d,.38)
       .setDepth(target.depth-.5);
-    paintHero(ink,seat);
-    this.actors.push({target,ink,shadow,seat,lastX:target.x,lastY:target.y});
+    const sprite=createKenneyCharacter(this.scene,target,seat,target.depth+.25);
+    if(sprite)ink.setVisible(false);
+    else paintHero(ink,seat);
+    this.actors.push({target,ink,sprite,shadow,seat,lastX:target.x,lastY:target.y});
   }
 
   /** Same view bounds are used only for decoration, NEVER to disable physics. */
@@ -297,15 +301,17 @@ export class NightArt {
     for(const actor of this.actors){
       const target=actor.target;
       const visible=target.visible&&target.active&&target.x>=view.left&&target.x<=view.right;
-      if(actor.ink.visible!==visible)actor.ink.setVisible(visible);
+      const fallback=actor.sprite===null;
+      if(actor.ink.visible!==(visible&&fallback))actor.ink.setVisible(visible&&fallback);
+      if(actor.sprite&&!visible)actor.sprite.setVisible(false);
       if(actor.shadow.visible!==visible)actor.shadow.setVisible(visible);
       if(!visible)continue;
-      if(paint){
-        const dx=(target.x-actor.lastX)*16,dy=(target.y-actor.lastY)*16;
-        const body=target.body as Phaser.Physics.Arcade.Body|undefined;
-        paintHero(actor.ink,actor.seat,time,body?.velocity.x??dx,body?.velocity.y??dy);
-        actor.lastX=target.x;actor.lastY=target.y;
-      }
+      const dx=(target.x-actor.lastX)*16,dy=(target.y-actor.lastY)*16;
+      const body=target.body as Phaser.Physics.Arcade.Body|undefined;
+      const vx=body?.velocity.x??dx,vy=body?.velocity.y??dy;
+      if(paint&&fallback)paintHero(actor.ink,actor.seat,time,vx,vy);
+      updateKenneyCharacter(actor.sprite,target,time,vx,vy);
+      actor.lastX=target.x;actor.lastY=target.y;
       actor.ink.setPosition(target.x,target.y);
       actor.ink.setAlpha(target.alpha);
       actor.shadow.setPosition(target.x,target.y+27);
