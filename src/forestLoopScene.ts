@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {preloadKenneyCharacters} from './kenneyCharacterSprites';
 import {preloadOfficialLandmarks,officialLandmark,LANDMARK_KEYS} from './officialLandmarks';
 import {PipoGuide} from './pipoGuide';
 import {CooperativeExitArt} from './cooperativeExitArt';
@@ -108,6 +109,7 @@ export class ForestLoopScene extends Phaser.Scene {
     if(active)body.updateFromGameObject();
   }
   preload():void{
+    preloadKenneyCharacters(this);
     this.load.svg('loop-clearing-tree',import.meta.env.BASE_URL+'assets/clearing-tree.svg');
     preloadOfficialLandmarks(this);
     this.load.svg('loop-elevated-tree',import.meta.env.BASE_URL+'assets/loop-elevated-tree.svg');
