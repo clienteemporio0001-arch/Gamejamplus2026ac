@@ -444,6 +444,7 @@ export class TemporalForestScene extends Phaser.Scene {
   this.tree.setRotation(-1.13*(1-progress*progress*(3-2*progress)));
   this.renderRain(time);
   this.art.update(time);
+  this.art.drawTide(w.cycleStart,now,w.bridge,pause);
   this.hud?.();
   void dt;
  }
