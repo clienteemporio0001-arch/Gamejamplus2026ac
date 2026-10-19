@@ -1,4 +1,5 @@
 import {strict as assert} from 'node:assert';
+import {FireballImpactTracker} from '../src/fireballImpactAudio';
 import {readFileSync} from 'node:fs';
 import {FireAuthority,initFire,validFire} from '../src/burningForest';
 import type {Pose,Seat} from '../src/network';
@@ -107,4 +108,37 @@ assert.ok(net.includes('boulderHit(pose,boulder)')&&
  net.includes('tideHit(pose,tide)')&&
  net.includes('this.fireAuthority.tick(this.poses,now,this.fireSafeUntil,this.isSolo)'),
  'only host authority computes hazards while guests use visuals');
+// Sound effect must fire once when a fireball enters the existing 520ms
+// impact phase: no new damage timing or extra peer messages are introduced.
+const audioWorld=initFire(base);
+const tracker=new FireballImpactTracker();
+const lane0Impact=base+1200+950+1450;
+assert.equal(tracker.sample(audioWorld,lane0Impact-60).length,0,
+ 'falling fireballs are silent before ground contact');
+assert.deepEqual(tracker.sample(audioWorld,lane0Impact+35).map(b=>b.lane),[0],
+ 'the first ground collision triggers the corresponding explosion once');
+assert.equal(tracker.sample(audioWorld,lane0Impact+100).filter(b=>b.lane===0).length,0,
+ 'subsequent frames of the same 520ms impact never replay the explosion');
+assert.equal(tracker.sample(audioWorld,lane0Impact+280).filter(b=>b.lane===0).length,0,
+ 'impact animation frames never cause duplicate sounds');
+assert.deepEqual(
+ tracker.sample(audioWorld,lane0Impact+5700+35).filter(b=>b.lane===0).map(b=>b.lane),
+ [0],'the same lane can play again on the next falling fireball cycle');
+const midImpactJoin=new FireballImpactTracker();
+assert.equal(midImpactJoin.sample(audioWorld,lane0Impact+90).length,0,
+ 'joining a running game never creates retroactive explosions');
+const pausedWorld=initFire(base);
+pausedWorld.blackoutUntil=base+50000;
+const pausedTracker=new FireballImpactTracker();
+assert.equal(pausedTracker.sample(pausedWorld,lane0Impact+35).length,0,
+ 'forest blackout suppresses explosion sound events');
+const soundSource=readFileSync('src/burningForestAudio.ts','utf8');
+const stageSound=readFileSync('src/burningForestScene.ts','utf8');
+assert.ok(soundSource.includes('this.impactTracker.sample(w,now)')&&
+ soundSource.includes('audioLevel(\'sfx\')')&&
+ soundSource.includes("ctx.state!=='running'")&&
+ soundSource.includes('getSharedAudioContext()')&&
+ stageSound.includes('this.audio.update(w,now,this.local.x)'),
+ 'explosions use the shared WebAudio context, SFX mute and listener distance');
+
 console.log('GAME JAM 4 CHALLENGES + EXPLOSION: all regression assertions passed');
