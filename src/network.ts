@@ -51,7 +51,7 @@ type Wire =
   | { t: 'chapter'; world: ChapterWorld }
   | { t: 'hazard'; jaguar: Jaguar }
   | { t: 'phase'; info: PhaseInfo }
-  | { t: 'intro-skip' }
+  | { t: 'intro-done' }
   | { t: 'win' }
   | { t: 'reject'; reason: string }
   | { t: 'closed' };
@@ -158,7 +158,7 @@ function parseWire(value: unknown): Wire | null {
         && i.since >= 0 && i.until >= 0
         && (i.mode === undefined || i.mode === 'classic' || i.mode === 'loop') ? value as Wire : null;
     }
-    case 'intro-skip': return value as Wire;
+    case 'intro-done': return value as Wire;
     case 'reject': return typeof p.reason === 'string' && p.reason.length <= 130 ? value as Wire : null;
     case 'begin': case 'win': case 'closed': return value as Wire;
     default: return null;
@@ -511,7 +511,9 @@ export class Network {
         this.players[seat].ready = msg.value;
         this.updateRoster();
       }
-      if (msg.t === 'intro-skip' && this.stage === 'intro' && this.everyoneConnected) {
+      // Guests can report that playback naturally ended, but cannot skip
+      // the prologue or force the room to enter gameplay.
+      if (msg.t === 'intro-done' && this.stage === 'intro' && this.everyoneConnected) {
         this.introDone.add(seat);
         this.tryFinishIntro();
       }
@@ -774,16 +776,22 @@ export class Network {
     this.sharePuzzle(); this.shareForest(); this.shareRiver();
     this.setPhase('intro', 1, Date.now() + INTRO_WATCHDOG_MS);
   }
-  /** Called ONLY when this user's video has ended or they pressed PULAR.
-   * Host waits for each player so a 27s cinematic cannot be cut by a shorter
-   * network timer or by the first guest to finish buffering.
+  /** Only the room owner (or the local solo player) can skip for EVERYONE.
+   * This is enforced here, not merely by hiding the guest's UI button.
    */
-  skipIntro(): void {
-    if (this.stage !== 'intro'||this.localSeat===null) return;
-    if (this.isHost) {
+  skipIntro():void{
+    if(!this.isHost||this.stage!=='intro')return;
+    this.finishIntro();
+  }
+  /** Sent after the media element actually ends. Guests cannot request
+   * a skip; their message simply tells the host playback finished.
+   */
+  completeIntro():void{
+    if(this.stage!=='intro'||this.localSeat===null)return;
+    if(this.isHost){
       this.introDone.add(this.localSeat);
       this.tryFinishIntro();
-    } else this.message(this.hostConn, { t: 'intro-skip' });
+    }else this.message(this.hostConn,{t:'intro-done'});
   }
   private tryFinishIntro():void{
     if(this.isHost&&this.stage==='intro'&&this.everyoneConnected&&
