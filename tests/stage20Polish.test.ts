@@ -32,7 +32,9 @@ for(const starter of ['startLoopSolo','startTemporalSolo','startTreetopSolo','st
 assert.ok(main.includes("if(kind==='developer'&&(!devSession||!net.isSolo||!net.playing))return;"),
  'dev inspector cannot open in multiplayer or ordinary solo');
 assert.ok(main.includes("net.startSolo(level,false,'loop')"),'map can load any stage in solo');
-assert.ok(main.includes("devSession=false;info='';net.startLoopSolo();"));
+assert.ok(main.includes("startSoloAdventure(1)")&&
+ main.includes("playIntroVideo(()=>net.startLoopSolo());"),
+ 'JOGAR SOZINHO exibe a introdução antes de iniciar a primeira fase');
 assert.ok(main.includes("net.isSolo?'<details id=\"loop-dev\""));
 assert.ok(main.includes("devSession?'<button id=\"dev-inspect\""));
 assert.ok(main.includes("net.level===4?'REINICIAR FASE 04'"));
