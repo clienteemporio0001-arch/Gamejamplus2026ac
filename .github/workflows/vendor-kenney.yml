@@ -14,7 +14,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: true
-      - name: Verificar a origem e importar três spritesheets Kenney
+      - name: Instalar Pillow apenas para criar miniaturas dos seis personagens
+        run: python3 -m pip install --disable-pip-version-check pillow
+      - name: Verificar ZIP CC0 e importar seis spritesheets e retratos Kenney
         run: python3 scripts/vendor_kenney.py
       - name: Versionar sprites e licença no repositório
         shell: bash
