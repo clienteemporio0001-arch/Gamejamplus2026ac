@@ -738,3 +738,71 @@ body.playing{overflow:hidden;touch-action:none;overscroll-behavior:none}
  .jam-field{width:min(96%,340px)}
  .rank-panel{max-height:95dvh;padding:10px}
 }
+
+/* Character select: original Kenney portraits, no changes to scene physics. */
+.lobby-panel,.skin-select-panel{width:min(940px,97vw);max-height:min(95dvh,940px);
+ overflow-y:auto;padding:clamp(12px,2.5vw,28px)}
+.lobby-panel h2,.skin-select-panel h2{margin:8px auto;color:#ecf7cf}
+.lobby-panel .player-list{max-width:740px;margin:11px auto;gap:8px}
+.lobby-panel .player{min-width:0;display:flex;flex-direction:column;
+ align-items:center;justify-content:center;gap:3px;padding:9px 5px}
+.lobby-panel .player strong{font-size:clamp(10px,1.6vw,13px);line-height:1.25}
+.lobby-panel .player small{font-size:11px;line-height:1.2;overflow-wrap:anywhere}
+.roster-skin{width:42px;height:56px;object-fit:contain;
+ filter:drop-shadow(0 2px 7px #8ce5b755)}
+.roster-skin-empty{display:flex;align-items:center;justify-content:center;
+ width:42px;height:56px;border:1px dashed #acc89465;border-radius:10px;
+ color:#afceaf;font-size:25px}
+.multiplayer-skins{padding:10px 8px 0;margin:9px auto 8px;max-width:850px}
+.multiplayer-skins h3{margin:4px 0 8px;letter-spacing:.06em;color:#f3efbc;font-size:17px}
+.multiplayer-skins p,.skin-select-panel>p{font-size:12px;color:#d0decf;
+ margin:5px auto 10px;line-height:1.4}
+.avatar-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));
+ gap:8px;margin:11px auto;max-width:850px}
+.skin-card{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+ min-width:0;min-height:158px;padding:9px 4px 8px;border:2px solid #537f69a0;
+ border-radius:13px;background:linear-gradient(165deg,#1b4237,#0c211e);
+ color:#e4f5df;cursor:pointer;transition:border-color .12s,transform .12s,background .12s}
+.skin-card:not(:disabled):hover,.skin-card:not(:disabled):focus-visible{
+ border-color:#c5f7a0;background:linear-gradient(170deg,#275b49,#11332b);
+ transform:translateY(-3px)}
+.skin-card:focus-visible{outline:3px solid #b1f3d6;outline-offset:2px}
+.skin-card.skin-selected{border-color:#e5d386;
+ background:linear-gradient(170deg,#2d5437,#204039);box-shadow:0 0 18px #d9f39d33}
+.skin-card.skin-occupied{opacity:.49;cursor:not-allowed;filter:grayscale(.8)}
+.skin-card:disabled{cursor:not-allowed}
+.skin-img-box{display:flex;align-items:end;justify-content:center;
+ width:74px;height:104px;max-width:100%;border-radius:11px;
+ background:radial-gradient(ellipse at 50% 72%,#b0f2b833,#14382d20 75%);
+ overflow:hidden}
+.skin-img-box img{display:block;width:auto;max-width:96%;height:96px;object-fit:contain;
+ image-rendering:auto;filter:drop-shadow(0 4px 2px #0005)}
+.skin-card strong{font-size:12px;line-height:1.25;margin-top:4px;overflow-wrap:anywhere}
+.skin-card small{font-size:9px;line-height:1.25;margin-top:4px;color:#c0dbad;
+ white-space:normal;overflow-wrap:anywhere;min-height:21px}
+.skin-card.skin-selected small{color:#ffe69c;font-weight:800}
+.role-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+ gap:9px;max-width:790px;margin:13px auto}
+.role-chip{display:flex;flex-direction:column;align-items:center;gap:2px;
+ border:2px solid #517a62;background:#102e28;color:#d9eaca;border-radius:12px;
+ padding:9px 6px;cursor:pointer}
+.role-chip.role-chip-active{border-color:#e6d992;background:#2b4b36}
+.role-chip strong{font-size:14px}.role-chip small{font-size:11px;color:#bfdcaf}
+.role-chip em{font-size:11px;color:#fce5b2;font-style:normal}
+.skin-select-panel .skin-selector-caption{letter-spacing:.05em;color:#ecf0bc}
+.skin-explainer{font-size:11px;color:#b8d7c0}
+@media(max-width:690px){
+ .lobby-panel,.skin-select-panel{padding:12px 7px;max-width:98vw}
+ .avatar-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+ .skin-card{min-height:142px;padding:6px 3px}
+ .skin-img-box{height:91px;width:65px}.skin-img-box img{height:86px}
+ .skin-card strong{font-size:11px}.skin-card small{font-size:9px}
+ .role-chip strong{font-size:12px}.role-chip small,.role-chip em{font-size:9px}
+ .lobby-panel .player{padding:7px 3px}.lobby-panel .player small{font-size:9px}
+}
+@media(max-height:430px) and (orientation:landscape){
+ .lobby-panel,.skin-select-panel{max-height:calc(100dvh - 10px)}
+ .skin-card{min-height:128px}
+ .skin-img-box{height:75px}.skin-img-box img{height:72px}
+ .skin-select-panel .actions{margin-top:7px}
+}
