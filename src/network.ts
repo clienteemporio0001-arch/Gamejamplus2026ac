@@ -21,6 +21,8 @@ export type Level = 1 | 2 | 3 | 4;
 export type PhaseInfo = { stage: Stage; level: Level; since: number; until: number; mode?: Experience };
 
 export type Seat = 0 | 1 | 2;
+/** Safety net for failed or stalled video loads; never the normal end of the cutscene. */
+export const INTRO_WATCHDOG_MS=180_000;
 export type Slot = { seat: Seat; online: boolean; ready: boolean };
 export type Pose = { seat: Seat; x: number; y: number; vx: number; vy: number };
 type Wire =
@@ -202,6 +204,8 @@ export class Network {
   private riverAuthority = new RiverAuthority();
   private authority = new PuzzleAuthority();
   private lastAction = new Map<string, number>();
+  /** Completed playback or manually skipped, per authoritative multiplayer seat. */
+  private introDone = new Set<Seat>();
   private effectGate = new SkillFxGate();
   private peer: Peer | null = null;
   private hostConn: DataConnection | null = null;
@@ -268,7 +272,7 @@ export class Network {
     this.journeyAuthority.solo=true;this.chapterAuthority.solo=true;
     this.heartbeat=setInterval(()=>this.hostTick(),50);
     this.setPhase(showIntro&&level===1?'intro':'playing',level,
-      showIntro&&level===1?Date.now()+24000:0);
+      showIntro&&level===1?Date.now()+INTRO_WATCHDOG_MS:0);
   }
   startLoopSolo():void{this.startSolo(1,false,'loop');}
   startTemporalSolo():void{this.startSolo(2,false,'loop');}
@@ -507,7 +511,10 @@ export class Network {
         this.players[seat].ready = msg.value;
         this.updateRoster();
       }
-      if (msg.t === 'intro-skip' && this.stage === 'intro' && this.everyoneConnected) this.finishIntro();
+      if (msg.t === 'intro-skip' && this.stage === 'intro' && this.everyoneConnected) {
+        this.introDone.add(seat);
+        this.tryFinishIntro();
+      }
       if (msg.t === 'act' && this.playing && this.everyoneConnected) {
         this.hostAction(seat, msg.action);
       }
@@ -737,6 +744,7 @@ export class Network {
     return { stage: this.stage, level: this.level, since: this.phaseSince, until: this.phaseUntil, mode:this.experience };
   }
   private setPhase(stage: Stage, level: Level, until = 0): void {
+    if(stage==='intro')this.introDone.clear();
     this.stage = stage; this.level = level;
     this.phaseSince = Date.now(); this.phaseUntil = until;
     this.playing = stage === 'playing'; this.completed = stage === 'final';
@@ -752,7 +760,7 @@ export class Network {
       this.authority.reset();this.authority.world.unlocked=[true,true,true];this.sharePuzzle();
       this.poses=LOOP_START.map(p=>({...p}));
       this.shareLoop();
-      this.setPhase('intro',1,Date.now()+24000);
+      this.setPhase('intro',1,Date.now()+INTRO_WATCHDOG_MS);
       return;
     }
     this.authority.reset(); this.riverAuthority.reset(); this.effectGate.reset();
@@ -764,12 +772,22 @@ export class Network {
     this.puzzle = initialWorld(); this.river = initialRiver();
     this.poses = FOREST_SPAWNS.map(p => ({ ...p }));
     this.sharePuzzle(); this.shareForest(); this.shareRiver();
-    this.setPhase('intro', 1, Date.now() + 24000);
+    this.setPhase('intro', 1, Date.now() + INTRO_WATCHDOG_MS);
   }
+  /** Called ONLY when this user's video has ended or they pressed PULAR.
+   * Host waits for each player so a 27s cinematic cannot be cut by a shorter
+   * network timer or by the first guest to finish buffering.
+   */
   skipIntro(): void {
-    if (this.stage !== 'intro') return;
-    if (this.isHost) this.finishIntro();
-    else this.message(this.hostConn, { t: 'intro-skip' });
+    if (this.stage !== 'intro'||this.localSeat===null) return;
+    if (this.isHost) {
+      this.introDone.add(this.localSeat);
+      this.tryFinishIntro();
+    } else this.message(this.hostConn, { t: 'intro-skip' });
+  }
+  private tryFinishIntro():void{
+    if(this.isHost&&this.stage==='intro'&&this.everyoneConnected&&
+      this.players.every(p=>this.introDone.has(p.seat)))this.finishIntro();
   }
   private finishIntro(): void {
     if (!this.isHost || this.stage !== 'intro' || !this.everyoneConnected) return;
@@ -1288,6 +1306,7 @@ export class Network {
     this.players = slots(); this.poses = SPAWNS.map(p => ({ ...p }));
     this.playing = false; this.completed = false;
     this.stage = 'lobby'; this.level = 1; this.phaseSince = 0; this.phaseUntil = 0;
+    this.introDone.clear();
     this.riverAuthority.reset(); this.river = initialRiver();
     this.journeyAuthority.reset();this.journey=initialJourney();this.journeyMotion={logs:[3086,3224],now:0};this.lastJourneyMotionBroadcast=0;
     this.chapterAuthority.reset(3);this.chapter=initialEyes();this.jaguar=defaultJaguar();this.lastHazardBroadcast=0;
