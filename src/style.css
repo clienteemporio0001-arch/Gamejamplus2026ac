@@ -705,3 +705,36 @@ body.playing{overflow:hidden;touch-action:none;overscroll-behavior:none}
 .video-intro video::-webkit-media-controls{display:none!important}
 .video-skip{position:absolute;right:max(16px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));z-index:2}
 .video-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:3}
+
+/* Game Jam timing and browser-local records: presentation only. */
+.jam-field{display:flex;flex-direction:column;gap:6px;width:min(100%,380px);margin:12px auto;
+ text-align:left;color:#c1e4c7;font-size:11px;font-weight:800;letter-spacing:.11em}
+.jam-field input{box-sizing:border-box;width:100%;min-height:43px;padding:10px 12px;background:#081f22;
+ color:#f3ffed;border:1px solid #6b9f89;border-radius:11px;font-size:16px;letter-spacing:normal}
+.jam-field input:focus-visible{outline:2px solid #c1f3ae;outline-offset:2px}
+.jam-profile-save{display:flex;justify-content:center;margin:4px auto 14px}
+.rank-team{font-weight:800;text-align:center;color:#e1f6cd}
+.run-clock{display:inline-flex;margin-inline-start:12px;padding:4px 9px;border:1px solid #b3edbd66;
+ border-radius:8px;color:#f7ffd6;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rank-panel{max-height:91dvh;overflow:auto}
+.rank-mode{margin:16px 0;text-align:left;border:1px solid #a9d5a044;border-radius:14px;padding:14px}
+.rank-mode h3{margin:0 0 12px;color:#dff5c8;font-size:15px}
+.rank-mode ol{padding:0;margin:0;list-style:none;counter-reset:record}
+.rank-mode li{display:grid;grid-template-columns:1fr auto;gap:3px 12px;padding:9px 0;
+ border-bottom:1px solid #b8d6ad29;font-variant-numeric:tabular-nums;counter-increment:record}
+.rank-mode li:last-child{border-bottom:0}
+.rank-mode li strong:before{content:counter(record) '. ';color:#e3d38a}
+.rank-mode li span{color:#e9e8ae;font-weight:800}
+.rank-mode li small{grid-column:1/-1;color:#b7cbbc}
+.run-result{display:flex;flex-direction:column;align-items:center;gap:7px;
+ padding:15px;margin:12px auto;background:#081e20db;border:1px solid #b5d9a85c;
+ border-radius:15px;max-width:450px}
+.run-result>span{font-size:12px;font-weight:800;letter-spacing:.12em;color:#cbf2c7}
+.run-result>strong{font-size:clamp(26px,5vw,44px);font-variant-numeric:tabular-nums;color:#f8e3a2}
+.run-result p{margin:0}.run-result small{color:#cee0d2}.run-result b{color:#cfff8e}
+.run-practice{font-size:12px;color:#c6d7c8}
+@media(max-width:720px){
+ .run-clock{margin-inline-start:3px;font-size:11px;padding:2px 4px}
+ .jam-field{width:min(96%,340px)}
+ .rank-panel{max-height:95dvh;padding:10px}
+}
