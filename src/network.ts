@@ -787,7 +787,7 @@ export class Network {
   }
   private tryFinishIntro():void{
     if(this.isHost&&this.stage==='intro'&&this.everyoneConnected&&
-      this.players.every(p=>this.introDone.has(p.seat)))this.finishIntro();
+      (this.isSolo||this.players.every(p=>this.introDone.has(p.seat))))this.finishIntro();
   }
   private finishIntro(): void {
     if (!this.isHost || this.stage !== 'intro' || !this.everyoneConnected) return;
