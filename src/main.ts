@@ -245,7 +245,10 @@ function stopIntroVideo():void{
  }
  introLayer?.remove();introLayer=null;
 }
-function playIntroVideo(onComplete:()=>void):void{
+/** Cinematic media only: native seek/pause/PiP controls are never exposed.
+ * A guest can report natural completion, but only a host can skip the movie.
+ */
+function playIntroVideo(onComplete:()=>void,allowSkip=true,onSkip=onComplete):void{
  stopIntroVideo();
  const holder=document.createElement('div');
  introLayer=holder;
@@ -253,33 +256,42 @@ function playIntroVideo(onComplete:()=>void):void{
  const video=document.createElement('video');
  introVideo=video;
  video.src=import.meta.env.BASE_URL+'introducao.mp4';
- video.playsInline=true;video.controls=true;video.preload='auto';
- video.autoplay=true;video.setAttribute('aria-label','Vídeo de introdução A Floresta Mente');
+ video.playsInline=true;video.controls=false;video.preload='auto';
+ video.autoplay=true;video.tabIndex=-1;
+ video.disablePictureInPicture=true;
+ video.setAttribute('controlsList','nodownload nofullscreen noplaybackrate noremoteplayback');
+ video.setAttribute('aria-label','Introdução cinematográfica A Floresta Mente');
  const preferences=getAudioSettings();
  video.volume=preferences.music/100;
  video.muted=preferences.muted||preferences.musicMuted;
- const skip=document.createElement('button');
- skip.type='button';skip.className='btn secondary video-skip';
- skip.textContent='⏭ PULAR INTRODUÇÃO';
- const finish=()=>{
+ const complete=(callback:()=>void)=>{
   if(introVideo!==video)return;
-  stopIntroVideo();holder.remove();onComplete();
+  stopIntroVideo();
+  callback();
  };
- skip.addEventListener('click',finish);
- video.addEventListener('ended',finish,{once:true});
- video.addEventListener('error',()=>{
-  skip.textContent='CONTINUAR PARA O JOGO';
- },{once:true});
- holder.append(video,skip);
+ const skip=document.createElement('button');
+ if(allowSkip){
+  skip.type='button';skip.className='btn secondary video-skip';
+  skip.textContent='⏭ PULAR INTRODUÇÃO';
+  skip.addEventListener('click',()=>complete(onSkip));
+ }
+ video.addEventListener('ended',()=>complete(onComplete),{once:true});
+ // Broken/unsupported media must not leave clients trapped behind the intro.
+ video.addEventListener('error',()=>complete(onComplete),{once:true});
+ holder.appendChild(video);
+ if(allowSkip)holder.appendChild(skip);
  document.body.appendChild(holder);
  // Only the movie's soundtrack should be heard during the prologue.
  audio.setScore('none');
  void video.play().catch(()=>{
   if(introVideo!==video)return;
-  // Browser autoplay policy: user can press the native Play control.
+  // Browsers may require a direct gesture before starting video with sound.
   const prompt=document.createElement('button');
-  prompt.className='btn video-play';prompt.textContent='▶ REPRODUZIR INTRODUÇÃO';
-  prompt.addEventListener('click',()=>{void video.play().then(()=>prompt.remove()).catch(()=>{});});
+  prompt.type='button';prompt.className='btn video-play';
+  prompt.textContent='▶ REPRODUZIR INTRODUÇÃO';
+  prompt.addEventListener('click',()=>{
+   void video.play().then(()=>prompt.remove()).catch(()=>{});
+  });
   holder.appendChild(prompt);
  });
 }
@@ -437,14 +449,18 @@ function render(): void {
   if (showing) {
     if (net.stage === 'intro' || net.playing) enterGame();
     if (net.stage === 'intro') {
+      const canSkipIntro=net.isHost;
       ui.innerHTML = '<div class="hud">🌙 PRÓLOGO · A FLORESTA MENTE · Sala ' + safeText(net.code) +
-        ' · <span class="text-muted">os três verão o mesmo encerramento</span></div>' +
-        '<div class="cinematic-actions">' + button('skip-intro', '⏭ PULAR INTRODUÇÃO', true) + '</div>' +
+        ' · <span class="text-muted">introdução sincronizada com a sala</span></div>' +
+        (canSkipIntro?'<div class="cinematic-actions">'+
+          button('skip-intro', '⏭ PULAR INTRODUÇÃO', true)+'</div>':'') +
         (info ? '<div class="game-toast">' + safeText(info) + '</div>' : '');
-      ui.querySelector('#skip-intro')?.addEventListener('click', () => {stopIntroVideo();net.skipIntro();});
+      if(canSkipIntro)ui.querySelector('#skip-intro')?.addEventListener('click',()=>{
+        stopIntroVideo();net.skipIntro();
+      });
       if(!introVideo&&!introStageShown){
         introStageShown=true;
-        playIntroVideo(()=>net.skipIntro());
+        playIntroVideo(()=>net.completeIntro(),canSkipIntro,()=>net.skipIntro());
       }
       return;
     }
