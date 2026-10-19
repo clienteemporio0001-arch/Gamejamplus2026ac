@@ -700,7 +700,7 @@ function render(): void {
      ui.querySelector('#select-phase')?.addEventListener('click',()=>{
       captureProfile();phaseMapOpen=true;render();
     });
-    ui.querySelector('#create')?.addEventListener('click',()=>{captureProfile();devSession=false;info='';void net.createRoom('loop');net.setNickname(profile.nickname);});
+    ui.querySelector('#create')?.addEventListener('click',()=>{captureProfile();devSession=false;info='';void net.createRoom('loop');net.setNickname(profile.nickname);net.setTeamName(profile.teamName);});
     ui.querySelector('#create-classic')?.addEventListener('click',()=>{devSession=false;info='';void net.createRoom('classic');});
     ui.querySelector('#loop-solo')?.addEventListener('click',()=>{captureProfile();startSoloAdventure(1);});
     ui.querySelector('#join-menu')?.addEventListener('click',()=>{captureProfile();devSession=false;showJoin();});
@@ -722,7 +722,7 @@ function render(): void {
   const roster = net.players.map((p, i) => {
     const persona = CHARACTERS[i];
     return '<div class="player"><div class="avatar" style="background:' + persona.hex + '"></div>' +
-      '<strong>' + persona.name + '</strong><small><span class="dot ' + (p.online ? 'online' : '') + '"></span>' +
+      '<strong>' + persona.name + '</strong><small>'+safeText(cleanName(p.nickname,persona.name))+'</small><small><span class="dot ' + (p.online ? 'online' : '') + '"></span>' +
       (p.online ? (p.ready ? 'Pronto ✓' : 'Conectado') : 'Aguardando...') + '</small></div>';
   }).join('');
   const me = net.localSeat;
@@ -731,9 +731,12 @@ function render(): void {
   const startButton = net.isHost ? button('start', '▶ INICIAR JOGO', false, !net.canStart) : '';
   ui.innerHTML = panelStart + '<div class="kicker">SALA COOPERATIVA · 3 JOGADORES</div>' +
     '<h2>A equipe está se formando</h2>' +
+     (net.isHost?teamInput(net.teamName):'<p class="rank-team">Equipe: '+safeText(net.teamName)+'</p>')+
+     nicknameInput()+
     '<div class="muted">Código da sala</div><div class="code-row"><div class="code">' + safeText(net.code) +
     '</div>' + button('copy', 'COPIAR', true) + '</div>' +
     '<div class="player-list">' + roster + '</div>' + notice() +
+     '<div class="jam-profile-save">'+button('save-player','SALVAR NOME(S)',true)+'</div>'+
     '<div class="actions">' + readyButton + startButton + button('leave-lobby', 'SAIR', true) + '</div>' +
     '<div class="tip">' + (net.isHost ? 'Você é Téo, anfitrião. Inicie somente com os 3 prontos.' :
       'Você controla ' + (me === null ? 'seu personagem' : CHARACTERS[me].name) + '. Aguarde o anfitrião iniciar.') +
@@ -744,14 +747,15 @@ function render(): void {
     navigator.clipboard?.writeText(net.code).then(() => { info = 'Código copiado!'; render(); })
       .catch(() => { info = 'Copie este código: ' + net.code; render(); });
   });
-  ui.querySelector('#ready')?.addEventListener('click', () => { info = ''; net.ready(!ready); });
-  ui.querySelector('#start')?.addEventListener('click', () => { info = ''; net.start(); });
+  ui.querySelector('#save-player')?.addEventListener('click',()=>{captureProfile();net.setNickname(profile.nickname);if(net.role==='host')net.setTeamName(profile.teamName);});
+   ui.querySelector('#ready')?.addEventListener('click', () => { captureProfile();net.setNickname(profile.nickname);if(net.role==='host')net.setTeamName(profile.teamName);info = ''; net.ready(!ready); });
+  ui.querySelector('#start')?.addEventListener('click', () => { captureProfile();net.setNickname(profile.nickname);if(net.role==='host')net.setTeamName(profile.teamName);info = ''; net.start(); });
   ui.querySelector('#leave-lobby')?.addEventListener('click', () => net.shutdown());
 }
 function showJoin(): void {
   ui.innerHTML = '<main class="panel"><div class="kicker">REUNIR OS TRÊS AMIGOS</div>' +
     '<h2>Entrar em sala</h2><p>Peça o código de 6 caracteres para o anfitrião.</p>' +
-    '<form id="join-form"><input class="code-input" id="code-input" type="text" maxlength="6" ' +
+    '<form id="join-form"><label class="jam-field">SEU APELIDO <input id="join-nickname" type="text" maxlength="22" value="'+safeText(profile.nickname)+'" autocomplete="nickname"/></label><input class="code-input" id="code-input" type="text" maxlength="6" ' +
     'autocapitalize="characters" autocorrect="off" spellcheck="false" autocomplete="off" ' +
     'placeholder="ABC123" required aria-label="Código da sala"/>' +
     '<div class="actions">' + button('submit', 'ENTRAR') + button('cancel', 'VOLTAR', true) + '</div></form></main>';
@@ -764,7 +768,7 @@ function showJoin(): void {
     const input = document.querySelector<HTMLInputElement>('#code-input')!;
     const code = input.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (code.length !== 6) { input.setCustomValidity('Use 6 caracteres.'); input.reportValidity(); return; }
-    info = ''; net.joinRoom(code);
+    captureProfile();info = ''; net.joinRoom(code);net.setNickname(profile.nickname);
   });
   form.querySelector<HTMLInputElement>('#code-input')?.addEventListener('input', event => {
     (event.target as HTMLInputElement).setCustomValidity('');
