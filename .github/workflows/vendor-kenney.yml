@@ -1,0 +1,28 @@
+name: Importar personagens Kenney CC0
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/vendor-kenney.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Verificar a origem e importar três spritesheets Kenney
+        run: python3 scripts/vendor_kenney.py
+      - name: Versionar sprites e licença no repositório
+        shell: bash
+        run: |
+          git add public/characters/kenney/
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "assets: vendor approved Kenney CC0 character atlases and license"
+            git push origin HEAD:main
+          fi
