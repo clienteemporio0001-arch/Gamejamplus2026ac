@@ -15,11 +15,11 @@ for(const [id,name] of [['loop-solo','JOGAR SOZINHO'],['create','MULTIPLAYER ONL
 }
 ok(main.includes("void net.createRoom('loop')"),'multiplayer abre a floresta mutável');
 ok(main.includes("net.startLoopSolo()"),'solo abre a mesma aventura');
-ok(main.includes("button('dev-loop','TESTAR FASE 01 · BOCA DA NOITE'"),'teste da mutável isolado');
-ok(main.includes("([1,2,3,4] as const).map(level=>button('dev-classic-'"),'quatro fases clássicas em desenvolvimento');
-ok(main.includes('net.startSolo(level)'),'fase clássica iniciada pela mesma API');
-ok(main.includes("net.createRoom('classic')"),'sala clássica mantida como ferramenta');
-ok(main.includes('<details id="dev-tools"'),'ferramentas fechadas por padrão');
+ok(main.includes("button('select-phase','SELECIONAR FASE'"),'acesso à seleção de fases');
+ok(main.includes('class="phase-trail"')&&main.includes('data-phase'),'mapa visual de quatro regiões');
+ok(main.includes("net.startSolo(level,false,'loop')"),'fase escolhida abre a aventura atual');
+ok(main.includes("net.createRoom('loop')"),'multiplayer mantém a aventura principal');
+ok(!main.includes('<details id="dev-tools"'),'ferramentas não visíveis no menu público');
 ok(main.includes('<details id="loop-dev"'),'reiniciar/adiantar ficam em menu de opções');
 ok(main.includes("class=\"loop-top-left\""),'estado e tempo no canto esquerdo');
 ok(main.includes("class=\"loop-top-right\""),'objetivo no canto direito');
