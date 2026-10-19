@@ -806,3 +806,129 @@ body.playing{overflow:hidden;touch-action:none;overscroll-behavior:none}
  .skin-img-box{height:75px}.skin-img-box img{height:72px}
  .skin-select-panel .actions{margin-top:7px}
 }
+
+/* HOTFIX LOBBY — entire multiplayer character selection fits the viewport.
+ * Changes deliberately apply only to .lobby-panel; solo picker unchanged.
+ */
+#ui:not(.in-game) .lobby-panel{
+ width:min(1010px,98vw);
+ max-width:calc(100dvw - 12px);
+ max-height:calc(100dvh - 14px);
+ overflow:hidden;
+ display:flex;
+ flex-direction:column;
+ gap:clamp(3px,.75vh,9px);
+ padding:clamp(8px,1.8vh,17px) clamp(10px,2vw,22px);
+}
+.lobby-header{flex:0 0 auto}
+.lobby-panel .lobby-header .kicker{font-size:clamp(9px,1.55vh,12px);letter-spacing:2px}
+.lobby-panel .lobby-header h2{margin:2px 0 0;font-size:clamp(17px,3vh,27px);line-height:1.1}
+.lobby-overview{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);
+ gap:clamp(8px,1.8vw,20px);align-items:center;min-width:0;flex:0 0 auto}
+.lobby-identity{min-width:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+ gap:clamp(4px,.7vh,9px) clamp(6px,.9vw,12px);align-items:end}
+.lobby-panel .jam-field{width:100%;min-width:0;margin:0;gap:3px;
+ font-size:clamp(9px,1.25vh,11px);letter-spacing:.04em}
+.lobby-panel .jam-field input{min-width:0;width:100%;height:clamp(31px,4.5vh,40px);
+ min-height:0;padding:5px 9px;font-size:clamp(12px,1.8vh,15px);border-radius:8px}
+.lobby-panel .rank-team{grid-column:1;align-self:end;margin:0;
+ font-size:clamp(11px,1.5vh,14px);line-height:1.2}
+.lobby-room{min-width:0;text-align:left}
+.lobby-room .muted{font-size:10px;font-weight:800;letter-spacing:.07em;margin:0 0 2px}
+.lobby-room .code-row{justify-content:flex-start;gap:clamp(4px,.6vw,9px);
+ flex-wrap:nowrap;min-width:0}
+.lobby-panel .code{font-size:clamp(17px,3.4vh,29px);
+ letter-spacing:clamp(1px,.27vw,3px);white-space:nowrap;line-height:1.1}
+.lobby-panel .code-row .btn{padding:clamp(5px,.8vh,9px) clamp(6px,.7vw,10px);
+ border-radius:9px;font-size:clamp(9px,1.6vh,12px)}
+.lobby-panel .jam-profile-save{margin:0;align-self:end;justify-content:flex-end}
+.lobby-panel .jam-profile-save .btn{min-height:0;padding:clamp(6px,1.1vh,10px) 8px;
+ font-size:clamp(9px,1.55vh,12px);border-radius:9px;white-space:nowrap}
+.lobby-members{min-width:0}
+.lobby-panel .player-list{margin:0;width:100%;max-width:none;gap:clamp(4px,.65vw,9px)}
+.lobby-panel .player{min-height:0;padding:clamp(5px,.8vh,9px) 3px;
+ border-radius:10px;gap:2px}
+.lobby-panel .roster-skin,.lobby-panel .roster-skin-empty{
+ width:clamp(23px,4vh,39px);height:clamp(30px,5.5vh,52px)}
+.lobby-panel .roster-skin-empty{font-size:clamp(13px,2.7vh,23px)}
+.lobby-panel .player strong{font-size:clamp(9px,1.5vh,12px);line-height:1.12}
+.lobby-panel .player small{font-size:clamp(8px,1.35vh,11px);line-height:1.1}
+.lobby-panel .multiplayer-skins{min-width:0;width:100%;max-width:none;
+ padding:0;margin:0;flex:0 0 auto}
+.lobby-panel .multiplayer-skins h3{font-size:clamp(13px,2.1vh,18px);
+ line-height:1.12;margin:0 0 3px}
+.lobby-panel .multiplayer-skins p{margin:0;font-size:clamp(10px,1.6vh,12px);
+ line-height:1.2}
+.lobby-panel .avatar-grid{max-width:none;grid-template-columns:repeat(6,minmax(0,1fr));
+ gap:clamp(4px,.85vw,11px);margin:clamp(4px,.8vh,9px) auto 0}
+.lobby-panel .skin-card{min-height:0;height:clamp(107px,17vh,147px);
+ padding:clamp(4px,.8vh,8px) 3px 2px;gap:1px;border-radius:11px}
+.lobby-panel .skin-img-box{height:clamp(60px,11vh,95px);width:min(100%,70px)}
+.lobby-panel .skin-img-box img{height:clamp(57px,10.5vh,91px);max-width:100%}
+.lobby-panel .skin-card strong{font-size:clamp(10px,1.55vh,12px);
+ line-height:1.12;margin-top:1px}
+.lobby-panel .skin-card small{font-size:clamp(8px,1.2vh,10px);
+ line-height:1.14;min-height:0;margin-top:1px}
+.lobby-footer{min-width:0;display:flex;flex-direction:column;align-items:center;
+ gap:clamp(2px,.6vh,6px);flex:0 0 auto}
+.lobby-panel .actions{margin:0;gap:clamp(5px,.9vw,10px)}
+.lobby-panel .actions .btn{padding:clamp(7px,1.15vh,11px) clamp(9px,1.5vw,19px);
+ font-size:clamp(11px,1.75vh,14px);border-radius:10px}
+.lobby-panel .notice{margin:0;padding:5px 9px;font-size:11px;line-height:1.15}
+.lobby-panel .tip{margin:0;font-size:clamp(9px,1.35vh,11px);line-height:1.15}
+.lobby-rules{font-size:10px;color:#bbd8bf;line-height:1.2;width:min(100%,680px)}
+.lobby-rules summary{cursor:pointer;display:inline-flex;align-items:center;
+ gap:4px;padding:3px 10px;color:#d1ecc3;font-size:10px;
+ font-weight:800;letter-spacing:.05em;border:1px solid #426a51;border-radius:7px}
+.lobby-rules .rules{max-width:none;text-align:left;margin:4px 0 0;
+ padding:7px;font-size:10px;line-height:1.3}
+.lobby-rules .rules p{font-size:10px;line-height:1.3;margin:4px 0 0}
+/* Portrait/mobile layout: narrower screens stack the overview but keep
+ * all six skins visible in two short rows, without a vertical scrollbar.
+ */
+@media(max-width:700px) and (orientation:portrait){
+ #ui:not(.in-game) .lobby-panel{width:calc(100vw - 8px);
+  max-height:calc(100dvh - 8px);padding:clamp(6px,1.1vh,10px) 7px;gap:4px}
+ .lobby-overview{grid-template-columns:1fr;gap:5px}
+ .lobby-identity{grid-template-columns:1fr 1fr;gap:4px 7px}
+ .lobby-panel .player{flex-direction:row;flex-wrap:wrap;gap:2px 4px;
+  align-items:center;justify-content:center;padding:3px}
+ .lobby-panel .player strong{font-size:9px}
+ .lobby-panel .player small{font-size:8px}
+ .lobby-panel .roster-skin,.lobby-panel .roster-skin-empty{width:22px;height:28px}
+ .lobby-panel .avatar-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+ .lobby-panel .skin-card{height:clamp(89px,13.5vh,112px)}
+ .lobby-panel .skin-img-box{height:clamp(51px,8vh,73px)}
+ .lobby-panel .skin-img-box img{height:clamp(48px,7.5vh,69px)}
+ .lobby-panel .multiplayer-skins p{font-size:10px}
+ .lobby-panel .lobby-header h2{font-size:clamp(17px,2.5vh,22px)}
+ .lobby-panel .actions .btn{padding:8px 9px;font-size:11px}
+ .lobby-panel .tip{font-size:9px}
+}
+@media(max-height:570px){
+ #ui:not(.in-game) .lobby-panel{gap:3px;padding:6px 10px;max-height:calc(100dvh - 6px)}
+ .lobby-panel .lobby-header h2{font-size:clamp(15px,3.3vh,20px);margin:0}
+ .lobby-panel .lobby-header .kicker{font-size:9px}
+ .lobby-panel .jam-field{font-size:9px;gap:1px}
+ .lobby-panel .jam-field input{height:29px;font-size:12px;padding:3px 7px}
+ .lobby-panel .code{font-size:20px;letter-spacing:1px}
+ .lobby-panel .code-row .btn,.lobby-panel .jam-profile-save .btn{padding:5px 7px;font-size:9px}
+ .lobby-panel .roster-skin,.lobby-panel .roster-skin-empty{height:26px;width:21px}
+ .lobby-panel .player{gap:1px;padding:3px 2px}
+ .lobby-panel .player strong{font-size:9px}
+ .lobby-panel .player small{font-size:8px}
+ .lobby-panel .multiplayer-skins h3{font-size:12px}
+ .lobby-panel .multiplayer-skins p{font-size:9px}
+ .lobby-panel .skin-card{height:83px;padding:2px}
+ .lobby-panel .skin-img-box{height:47px;width:55px}
+ .lobby-panel .skin-img-box img{height:45px}
+ .lobby-panel .skin-card strong{font-size:9px}
+ .lobby-panel .skin-card small{font-size:8px}
+ .lobby-panel .actions .btn{padding:6px 9px;font-size:10px}
+ .lobby-panel .tip{font-size:9px}
+ .lobby-rules summary{font-size:9px;padding:2px 7px}
+}
+@media(max-height:570px) and (orientation:landscape){
+ .lobby-panel .avatar-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
+ .lobby-overview{grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr)}
+}
