@@ -734,7 +734,7 @@ function render(): void {
     ui.querySelectorAll<HTMLButtonElement>('[data-phase]').forEach(item=>
       item.addEventListener('click',()=>{
         const level=Number(item.dataset.phase) as 1|2|3|4;
-        startSoloAdventure(level);
+        showSoloSelection(level);
       }));
     return;
   }
@@ -761,7 +761,7 @@ function render(): void {
     });
     ui.querySelector('#create')?.addEventListener('click',()=>{captureProfile();devSession=false;info='';void net.createRoom('loop');net.setNickname(profile.nickname);net.setTeamName(profile.teamName);});
     ui.querySelector('#create-classic')?.addEventListener('click',()=>{devSession=false;info='';void net.createRoom('classic');});
-    ui.querySelector('#loop-solo')?.addEventListener('click',()=>{captureProfile();startSoloAdventure(1);});
+    ui.querySelector('#loop-solo')?.addEventListener('click',()=>{captureProfile();showSoloSelection(1);});
     ui.querySelector('#join-menu')?.addEventListener('click',()=>{captureProfile();devSession=false;showJoin();});
     return;
   }
