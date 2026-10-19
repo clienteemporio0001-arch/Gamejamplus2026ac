@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {preloadKenneyCharacters} from './kenneyCharacterSprites';
 import { gameKeys } from './keyboard';
 import { CHARACTERS, type Network, type Pose, type Seat } from './network';
 import type { TouchInput } from './game';
@@ -82,6 +83,7 @@ export class LateScene extends Phaser.Scene {
     this.info.setText(msg).setVisible(true);
     this.infoUntil=this.time.now+ms;
   }
+  preload():void{preloadKenneyCharacters(this);}
   create():void {
     const late=this.net.level;
     this.physics.world.setBounds(0,0,1200,900);
