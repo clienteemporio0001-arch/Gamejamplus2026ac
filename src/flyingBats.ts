@@ -74,3 +74,38 @@ export function batTouchesHero(
     Math.abs(pose.y-bat.y)<=BAT_TOUCH_HALF_HEIGHT;
  });
 }
+
+/** Short velocity impulse. The host records the event only on a REAL
+ * successful heart loss, then every peer gets it in its existing snapshot.
+ * A 320ms input pause lets the contact visibly push the character without
+ * disabling the normal platform/ground collisions.
+ */
+export const BAT_KNOCKBACK_MS=320;
+export const BAT_KNOCKBACK_VERTICAL=-185;
+export type BatImpact={at:number;vx:number;vy:number};
+export type BatImpacts=[BatImpact|null,BatImpact|null,BatImpact|null];
+export const initialBatImpacts=():BatImpacts=>[null,null,null];
+export const validBatImpacts=(value:unknown):value is BatImpacts=>
+ Array.isArray(value)&&value.length===3&&value.every(item=>
+  item===null||(typeof item==='object'&&item!==null&&!Array.isArray(item)&&
+   typeof item.at==='number'&&Number.isFinite(item.at)&&item.at>=0&&
+   typeof item.vx==='number'&&Number.isFinite(item.vx)&&Math.abs(item.vx)<=410&&
+   typeof item.vy==='number'&&Number.isFinite(item.vy)&&item.vy<=0&&item.vy>=-440));
+/** Flight direction + player overlap decide whether to push left or right.
+ * For dead-centre contact the bat's movement supplies a stable direction.
+ */
+export function batContactImpact(
+ stage:BatStage,down:BatDownState,pose:Pick<Pose,'x'|'y'>,
+ now:number,startedAt:number
+):BatImpact|null{
+ for(const id of [0,1] as const){
+  if(!batAlive(down,id,now))continue;
+  const bat=batFlight(stage,id,now,startedAt);
+  const dx=pose.x-bat.x;
+  if(Math.abs(dx)>BAT_TOUCH_HALF_WIDTH||
+     Math.abs(pose.y-bat.y)>BAT_TOUCH_HALF_HEIGHT)continue;
+  const dir=dx>3?1:dx< -3?-1:bat.vx>=0?1:-1;
+  return {at:now,vx:dir*(stage===3?225:250),vy:BAT_KNOCKBACK_VERTICAL};
+ }
+ return null;
+}
