@@ -27,13 +27,13 @@ for(const frame of Object.values(atlas.frames) as Array<{frame:{x:number;y:numbe
 }
 const widths:Record<ForestTreeStage,number>={1:11400,2:4200,3:5250,4:5200};
 assert.equal(FOREST_TREE_LAYOUTS[1].length,16,'stage 01 receives varied background trees');
-assert.equal(FOREST_TREE_LAYOUTS[2].length,7,'stage 02 receives storm-tinted trees');
+assert.equal(FOREST_TREE_LAYOUTS[2].length,0,'stage 02 must not contain floating imported trees');
 assert.equal(FOREST_TREE_LAYOUTS[3].length,4,'canopy uses fewer distant trees');
 assert.equal(FOREST_TREE_LAYOUTS[4].length,3,'burning area receives minimal dark silhouettes');
 for(const phase of [1,2,3,4] as const){
  const trees=FOREST_TREE_LAYOUTS[phase];
  const frames=new Set(trees.map(t=>t.frame));
- assert.ok(frames.size>=2,'multiple silhouettes should appear in stage '+phase);
+ if(phase!==2)assert.ok(frames.size>=2,'multiple silhouettes should appear in stage '+phase);
  for(const [i,t] of trees.entries()){
   assert.ok(t.x>=180&&t.x<=widths[phase]-60,'tree stays inside stage '+phase+' ('+i+')');
   assert.ok(t.height>=220&&t.height<=420,'tree sizing is visually restrained');
@@ -63,8 +63,7 @@ assert.ok(renderer.includes('scene.load.atlas(TEXTURE_KEY')&&
 assert.ok(renderer.includes('camera.scrollX')&&renderer.includes('setVisible(visible)'),
  'off-camera trees are hidden to keep draw workload low');
 for(const [phase,file] of [
- [1,'forestLoopScene'],[2,'temporalForestScene'],
- [3,'treetopForestScene'],[4,'burningForestScene']
+ [1,'forestLoopScene'],[3,'treetopForestScene'],[4,'burningForestScene']
 ] as const){
  const source=readFileSync('src/'+file+'.ts','utf8');
  assert.ok(source.includes('preloadForestTrees(this)'),'atlas preloaded for phase '+phase);
@@ -75,4 +74,9 @@ const docs=readFileSync('public/assets/trees/README.md','utf8');
 assert.ok(docs.includes('avores 2d.zip')&&docs.includes('não incluía licença')&&
  docs.includes('confirmar a licença'),'unknown license documented and not mistaken for CC0');
 assert.ok(statSync(imagePath).size<10000,'compact atlas keeps mobile and itch.io builds lightweight');
-console.log('ÁRVORES 2D: original lossless sprites, 30 scenic trees, 4 safe layers, no collisions ✓');
+const temporalScene=readFileSync('src/temporalForestScene.ts','utf8');
+assert.ok(!temporalScene.includes('ForestTrees')&&!temporalScene.includes('preloadForestTrees'),
+ 'stage 02 no longer instantiates or loads floating decorative trees');
+assert.ok(temporalScene.includes('this.woodedEnvironment()')&&temporalScene.includes('this.chickens=new ForestChickens(this,2)'),
+ 'native stage-2 rainy forest and one running chicken are preserved');
+console.log('ÁRVORES 2D: 23 scenic trees in phases 01, 03, 04; stage 02 floating trees removed ✓');
