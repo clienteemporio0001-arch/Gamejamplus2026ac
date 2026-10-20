@@ -220,7 +220,8 @@ export class TreeAuthority{
   else if(kind==='doubleJump')this.doubled=true;
   else {
    this.lastSkill[seat]=now;
-   this.interact(seat,kind,poses,now,facing);
+   if(kind!=='dash')this.interact(seat,kind,poses,now,facing);
+   else {w.dashAt=now;w.dashX=p.x;}
    if(kind==='shoot'&&seat===1)
      shootMonster(3,w,p,facing,now,w.cycleStart);
   }
@@ -284,6 +285,10 @@ export class TreeAuthority{
    w.blackoutUntil=now+TREE_BLACKOUT;w.windPhase='calm';w.windUntil=0;
    return {changed:true};
   }
+  // A dash is resolved after moving; this checks the authoritative moving pose.
+  const nino=poses[2];
+  const dashSolved=nino&&w.dashAt>0&&now-w.dashAt<850&&
+    Math.abs(nino.x-w.dashX)>=42&&this.interact(2,'dash',poses,now);
   // Each of the three optional branches cracks only AFTER a character
   // stands on it. Host timestamps are shared with all WebRTC guests.
   let fragileChanged=false;
@@ -317,7 +322,7 @@ export class TreeAuthority{
    if(startedGust)w.gustCount++;
    return {changed:true};
   }
-  return {changed:fragileChanged||batDamage};
+  return {changed:fragileChanged||batDamage||Boolean(dashSolved)};
  }
  /** All puzzle actions use the host's validated positions and actual skill events. */
  interact(seat:Seat,kind:'lever'|'switch'|'shoot'|'support'|'detach'|'dash',
@@ -327,7 +332,7 @@ export class TreeAuthority{
   const p=poses[seat];
   if(!p||w.deadUntil||w.blackoutUntil>now||w.completed)return false;
   const windy=w.windPhase==='gust'&&treeExposure(p)>.35;
-  if(kind==='dash'&&seat===2){w.dashAt=now;w.dashX=p.x;return true;}
+  if(kind==='dash'&&seat===2){w.dashAt=now;w.dashX=p.x;}
   if(kind==='support'&&(seat===0||seat===1)){
    const base:Seat=seat===0?1:2,b=poses[base];
    if(!b||w.supporting[seat]!==null||!close(p,b.x,b.y,65,86)
@@ -349,8 +354,8 @@ export class TreeAuthority{
    &&!windy&&(target.x-p.x)*facing>=0&&(target.x-p.x)*facing<=360
    &&Math.abs(p.y-18-target.y)<56;
   if(!w.bridgeOpen){
-   // Nino's bridge switch requires only E; dash is a separate optional ability.
-   if(seat===2&&kind==='switch'&&!w.bridge[2]
+   // Only the authorized Dash can activate Nino's marker.
+   if(seat===2&&kind==='dash'&&!w.bridge[2]
      &&close(p,TREE_TARGETS.bridge.nino.x,TREE_TARGETS.bridge.nino.y,62,75))
      changed=w.bridge[2]=true;
    if(!w.bridge[1]&&shot(TREE_TARGETS.bridge.lia))changed=w.bridge[1]=true;
@@ -377,9 +382,8 @@ export class TreeAuthority{
    if(seat===0&&kind==='lever'&&!w.time[0]
      &&close(p,TREE_TARGETS.time.teo.x,TREE_TARGETS.time.teo.y,82,70)
      &&Math.abs(p.vy)<210)changed=w.time[0]=true;
-   // Nino's final Galhos do Tempo circle uses E alone. Dash is optional.
-   // Host validates the correct character and proximity, in every layout.
-   if(seat===2&&kind==='switch'&&!w.time[2]
+   // Final marker also requires Dash, never the E interaction.
+   if(seat===2&&kind==='dash'&&!w.time[2]
      &&close(p,TREE_TARGETS.time.nino.x,TREE_TARGETS.time.nino.y,105,95))
     changed=w.time[2]=true;
    if(w.time.every(Boolean))w.finalOpen=true;

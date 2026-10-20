@@ -726,7 +726,7 @@ export class ForestLoopScene extends Phaser.Scene {
         this.net.act({kind:'lever'});return;
       }
     }
-    if(seat===2){this.net.act({kind:'switch'});return;}
+    if(seat===2)return; // Dash itself activates Nino's targets.
     // Existing universal human tower, subject to all host collision checks.
     if(seat===1&&w.lastRoute==='right'&&!w.suspended[0]&&
       Math.abs(x-SUSPENSION.lever.x)<185&&!canStack(w,seat,this.net.poses)){

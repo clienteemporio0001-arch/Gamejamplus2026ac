@@ -252,6 +252,10 @@ export class TemporalAuthority{
    return{changed:true,poses:rescued?corrected:undefined};
   }
   if(now-w.cycleStart>=TEMP_CYCLE){w.blackoutUntil=now+TEMP_BLACKOUT;return{changed:true};}
+  // Host checks Nino's traveled dash against the existing targets; no E needed.
+  const nino=poses[2];
+  const dashSolved=nino&&w.health[2]>0&&w.dashAt>0&&now-w.dashAt<=1700&&
+   nino.x-w.dashX>=95&&this.act(2,{kind:'switch'},poses,now);
   const alive=poses.filter(p=>w.health[p.seat]>0);
   const rats=tickMonsters(2,w,alive,now,w.cycleStart);
   const bossChanged=tickBafomet(w,alive,now);
@@ -279,6 +283,6 @@ export class TemporalAuthority{
    w.supporting=[null,null,null];w.climbReady=false;
    return{changed:true,poses:TEMP_START.map(p=>({...p}))};
   }
-  return{changed:rats.changed||bossChanged};
+  return{changed:rats.changed||bossChanged||Boolean(dashSolved)};
  }
 }

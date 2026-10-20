@@ -178,7 +178,7 @@ export function windGuide(w:LoopWorld,seat:Seat,x:number):{direction:-1|0|1;targ
       !w.suspended[1]?SUSPENSION.lia.x-200:SUSPENSION.nino.x-165;
     hint=!w.suspended[0]?'ESCADA HUMANA: NINO NA BASE, LIA NO MEIO, TÉO NO ALTO PARA A ALAVANCA.':
       !w.suspended[1]?'LIA: ACERTE COM J A TRAVA DA PLATAFORMA SUSPENSA.':
-      'NINO: USE DASH E E NA FIXAÇÃO DA MARGEM INICIAL.';
+      'NINO: USE APENAS DASH NA FIXAÇÃO DA MARGEM INICIAL.';
   }else if(!w.bridge){
     target=!w.stackMilestone?9360:!w.teoUpperReached?UPPER_BRANCH.x:LOOP_TREE[w.tree.findIndex(value=>!value)]?.x??9310;
     hint=!w.stackMilestone?'APOIO: NINO PARADO, LIA SOBE COM E, TÉO SOBE EM LIA COM E.':
@@ -556,6 +556,9 @@ export class LoopAuthority{
     if(now-w.cycleStart>=LOOP_CYCLE_MS){
       w.blackoutUntil=now+LOOP_BLACKOUT_MS;return{changed:true};
     }
+    const nino=poses[2];
+    const dashSolved=nino&&this.lastDash[2]>0&&now-this.lastDash[2]<=900&&
+      this.act(2,{kind:'switch'},poses,now);
     const combat=tickMonsters(1,w,poses,now,w.cycleStart);
     const ratChanged=combat.changed;
     if(w.health.some(h=>h<=0)){
@@ -594,6 +597,6 @@ export class LoopAuthority{
       w.supporting=[null,null,null];w.climbReady=false;
       return{changed:true,poses:LOOP_START.map(p=>({...p}))};
     }
-    return{changed:supportChanged||ratChanged};
+    return{changed:supportChanged||ratChanged||Boolean(dashSolved)};
   }
 }

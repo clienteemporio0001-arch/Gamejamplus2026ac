@@ -234,7 +234,8 @@ export class FireAuthority {
   }else if(kind==='doubleJump')this.doubleUsed=true;
   else{
    this.lastSkill[seat]=now;
-   this.interact(seat,kind,poses,now,facing);
+   if(kind!=='dash')this.interact(seat,kind,poses,now,facing);
+   else {w.dashAt[2]=now;w.dashX[2]=p.x;}
    if(kind==='shoot'&&seat===1)
      shootMonster(4,w,p,facing,now,w.cycleStart);
   }
@@ -244,10 +245,9 @@ export class FireAuthority {
  interact(seat:Seat,kind:'lever'|'switch'|'shoot'|'dash'|'support'|'detach',
   poses:Pose[],now=Date.now(),facing:-1|1=1):boolean{
   const w=this.world,p=poses[seat];if(!p||w.deadUntil||w.completed)return false;
-  if(kind==='dash'&&seat===2){w.dashAt[2]=now;w.dashX[2]=p.x;return true;}
-  // All three Nino fire-biome circles activate with E only, with proximity
-  // checked independently of dash/cooldown and with authority on the host.
-  const nino=seat===2&&kind==='switch';
+  if(kind==='dash'&&seat===2){w.dashAt[2]=now;w.dashX[2]=p.x;}
+  // Nino can release his mechanism only by dashing into range.
+  const nino=seat===2&&kind==='dash';
   const teo=seat===0&&kind==='lever'&&Math.abs(p.vy)<175;
   const lia=seat===1&&kind==='shoot';
   const shot=(t:{x:number;y:number})=>lia&&facing===1&&t.x>=p.x&&t.x-p.x<=360
@@ -330,6 +330,14 @@ export class FireAuthority {
    });
    changed=true;
    if(adjusted.some((p,i)=>p.x!==poses[i].x))return {changed:true,poses:adjusted};
+  }
+  // The server approves the moving dash and checks Nino's marker proximity.
+  const nino=poses[2];
+  if(nino&&w.dashAt[2]>0&&now-w.dashAt[2]<900&&
+    Math.abs(nino.x-w.dashX[2])>=38){
+   const before=w.log[2]||w.smoke[2]||w.tree[2];
+   this.interact(2,'dash',poses,now);
+   if(!before&&(w.log[2]||w.smoke[2]||w.tree[2]))changed=true;
   }
   // Trigger only after all players have crossed the completed cooperative
   // puzzles. Timing is broadcast in the existing FireWorld snapshot.

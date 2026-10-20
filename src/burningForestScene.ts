@@ -301,7 +301,7 @@ export class BurningForestScene extends Phaser.Scene {
  }
  private interact(seat:Seat):void{
   if(seat===0)this.net.act({kind:'lever'});
-  if(seat===2)this.net.act({kind:'switch'});
+  // Nino uses the Dash skill only; E has no switch effect.
  }
  update(time:number,dt:number):void{
   if(!this.body||!this.net.playing||this.net.localSeat===null)return;

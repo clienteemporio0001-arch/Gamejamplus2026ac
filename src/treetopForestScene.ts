@@ -316,7 +316,7 @@ export class TreetopForestScene extends Phaser.Scene {
     this.net.act({kind:'support'});return;
    }
   }
-  if(seat===2)this.net.act({kind:'switch'});
+  // Nino never needs E; host checks the dash against the target.
  }
  update(time:number,dt:number):void{
   if(!this.body||!this.net.playing||this.net.localSeat===null)return;

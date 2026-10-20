@@ -57,6 +57,7 @@ export class TemporalForestScene extends Phaser.Scene {
  private branches:Phaser.GameObjects.Container[]=[];
  private tree!:Phaser.GameObjects.Container;
  private roots:Phaser.GameObjects.Graphics[]=[];
+ private treeSignals:Phaser.GameObjects.Arc[]=[];
  private echoVisuals:Phaser.GameObjects.Container[]=[];
  private echoLabels:Phaser.GameObjects.Text[]=[];
  private echoChecks:Phaser.GameObjects.Text[]=[];
@@ -120,6 +121,15 @@ export class TemporalForestScene extends Phaser.Scene {
     rope.lineStyle(3,[0xb7f4be,0xf8d5a2,0xa9d9ed][i],.72);
     rope.lineBetween(point.x,point.y,2580,420+i*42);
     this.roots.push(rope);
+  }
+  // Three skill-specific markers anchored to the REAL tree/rope puzzle targets.
+  // Keep visible until each hero has released their own vine.
+  const signalColors=[0x88ef9d,0x84caff,0xffb16d] as const;
+  for(const [i,p] of TEMP_TREE.entries()){
+   const ring=this.add.circle(p.x,p.y-12,15,signalColors[i],.28)
+    .setStrokeStyle(3,signalColors[i],.95).setDepth(48);
+   this.tweens.add({targets:ring,scale:1.2,alpha:.56,duration:1050,yoyo:true,repeat:-1});
+   this.treeSignals.push(ring);
   }
   // Two decoy trail plaques intentionally contradict rain direction in A/B.
   for(const x of [760,3370]){
@@ -325,6 +335,7 @@ export class TemporalForestScene extends Phaser.Scene {
   this.setActive(this.bridge,w.bridge);
   this.setActive(this.temporary,TEMP_LAYOUTS[w.layout].temporaryBridge);
   this.roots.forEach((r,i)=>r.setVisible(!w.tree[i]));
+  this.treeSignals.forEach((ring,i)=>ring.setVisible(w.echo.every(Boolean)&&!w.tree[i]));
   this.stormShade.setFillStyle([0x1b3b46,0x254d64,0x112639][w.layout])
    .setAlpha([.12,.20,.27][w.layout]);
   this.pools.forEach((p,i)=>{
@@ -353,7 +364,7 @@ export class TemporalForestScene extends Phaser.Scene {
    else if(w.bridge&&w.layout===2&&!w.roots[0]&&
       tempNear({seat,x:p.x,y:p.y,vx:0,vy:0},TEMP_ROOTS[0].x,TEMP_ROOTS[0].y))
      this.net.act({kind:'lever'});
-  }else if(seat===2)this.net.act({kind:'switch'});
+  }
   if((seat===0||seat===1)&&p.x>2310&&p.x<2530)this.net.act({
     kind:w.supporting[seat]===null?'support':'detach'
   });
