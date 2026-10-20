@@ -190,14 +190,14 @@ function openPanel(kind:PanelKind):void{
  const title=kind==='how'?'COMO JOGAR':kind==='settings'?'CONFIGURAÇÕES':
    kind==='credits'?'CRÉDITOS':'PAINEL DE TESTES';
  const body=kind==='how'?
-   '<p>Três amigos, uma saída. <strong>Ninguém fica para trás.</strong></p>'+
+   '<p>Três amigos, quatro fases e uma missão: <strong>escapar da floresta no menor tempo possível, sem deixar ninguém para trás!</strong></p>'+
    '<div class="overlay-guide">'+
    '<p><b>TEO · VERDE:</b> caminhe com A/D ou setas. Espaço/↑ pula; pressione novamente no ar para o salto duplo.</p>'+
    '<p><b>LIA · LARANJA:</b> use J para disparar a baladeira. A mira depende da posição e direção.</p>'+
    '<p><b>NINO · AZUL:</b> use SHIFT para o dash e E para interagir com mecanismos.</p>'+
    '<p><b>SOZINHO:</b> alterne entre os amigos pelas teclas 1, 2 e 3. No celular, use o joystick e os botões da tela.</p>'+
    '<p><b>PIPO:</b> pressione H ou toque em 🦜 DICA para receber ajuda contextual.</p>'+
-   '<p>Observe vento, estados da floresta, estamina, corações e objetivos. Os três precisam chegar juntos à saída.</p>'+
+   '<p>Joguem cooperativamente, observem o ambiente e sigam os sinais e avisos do Pipo. Superem os perigos juntos e cheguem à saída o mais rápido possível.</p>'+
    '</div>':
   kind==='settings'?
    '<p>Trilhas sonoras originais em MP3, carregadas conforme a fase. Ajustes aplicados sem reiniciar.</p>'+
@@ -902,7 +902,7 @@ function render(): void {
       '<details class="lobby-rules"><summary>CONTROLES E OBJETIVO</summary>'+
         '<div class="rules"><b>COMPUTADOR:</b> A/D ou ←/→ para andar; ESPAÇO ou ↑ para pular; SHIFT = dash de Nino; J = baladeira de Lia; E = interagir.'+
         '<p><b>CELULAR:</b> setas na esquerda e PULAR na direita. Coloque na horizontal.</p>'+
-        '<p><b>OBJETIVO:</b> encontrem o Guia Indígena, apoiem-se uns nos outros, coletem 3 cipós e derrubem a árvore para atravessar juntos.</p>'+
+        '<p><b>OBJETIVO:</b> escapem da floresta no menor tempo possível! Joguem em equipe, combinem suas habilidades e sigam os sinais e avisos do Pipo para superar os perigos. Ninguém fica para trás!</p>'+
         '</div></details></footer></main>';
   ui.querySelectorAll<HTMLButtonElement>('[data-avatar]').forEach(item=>
     item.addEventListener('click',()=>{
