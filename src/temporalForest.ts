@@ -1,3 +1,4 @@
+import {initRatCombat,validRatCombat,activateMonsterSkill,shootMonster,tickMonsters,type RatCombatWorld} from './ratCombat';
 import {exitPresence} from './sharedExit';
 import type {Pose,Seat} from './network';
 import type {PuzzleAction} from './puzzles';
@@ -18,7 +19,7 @@ export const TEMP_LAYOUTS=[
   {obstacles:[1190,1850,3480],puddles:[650,1570,3450],temporaryBridge:false,wind:1},
   {obstacles:[1450,2180,3680],puddles:[770,1890,3610],temporaryBridge:true,wind:1}
 ] as const;
-export type TemporalWorld=Vitals&{
+export type TemporalWorld=Vitals&RatCombatWorld&{
   layout:0|1|2;cycle:number;cycleStart:number;blackoutUntil:number;deadUntil:number;resetId:number;
   echo:[boolean,boolean,boolean];tree:[boolean,boolean,boolean];bridgeAt:number;bridge:boolean;
   roots:[boolean,boolean,boolean];exit:boolean;completed:boolean;
@@ -34,7 +35,7 @@ export function initTemporal(now=Date.now()):TemporalWorld{
   echo:[false,false,false],tree:[false,false,false],bridgeAt:0,bridge:false,
   roots:[false,false,false],exit:false,completed:false,supporting:[null,null,null],
   stacked:false,climbReady:false,teoLanded:false,teoSummitReached:false,dashAt:0,dashX:0,
-  teoJumpAt:0,teoJumpY:0,teoDoubled:false,skillAt:[0,0,0],resourceAt:now,...initVitals()};
+  teoJumpAt:0,teoJumpY:0,teoDoubled:false,skillAt:[0,0,0],resourceAt:now,...initRatCombat(),...initVitals()};
 }
 export function validTemporal(value:unknown):value is TemporalWorld{
  if(!value||typeof value!=='object'||Array.isArray(value))return false;
@@ -47,7 +48,7 @@ export function validTemporal(value:unknown):value is TemporalWorld{
    &&Array.isArray(w.skillAt)&&w.skillAt.length===3&&w.skillAt.every(nonneg)
    &&Array.isArray(w.supporting)&&w.supporting.length===3
    &&w.supporting.every((s,i)=>s===null||(i===0&&s===1)||(i===1&&s===2))
-   &&validVitals(w);
+   &&validRatCombat(w)&&validVitals(w);
 }
 export function tempWind(w:TemporalWorld,x:number):-1|0|1{
  if(!w.echo.every(Boolean)){
@@ -156,6 +157,8 @@ export class TemporalAuthority{
   if(w.stamina[seat]<cost||!spendVital(w,seat,kind,now))return fail('tired');
   if(kind==='jump'){this.lastJump[seat]=now;this.lastJumpY[seat]=p.y;this.doubleUsed[seat]=false;}
   if(kind==='doubleJump')this.doubleUsed[0]=true;
+  activateMonsterSkill(w,seat,kind,now,facing);
+  if(kind==='shoot')shootMonster(2,w,p,facing,now,w.cycleStart);
   if(kind==='shoot'||kind==='dash'){
    w.skillAt[seat]=now;
    if(kind==='dash'){w.dashAt=now;w.dashX=p.x;}
@@ -219,6 +222,10 @@ export class TemporalAuthority{
    return{changed:true,poses:rescued?corrected:undefined};
   }
   if(now-w.cycleStart>=TEMP_CYCLE){w.blackoutUntil=now+TEMP_BLACKOUT;return{changed:true};}
+  const rats=tickMonsters(2,w,poses,now,w.cycleStart);
+  if(w.health.some(h=>h<=0)){
+   w.deadUntil=now+2200;return{changed:true};
+  }
   if(w.climbReady&&!w.teoLanded&&w.supporting[0]===null&&tempLanding(poses[0])){
    w.teoLanded=true;return{changed:true};
   }
@@ -236,6 +243,6 @@ export class TemporalAuthority{
    w.supporting=[null,null,null];w.climbReady=false;
    return{changed:true,poses:TEMP_START.map(p=>({...p}))};
   }
-  return{changed:false};
+  return{changed:rats.changed};
  }
 }
