@@ -951,3 +951,131 @@ body.playing{overflow:hidden;touch-action:none;overscroll-behavior:none}
  .lobby-panel .player strong{font-size:9px}
  .lobby-panel .player small{font-size:8px}
 }
+
+
+/* Updated mission-control style menu: typography first, atmosphere behind controls. */
+#ui:not(.in-game) .menu-panel{
+ width:min(660px,95vw);
+ border:1px solid #8ae8af83;
+ background:linear-gradient(158deg,#0e3129f5 0%,#071915f8 53%,#071710fc 100%);
+ box-shadow:0 28px 100px #000c,0 0 54px #55eab21d,inset 0 1px #d9ffe124;
+}
+.menu-panel .menu-atmosphere{
+ background:
+ radial-gradient(ellipse at 50% 18%,#b7ffa51b 0%,transparent 54%),
+ linear-gradient(0deg,#020f0d33,transparent),
+ repeating-linear-gradient(109deg,transparent 0 83px,#82ffc00a 84px 86px,transparent 87px 142px);
+}
+.menu-panel .brand-mark{
+ width:68px;height:62px;border:1px solid #b7ecb66b;
+ box-shadow:0 0 28px #93f7b437,inset 0 0 20px #b2efab0d;
+}
+.menu-panel .menu-eyebrow{
+ display:block;margin:5px auto 10px;
+ color:#99e9bc;letter-spacing:clamp(1px,.5vw,3px);
+ font-size:clamp(9px,1.8vw,11px)
+}
+.menu-panel h1.forest-logo{
+ display:flex;flex-direction:column;align-items:center;
+ margin:4px 0 5px;font-size:clamp(40px,7.8vw,76px);
+ font-weight:900;line-height:.92;letter-spacing:clamp(-3px,-.25vw,-1px);
+ color:#f4ffdd;text-shadow:0 0 38px #92f3b73c,0 4px 4px #020f0c;
+}
+.menu-panel .forest-logo span:first-child{white-space:nowrap}
+.menu-panel .forest-logo span:last-child{
+ font-size:1.15em;letter-spacing:.055em;
+ background:linear-gradient(90deg,#d8ffad,#f3ffdb 45%,#91f2cd);
+ color:transparent;background-clip:text;-webkit-background-clip:text;
+ filter:drop-shadow(0 5px 20px #5ce4b325)
+}
+.menu-panel .subtitle{
+ margin:8px auto 0;font-size:clamp(11px,1.9vw,15px);letter-spacing:2px;
+ color:#b8f7b6;
+}
+.menu-panel .menu-story{margin:13px auto 15px;max-width:470px;line-height:1.5}
+.menu-panel .menu-story strong{display:block;margin-top:7px;font-size:12px;
+ color:#e5ffcd;letter-spacing:.065em}
+.menu-panel .primary-play .btn{
+ background:linear-gradient(118deg,#bff47c,#58dba8);
+ border:1px solid #d5ffc078;
+ box-shadow:0 8px 24px #22c98225;
+}
+.menu-panel .primary-play .btn:hover,.menu-panel .menu-join .btn:hover{
+ filter:brightness(1.12);
+}
+.menu-panel .menu-secondary button{
+ border-color:#79b89276;
+ background:linear-gradient(150deg,#173c31,#0e2922);
+}
+@media(max-height:680px){
+ .menu-panel .brand-mark{width:52px;height:42px;margin-bottom:5px}
+ .menu-panel .brand-mark b{font-size:23px}
+ .menu-panel h1.forest-logo{font-size:clamp(30px,5vw,51px)}
+ .menu-panel .menu-story{margin:7px auto}
+ .menu-panel .primary-play{margin-top:11px}
+}
+@media(max-width:540px){
+ .menu-panel h1.forest-logo{font-size:clamp(36px,10vw,57px)}
+ .menu-panel .menu-eyebrow{letter-spacing:1px}
+}
+
+/* The normal Como Jogar modal and the mandatory first-play reading sheet
+   share the exact same content and safe scrolling on landscape phones. */
+.overlay-sheet:has(.guide-grid){width:min(760px,100%)}
+.guide-intro{color:#e4f7d4!important;font-weight:700}
+.guide-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:15px 0}
+.guide-item,.guide-tip{
+ border:1px solid #8fc3a252;border-radius:12px;
+ background:linear-gradient(165deg,#13392e,#0a211bbf);
+ padding:12px;
+}
+.guide-item h3,.guide-tip h3{margin:0 0 7px;font-size:12px;letter-spacing:.055em;color:#c7f6b4}
+.guide-item h3 span{font-size:10px;color:#8dc5a3;margin-right:3px}
+.guide-item p,.guide-tip p{margin:0;line-height:1.48}
+.guide-teo{border-top:3px solid #90e896}
+.guide-lia{border-top:3px solid #ffb16d}
+.guide-nino{border-top:3px solid #81ccff}
+.guide-tip{margin:8px 0}
+.guide-tip h3{color:#bff0c5}
+.guide-end{margin:15px 0 4px;text-align:center;color:#c5e9ba}
+.first-play-guide{z-index:300}
+.first-play-sheet{
+ width:min(750px,100%);max-height:min(710px,calc(100dvh - 20px));
+ display:flex;flex-direction:column;gap:5px;overflow:hidden;
+}
+.first-play-sheet h2{font-size:clamp(19px,3vw,28px);margin:7px 0 2px}
+.first-play-sheet>p{margin:3px 0}
+.first-play-sheet header{flex:0 0 auto}
+.first-play-scroll{
+ overflow:auto;min-height:0;flex:1 1 auto;padding:3px 10px 10px 2px;
+ touch-action:pan-y;overscroll-behavior:contain;
+ scrollbar-color:#7cb995 #0c2b21;scrollbar-width:thin;
+ border-block:1px solid #7cad8f40;
+}
+.first-play-scroll-hint{color:#b4f6af!important;font-weight:900;font-size:12px!important}
+.first-play-confirm{
+ flex:0 0 auto;display:flex;gap:10px;align-items:center;padding:9px 11px;
+ border:1px solid #85bd966e;border-radius:10px;background:#173b2b;
+ font-size:12px;font-weight:800;line-height:1.3;cursor:pointer;
+}
+.first-play-confirm input{width:20px;height:20px;flex:0 0 20px;accent-color:#9feb89}
+.first-play-sheet #first-play-continue{
+ margin-top:6px;align-self:stretch;flex:0 0 auto;padding:12px;
+}
+.guide-lock{font-size:10px;font-weight:900;color:#f0e5a1}
+@media(max-width:650px){
+ .guide-grid{grid-template-columns:1fr;gap:7px}
+ .guide-item,.guide-tip{padding:9px}
+ .first-play-sheet{padding:12px}
+ .guide-lock{font-size:9px}
+}
+@media(max-height:480px) and (orientation:landscape){
+ .first-play-sheet{max-height:calc(100dvh - 8px);padding:9px 14px;gap:2px}
+ .first-play-sheet h2{margin:2px 0;font-size:17px}
+ .first-play-sheet>p{font-size:11px}
+ .first-play-confirm{padding:5px 10px}
+ .first-play-sheet #first-play-continue{padding:7px}
+}
+@media(prefers-reduced-motion:reduce){
+ .menu-panel .menu-atmosphere *,#ui:not(.in-game)::after{animation:none}
+}

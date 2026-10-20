@@ -32,6 +32,7 @@ import {AVATAR_CATALOG,DEFAULT_AVATARS,avatarInfo,isAvatarId,uniqueAvatars,
 import {avatarGrid,roleLabel,ROLE_SKILLS} from './avatarSelectionUI';
 import {setActiveAvatarSelections} from './kenneyCharacterSprites';
 import {CinematicProgressWatch} from './cinematicHealth';
+import {gameGuideMarkup,beforeFirstPlay} from './gameGuide';
 
 const net = new Network();
 const ui = document.querySelector<HTMLDivElement>('#ui')!;
@@ -137,9 +138,10 @@ function banner(): string {
     Array.from({length:12},(_,i)=>'<i style="--leaf:'+i+'"></i>').join('')+
     '</div>'+
     '<div class="brand-mark" aria-hidden="true"><span>✦</span><b>🌳</b><span>✦</span></div>'+
-    '<span class="kicker">GAME JAM PLUS • BETTER TOGETHER / SOMETHING’S OFF</span>' +
-    '<h1>A FLORESTA<br>MENTE</h1><div class="subtitle">MAS O VENTO NÃO.</div>' +
-    '<p>Quando chega a boca da noite, a floresta muda de lugar.<br>Três amigos. Uma saída. <strong>NINGUÉM FICA PARA TRÁS.</strong></p>';
+    '<span class="kicker menu-eyebrow">UMA AVENTURA ALÉM DO QUE OS OLHOS VEEM</span>' +
+    '<h1 class="forest-logo"><span>A FLORESTA</span><span>MENTE</span></h1>'+ 
+    '<div class="subtitle">O VENTO REVELA O CAMINHO.</div>'+
+    '<p class="menu-story">A floresta muda a cada ciclo. Observe os sinais, domine as habilidades e escapem juntos.<br><strong>TRÊS AMIGOS. UMA SAÍDA. NINGUÉM FICA PARA TRÁS.</strong></p>';
 }
 /** The menu and the in-game options share one accessible, dismissible overlay. */
 type PanelKind='how'|'settings'|'credits'|'developer';
@@ -189,16 +191,7 @@ function openPanel(kind:PanelKind):void{
  const prefs=getAudioSettings();
  const title=kind==='how'?'COMO JOGAR':kind==='settings'?'CONFIGURAÇÕES':
    kind==='credits'?'CRÉDITOS':'PAINEL DE TESTES';
- const body=kind==='how'?
-   '<p>Três amigos, quatro fases e uma missão: <strong>escapar da floresta no menor tempo possível, sem deixar ninguém para trás!</strong></p>'+
-   '<div class="overlay-guide">'+
-   '<p><b>TEO · VERDE:</b> caminhe com A/D ou setas. Espaço/↑ pula; pressione novamente no ar para o salto duplo.</p>'+
-   '<p><b>LIA · LARANJA:</b> use J para disparar a baladeira. A mira depende da posição e direção.</p>'+
-   '<p><b>NINO · AZUL:</b> use SHIFT para o dash e E para interagir com mecanismos.</p>'+
-   '<p><b>SOZINHO:</b> alterne entre os amigos pelas teclas 1, 2 e 3. No celular, use o joystick e os botões da tela.</p>'+
-   '<p><b>PIPO:</b> pressione H ou toque em 🦜 DICA para receber ajuda contextual.</p>'+
-   '<p>Joguem cooperativamente, observem o ambiente e sigam os sinais e avisos do Pipo. Superem os perigos juntos e cheguem à saída o mais rápido possível.</p>'+
-   '</div>':
+ const body=kind==='how'?gameGuideMarkup():
   kind==='settings'?
    '<p>Trilhas sonoras originais em MP3, carregadas conforme a fase. Ajustes aplicados sem reiniciar.</p>'+
    '<div class="settings-control"><label for="fm-music">Música ambiente <output id="fm-music-value">'+prefs.music+'%</output></label>'+
@@ -784,7 +777,7 @@ function render(): void {
       const chosen=[...soloDraft] as AvatarChoices;
       saveSoloAvatars(chosen);
       soloSelectLevel=null;
-      startSoloAdventure(level,chosen);
+      beforeFirstPlay(()=>startSoloAdventure(level,chosen));
     });
     return;
   }
@@ -908,7 +901,7 @@ function render(): void {
         'Seu papel: '+(me===null?'aguarde conexão':CHARACTERS[me].name)+
         ' · '+(me===null?'':ROLE_SKILLS[me])+'. Aguarde o anfitrião iniciar.')+'</div>'+
       '<details class="lobby-rules"><summary>CONTROLES E OBJETIVO</summary>'+
-        '<div class="rules"><b>COMPUTADOR:</b> A/D ou ←/→ para andar; ESPAÇO ou ↑ para pular; SHIFT = dash de Nino; J = baladeira de Lia; E = interagir.'+
+        '<div class="rules"><b>COMPUTADOR:</b> A/D ou ←/→ para andar; ESPAÇO ou ↑ para pular; SHIFT = dash de Nino (ativa alvos azuis sem E); J = baladeira de Lia; E = interação indicada.'+
         '<p><b>CELULAR:</b> setas na esquerda e PULAR na direita. Coloque na horizontal.</p>'+
         '<p><b>OBJETIVO:</b> escapem da floresta no menor tempo possível! Joguem em equipe, combinem suas habilidades e sigam os sinais e avisos do Pipo para superar os perigos. Ninguém fica para trás!</p>'+
         '</div></details></footer></main>';
@@ -926,8 +919,8 @@ function render(): void {
       .catch(() => { info = 'Copie este código: ' + net.code; render(); });
   });
   ui.querySelector('#save-player')?.addEventListener('click',()=>{captureProfile();net.setNickname(profile.nickname);if(net.role==='host')net.setTeamName(profile.teamName);});
-   ui.querySelector('#ready')?.addEventListener('click', () => { captureProfile();net.setNickname(profile.nickname);if(net.role==='host')net.setTeamName(profile.teamName);info = ''; net.ready(!ready); });
-  ui.querySelector('#start')?.addEventListener('click', () => { captureProfile();net.setNickname(profile.nickname);if(net.role==='host')net.setTeamName(profile.teamName);info = ''; net.start(); });
+   ui.querySelector('#ready')?.addEventListener('click', () => { captureProfile();net.setNickname(profile.nickname);if(net.role==='host')net.setTeamName(profile.teamName);info = ''; if(ready)net.ready(false);else beforeFirstPlay(()=>net.ready(true)); });
+  ui.querySelector('#start')?.addEventListener('click', () => { captureProfile();net.setNickname(profile.nickname);if(net.role==='host')net.setTeamName(profile.teamName);info = ''; beforeFirstPlay(()=>net.start()); });
   ui.querySelector('#leave-lobby')?.addEventListener('click', () => net.shutdown());
 }
 function showJoin(): void {
