@@ -6,6 +6,7 @@ import {CooperativeExitArt} from './cooperativeExitArt';
 import {MissionDirector} from './missionDirector';
 import {animateForestProps} from './forestTransformFX';
 import {TreetopArt} from './treetopArt';
+import {ForestTrees,preloadForestTrees} from './forestTrees';
 import {FRAGILE_BRANCH_INDICES,fragilePhase} from './jamChallenges';
 import {TreetopWindAudio} from './treetopWindAudio';
 import {CHARACTERS,type Network,type Seat} from './network';
@@ -28,6 +29,7 @@ export class TreetopForestScene extends Phaser.Scene {
  private platforms:Phaser.GameObjects.Rectangle[]=[];
  private skins:Phaser.GameObjects.Graphics[]=[];
  private art!:TreetopArt;
+ private forestTrees?:ForestTrees;
  private windAudio!:TreetopWindAudio;
  private avatars:Phaser.GameObjects.Rectangle[]=[];
  private names:Phaser.GameObjects.Text[]=[];
@@ -54,10 +56,11 @@ export class TreetopForestScene extends Phaser.Scene {
   return this.add.text(x,y,value,{fontFamily:'Arial',fontSize:size+'px',fontStyle:'bold',
    color,stroke:'#071c1b',strokeThickness:4,align:'center'}).setOrigin(.5).setDepth(55);
  }
- preload():void{preloadOfficialLandmarks(this);preloadKenneyCharacters(this);}
+ preload():void{preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestTrees(this);}
 
  private makeEnvironment():void{
   this.art=new TreetopArt(this,TREE_WIDTH,TREE_HEIGHT);
+  this.forestTrees=new ForestTrees(this,3);
   for(const zone of TREE_SHELTERS)this.art.shelter(zone);
   // Familiar landmark family beside host-approved challenge targets.
   // Visual only; authority, collisions and puzzle positions are unchanged.
@@ -401,6 +404,7 @@ export class TreetopForestScene extends Phaser.Scene {
     vx:this.solo?.body(p.seat).velocity.x??p.vx,
     vy:this.solo?.body(p.seat).velocity.y??p.vy}:p);
   this.art.update(time,localPose,w.windPhase,w.windDirection,w.gustCount);
+  this.forestTrees?.update();
   // Physical velocity drives vertical look-ahead; no character/world movement.
   const camera=this.cameras.main;
   const viewH=this.scale.gameSize.height/Math.max(.6,camera.zoom);
