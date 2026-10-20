@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import {paintHero} from './sharedCharacterArt';
 import {createKenneyCharacter,updateKenneyCharacter} from './kenneyCharacterSprites';
-import {escapeWallX} from './jamChallenges';
 import type {Seat,Pose} from './network';
 import {FIRE_WIDTH,FIRE_HEIGHT,FIRE_SMOKE_ZONE,FIRE_TREE_DANGER,FIRE_TARGETS,
  FIRE_PLATFORMS,FIRE_SHELTERS,fireballHazards,fireFlareActive,fireVisualTreePhase,
@@ -193,25 +192,8 @@ export class BurningForestArt {
   this.fire.clear();this.sparks.clear();this.smokeInk.clear();this.embers.clear();
   this.fireballs.clear();
   this.chase.clear();
-  const wall=escapeWallX(w.escapeAt,now,isSolo);
-  if(wall!==null){
-    // Entirely visual wall. Host authority calculates contact separately.
-    const active=now-w.escapeAt>=4500;
-    const opacity=active?.96:.42;
-    this.chase.fillStyle(0xb93318,.16*opacity);
-    this.chase.fillRect(4100,190,Math.max(0,wall-4100),520);
-    for(let i=0;i<16;i++){
-      const y=185+i*33;
-      const pulse=10*Math.sin(now*.009+i*2.33);
-      this.chase.fillStyle(i%3===0?0xffbd61:i%3===1?0xf56c28:0xd43b20,
-        (i%3===0?.89:.7)*opacity);
-      this.chase.fillTriangle(wall-40,y+36,wall+13,y+24,wall+pulse+17,y-39);
-      this.chase.fillStyle(0xffd38b,.3*opacity);
-      this.chase.fillEllipse(wall+5,y,22,65);
-    }
-    this.chase.lineStyle(4,0xffc56c,.75*opacity);
-    this.chase.lineBetween(wall+22,180,wall+22,700);
-  }
+  // No advancing fire barrier in the final-boss arena.
+  void isSolo;
   for(const sprite of this.impactSprites.values())sprite.setVisible(false);
   const hasExplosion=this.scene.textures.exists('jam-explosion');
   // A soft ground warning precedes every fall, then a glowing projectile
@@ -257,7 +239,7 @@ export class BurningForestArt {
   }
   const fireZones=[
    {x:1390,spread:160,y:680,intensity:!w.logOpen?1:.35},
-   {x:4050,spread:174,y:678,intensity:!w.treeOpen?1:.35},
+   {x:4050,spread:174,y:678,intensity:w.treeOpen?0:1},
    {x:4390,spread:114,y:670,intensity:w.treeOpen?0:fireFlareActive(w,now,4380)?1:.13},
    {x:4680,spread:86,y:668,intensity:w.treeOpen?0:fireFlareActive(w,now,4650)?1:.13},
    {x:4860,spread:67,y:670,intensity:w.treeOpen?0:fireFlareActive(w,now,4840)?1:.13}

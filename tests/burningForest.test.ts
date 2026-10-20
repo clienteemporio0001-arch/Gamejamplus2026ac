@@ -246,3 +246,23 @@ console.log('ETAPA 19: host authority, fire, smoke, timed tree collapse, all 3 p
  assert.deepEqual(reset.poses,FIRE_START);
  assert.deepEqual(wiped.world.health,[3,3,3]);
 }
+
+{
+ // Regression: opening the fallen-tree bridge must clear ALL flames across the
+ // approach to the final guardian. A tracked escapeAt is NOT a damaging wall.
+ const finalArena=initFire(start);
+ finalArena.logOpen=true;finalArena.smokeOpen=true;finalArena.treeOpen=true;
+ finalArena.escapeAt=start+1500;
+ finalArena.flare=0;
+ for(const x of [3890,3980,4050,4160,4240,4390,4520,4680,4860,5020]){
+  assert.equal(fireDamageZone(finalArena,{x,y:675},start+60000),false,
+   'final path must not contain damaging fire barrier at x='+x);
+ }
+ const art=readFileSync('src/burningForestArt.ts','utf8');
+ const logic=readFileSync('src/burningForest.ts','utf8');
+ assert.ok(!art.includes('escapeWallX('),'no chase wall is drawn in stage 4');
+ assert.ok(!logic.includes('escapeFireHit('),'no invisible moving wall damages heroes');
+ assert.ok(art.includes('intensity:w.treeOpen?0:1'),
+  'tree bridge extinguishes persistent approach flames');
+ assert.equal(finalArena.hound.hp,8,'Boss and combat state remain intact');
+}

@@ -3,7 +3,6 @@ import {exitPresence} from './sharedExit';
 import {HOUND_HP,HOUND_NAME,initHound,validHound,armHound,shootHound,tickHound,type HoundState} from './hellHoundBoss';
 import {initialBats,initialBatImpacts,validBatState,validBatImpacts,type BatDownState,type BatImpacts} from './flyingBats';
 import type {Pose,Seat} from './network';
-import {escapeWallX,escapeFireHit} from './jamChallenges';
 import {initVitals,validVitals,spendVital,regenVitals,damageVitals,VITALS,
  type VitalAction,type Vitals} from './loopVitals';
 
@@ -170,7 +169,7 @@ export function fireDamageZone(w:FireWorld,p:Pick<Pose,'x'|'y'>,now:number):bool
  if(p.y<582||fireSheltered(p))return false;
  if(w.treeOpen&&p.x>=FIRE_CLEARING_LEFT&&p.x<=FIRE_CLEARING_RIGHT)return false;
  if(p.x>=1225&&p.x<=1560&&p.y>(w.logOpen?658:625))return true;
- if(p.x>=3875&&p.x<=4240&&p.y>(w.treeOpen?661:632))return true;
+ if(!w.treeOpen&&p.x>=3875&&p.x<=4240&&p.y>632)return true;
  return (p.x>4260&&p.x<4520||p.x>4570&&p.x<4770||
    p.x>4800&&p.x<4930)&&fireFlareActive(w,now,p.x);
 }
@@ -360,7 +359,8 @@ export class FireAuthority {
      poses.every(p=>p.x>=4270)){
     w.escapeAt=now;changed=true;
   }
-  const escapeWall=escapeWallX(w.escapeAt,now,isSolo);
+  // Final guardian fight: no advancing fire wall may close off the arena.
+  void isSolo;
   const treePhase=fireTreePhase(w,now);
   if(treePhase!==w.treeStatus){w.treeStatus=treePhase;changed=true;}
   const remaining=Math.max(0,now-w.cycleStart)%FIRE_COLLAPSE_PERIOD;
@@ -386,7 +386,6 @@ export class FireAuthority {
    for(const p of poses){
     let cause:FireWorld['damageCause']='none';
     if(p.y>=FIRE_DEATH_Y)cause='fall';
-    else if(escapeFireHit(p,escapeWall,w.escapeAt,now))cause='fire';
     else if(fireballHit(w,p,now))cause='fireball';
     else if(fireDamageZone(w,p,now))cause='fire';
     else if(treePhase==='impact'&&Math.abs(p.x-FIRE_TREE_DANGER.x)<FIRE_TREE_DANGER.radius
