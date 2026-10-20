@@ -170,8 +170,10 @@ ok(net.includes("startTemporalSolo():void{this.startSolo(2,false,'loop');}"),
   'modo solo pode iniciar diretamente Fase 2');
 ok(main.includes("data-phase")&&main.includes("net.startSolo(level,false,'loop',avatars)"),
   'seletor de fases carrega Floresta Temporal sem a antiga aba clássica');
-ok(main.includes("mode === 'temporal' ? new TemporalForestScene"),
-  'Phaser monta segundo mapa em cena independente');
+ok(main.includes("new TemporalForestScene(net,touch,refreshHud)")&&
+   main.includes("instance.scene.add(key,scene,true)")&&
+   main.includes("instance.scene.remove(previous)"),
+  'Phaser carrega a Floresta Temporal como cena independente, mantendo o mesmo renderizador');
 ok(main.includes('VOCÊS VENCERAM A TEMPESTADE!'),'fim da Fase 2 tem tela própria');
 ok(scene.includes('this.solo=new SoloBodies')&&scene.includes("net.on('solo-seat'"),
   'três corpos sem IA e mudança manual no solo');
