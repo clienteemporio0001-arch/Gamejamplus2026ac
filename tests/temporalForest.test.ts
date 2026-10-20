@@ -143,15 +143,24 @@ set(2,TEMP_ROOTS[2].x);
 ok(act(a,2,'switch',22700)&&a.world.roots.every(Boolean)&&a.world.exit,
   'Nino conclui último mecanismo somente em C');
 for(const i of [0,1,2])set(i,4110+i*15);
-ok(a.tick(p,23000).won&&a.world.completed,'vitória exige os três vivos na saída');
+ok(!a.tick(p,23000).won&&!a.world.completed,
+  'passagem permanece bloqueada enquanto Bafomet estiver vivo');
+a.world.boss.hp=0;a.world.boss.defeatedAt=23000;
+ok(a.tick(p,23100).won&&a.world.completed,'vitória exige boss derrotado e os três vivos na saída');
 const doomed=new TemporalAuthority();doomed.reset(1000);
 doomed.world.echo=[true,true,true];doomed.world.tree=[true,true,true];
 doomed.world.bridge=true;doomed.world.layout=2;
 ok(doomed.damage(1,30000,true)&&doomed.world.health[1]===0,'água profunda causa morte fatal');
-ok(!doomed.tick(p,31200).reset,'derrota espera transição');
-const retry=doomed.tick(p,32201);
+ok(!doomed.tick(p,31200).reset,'um único personagem caído não reinicia a fase');
+ok(!doomed.tick(p,32201).reset&&doomed.world.health[1]===0,
+  'um personagem continua caído enquanto aguarda seu respawn');
+const revived=doomed.tick(p,40001);
+ok(revived.respawns?.length===1&&revived.respawns[0].seat===1&&doomed.world.health[1]===3,
+  'um amigo retorna individualmente após 10 segundos');
+for(const seat of [0,1,2] as Seat[])ok(doomed.damage(seat,41000,true),'queda fatal dos três');
+const retry=doomed.tick(p,41001);
 ok(retry.reset&&retry.poses?.every((p,i)=>p.x===TEMP_START[i].x),
-  'morte na fase 2 reinicia apenas fase 2');
+  'a última morte da equipe reinicia toda a fase 2');
 ok(doomed.world.health.every(h=>h===3)&&doomed.world.stamina.every(e=>e===100),
   'vida e energia restauradas no checkpoint da Fase 2');
 ok(!doomed.world.bridge&&doomed.world.echo.every(x=>!x)&&doomed.world.layout===0,
