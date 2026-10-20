@@ -1,6 +1,6 @@
 import {initRatCombat,validRatCombat,activateMonsterSkill,shootMonster,tickMonsters,type RatCombatWorld} from './ratCombat';
 import {exitPresence} from './sharedExit';
-import {ECLIPSE_MAX_HP,ECLIPSE_NAME,initEclipseBoss,validEclipseBoss,armEclipse,shootEclipse,tickEclipse,type EclipseBoss} from './eclipseBoss';
+import {ECLIPSE_SAFE_LEFT,ECLIPSE_SAFE_RIGHT,ECLIPSE_MAX_HP,ECLIPSE_NAME,initEclipseBoss,validEclipseBoss,armEclipse,shootEclipse,tickEclipse,type EclipseBoss} from './eclipseBoss';
 import {initialBats,initialBatImpacts,validBatState,validBatImpacts,type BatDownState,type BatImpacts} from './flyingBats';
 import type {Pose,Seat} from './network';
 import {escapeWallX,escapeFireHit} from './jamChallenges';
@@ -55,6 +55,7 @@ export function fireballHazards(w:FireWorld,now:number):Fireball[]{
   const phaseMs=local%FIREBALL_INTERVAL;
   if(phaseMs>=FIREBALL_WARNING+FIREBALL_FALL+FIREBALL_IMPACT)continue;
   const impactX=225+lane*360+(fireballSeed(lane*31+cycle*17)-.5)*114;
+  if(impactX>=ECLIPSE_SAFE_LEFT&&impactX<=ECLIPSE_SAFE_RIGHT)continue;
   const top=firePlatforms(w).filter(p=>Math.abs(impactX-p.x)<=p.width/2-8)
    .reduce((best,p)=>Math.min(best,p.y-p.height/2),675);
   const impactY=top-9;
@@ -103,6 +104,7 @@ export type FireWorld=Vitals&RatCombatWorld&{
  treeWarningUntil:number;treeImpactUntil:number;
  collapseCycle:number;completed:boolean;damageCause:'fire'|'smoke'|'tree'|'fall'|'fireball'|'bat'|'rat'|'none';
  batDownUntil:BatDownState;batImpacts:BatImpacts;boss:EclipseBoss;
+ reviveAt:[number,number,number];
 };
 export function initFire(now=Date.now()):FireWorld{return {
  cycleStart:now,phaseStart:now,resetId:0,deadUntil:0,escapeAt:0,
@@ -113,7 +115,7 @@ export function initFire(now=Date.now()):FireWorld{return {
  smokeSeconds:[0,0,0],supporting:[null,null,null],
  dashAt:[0,0,0],dashX:[0,0,0],flare:0,windDirection:1,treeStatus:'calm',
  treeWarningUntil:0,treeImpactUntil:0,collapseCycle:-1,
- completed:false,damageCause:'none',batDownUntil:initialBats(),batImpacts:initialBatImpacts(),boss:initEclipseBoss(now),...initRatCombat(),...initVitals()
+ completed:false,damageCause:'none',batDownUntil:initialBats(),batImpacts:initialBatImpacts(),boss:initEclipseBoss(now),reviveAt:[0,0,0],...initRatCombat(),...initVitals()
 };}
 export function validFire(value:unknown):value is FireWorld{
  if(!value||typeof value!=='object'||Array.isArray(value))return false;
@@ -137,6 +139,7 @@ export function validFire(value:unknown):value is FireWorld{
   &&w.supporting.every((seat:unknown,i:number)=>
     seat===null||(i===0&&seat===1)||(i===1&&seat===2))
   &&validBatState(w.batDownUntil)&&validBatImpacts(w.batImpacts)&&validRatCombat(w)
+  &&Array.isArray(w.reviveAt)&&w.reviveAt.length===3&&w.reviveAt.every(finite)
   &&validVitals(w)&&validEclipseBoss((w as Record<string,unknown>).boss);
 }
 export function firePlatforms(w:FireWorld):FirePlatform[]{
@@ -166,7 +169,7 @@ export function fireFlareActive(w:FireWorld,now:number,x:number):boolean{
  return x<4520?frame!==1:x<4770?frame!==2:x<4930?frame===2:false;
 }
 export function fireDamageZone(w:FireWorld,p:Pick<Pose,'x'|'y'>,now:number):boolean{
- if(p.y<582||fireSheltered(p))return false;
+ if(p.y<582||fireSheltered(p)||p.x>=ECLIPSE_SAFE_LEFT&&p.x<=ECLIPSE_SAFE_RIGHT)return false;
  if(p.x>=1225&&p.x<=1560&&p.y>(w.logOpen?658:625))return true;
  if(p.x>=3875&&p.x<=4240&&p.y>(w.treeOpen?661:632))return true;
  return (p.x>4260&&p.x<4520||p.x>4570&&p.x<4770||
@@ -296,7 +299,7 @@ export class FireAuthority {
   return changed;
  }
  tick(poses:Pose[],now=Date.now(),safeUntil=0,isSolo=false):
- {changed:boolean;poses?:Pose[];won?:boolean;respawn?:boolean}{
+ {changed:boolean;poses?:Pose[];respawns?:Pose[];won?:boolean;respawn?:boolean}{
   const w=this.world;
   if(w.deadUntil){
    if(now<w.deadUntil)return {changed:false};
@@ -308,6 +311,19 @@ export class FireAuthority {
    return {changed:true,poses:FIRE_START.map(p=>({...p})),respawn:true};
   }
   if(w.completed)return {changed:false,won:true};
+  if(w.health.every(h=>h===0)){
+   this.reset(now);return{changed:true,poses:FIRE_START.map(p=>({...p})),respawn:true};
+  }
+  const respawns:Pose[]=[];
+  for(const seat of [0,1,2] as Seat[]){
+   if(w.health[seat]===0&&w.reviveAt[seat]===0)w.reviveAt[seat]=now+10000;
+   if(w.health[seat]===0&&now>=w.reviveAt[seat]){
+    w.health[seat]=3;w.stamina[seat]=100;w.safeUntil[seat]=now+1800;
+    w.reviveAt[seat]=0;
+    respawns.push({...FIRE_START[seat],x:4320,y:FIRE_START[seat].y});
+   }
+  }
+  if(respawns.length)return{changed:true,respawns};
   let changed=false;
   const direction=fireWind(now,w);
   if(direction!==w.windDirection){w.windDirection=direction;changed=true;}
@@ -367,13 +383,14 @@ export class FireAuthority {
    w.treeOpen=true;w.treeFallAt=0;changed=true;
   }
   if(now>=safeUntil&&w.blackoutUntil<=now){
-   if(tickEclipse(w,poses,now))changed=true;
-   const monsters=tickMonsters(4,w,poses,now,w.cycleStart,safeUntil);
+   if(tickEclipse(w,poses.filter(p=>w.health[p.seat]>0),now))changed=true;
+   const monsters=tickMonsters(4,w,poses.filter(p=>w.health[p.seat]>0),now,w.cycleStart,safeUntil);
    if(monsters.changed){
     changed=true;
     if(monsters.hitType)w.damageCause=monsters.hitType;
    }
    for(const p of poses){
+    if(w.health[p.seat]===0)continue;
     let cause:FireWorld['damageCause']='none';
     if(p.y>=FIRE_DEATH_Y)cause='fall';
     else if(escapeFireHit(p,escapeWall,w.escapeAt,now))cause='fire';
@@ -386,8 +403,11 @@ export class FireAuthority {
     }
    }
   }
-  if(w.health.some(h=>h<=0)){
-   w.deadUntil=now+1450;changed=true;
+  if(w.health.every(h=>h<=0)){
+   this.reset(now);return{changed:true,poses:FIRE_START.map(p=>({...p})),respawn:true};
+  }
+  for(const seat of [0,1,2] as Seat[])if(w.health[seat]===0&&!w.reviveAt[seat]){
+   w.reviveAt[seat]=now+10000;changed=true;
   }
   if(!w.deadUntil&&w.treeOpen&&w.smokeOpen&&w.logOpen&&w.boss.hp===0&&exitPresence(4,poses,w.health).ready){
    w.completed=true;return {changed:true,won:true};

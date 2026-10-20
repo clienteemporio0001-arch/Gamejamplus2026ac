@@ -7,6 +7,8 @@ export const ECLIPSE_NAME='SENTINELA DO ECLIPSE';
 export const ECLIPSE_MAX_HP=16;
 export const ECLIPSE_HOME_X=4850;
 export const ECLIPSE_LEFT_X=4430;
+export const ECLIPSE_SAFE_LEFT=4400;
+export const ECLIPSE_SAFE_RIGHT=5030;
 export const ECLIPSE_FLOOR_Y=649;
 export type EclipseBoss={
  hp:number;x:number;y:number;facing:-1|1;awakeAt:number;
@@ -59,6 +61,13 @@ export function tickEclipse(w:EclipseArena,poses:Pose[],now:number):boolean{
  const b=w.boss,dt=Math.min(90,Math.max(0,now-b.lastTick));b.lastTick=now;
  if(b.hp===0)return false;
  const living=poses.filter(p=>w.health[p.seat]>0&&p.x>=ECLIPSE_LEFT_X&&p.x<=5060);
+ if(!living.length){
+  if(!b.awakeAt)return false;
+  const old=b.x;b.x=Math.min(ECLIPSE_HOME_X,b.x+155*dt/1000);
+  b.y=ECLIPSE_FLOOR_Y;b.leapAt=0;b.facing=1;
+  if(b.x>=ECLIPSE_HOME_X)b.awakeAt=0;
+  return old!==b.x||b.awakeAt===0;
+ }
  const target=living.sort((a,c)=>Math.abs(a.x-b.x)-Math.abs(c.x-b.x))[0];
  if(!target)return false;
  let changed=false;

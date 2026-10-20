@@ -266,7 +266,7 @@ export class BurningForestScene extends Phaser.Scene {
    safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],
    batDownUntil:[...w.batDownUntil],
    batImpacts:w.batImpacts.map(hit=>hit?{...hit}:null) as FireWorld['batImpacts'],
-   boss:{...w.boss}};
+   boss:{...w.boss},reviveAt:[...w.reviveAt]};
   if(this.shiftingRoots.length){
    this.shiftingRoots.forEach((root,i)=>{
     const target=FIRE_SHIFT_ROOTS[w.layout][i];

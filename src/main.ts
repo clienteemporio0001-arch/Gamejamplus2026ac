@@ -438,6 +438,8 @@ function currentMission(){
 function refreshHud(): void {
   // The shared soundtrack owns the battle crossfade and returns to the rain
   // theme immediately after the guardian falls or the team leaves the arena.
+  if(net.playing&&net.experience==='loop'&&net.level===4)
+   audio.setScore(net.fire.boss.hp>0&&net.poses.some(p=>p.x>=4100)?'battle':'fire');
   if(net.playing&&net.experience==='loop'&&net.level===2)
    audio.setScore(scoreForEncounter(net.stage,net.level,net.experience,
      {exit:net.temporal.exit,hp:net.temporal.boss.hp,aggroAt:net.temporal.boss.aggroAt},net.poses.map(p=>p.x)));
