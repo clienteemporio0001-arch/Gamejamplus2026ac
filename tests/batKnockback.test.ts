@@ -62,6 +62,9 @@ assert.deepEqual(tree.world.batImpacts[2],treeHit,'invulnerable contact does not
 
 const fire=new FireAuthority();
 fire.world=initFire(t0);
+// This regression targets bat knockback specifically: exclude the rat
+// occupying the same fire corridor so the source of contact is unambiguous.
+fire.world.ratDownUntil=[t+12000,t+12000,t+12000];
 const red=batFlight(4,1,t,t0);
 heroes=poses();
 heroes[1]={seat:1,x:red.x-12,y:red.y,vx:0,vy:0};
