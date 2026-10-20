@@ -49,6 +49,15 @@ assert.equal(falling.tick(fallPose,at+300).respawn,true,'falls still reset the w
 assert.equal(falling.world.hound.hp,HOUND_HP,'full reset restores the guardian');
 const visual=readFileSync('src/hellHoundVisual.ts','utf8');
 assert.ok(visual.includes('.setScale(2)'), 'exact 2x size requested');
+assert.ok(visual.includes('const show=!dead||vanish>0;'),
+ 'live Hound MUST render before and after the tree puzzle');
+assert.ok(visual.includes('this.aura.fillStyle(0xff4d12'),
+ 'bright background-independent silhouette is rendered if sprite is hard to see');
+assert.ok(visual.includes('this.dog.setVisible(show)'),
+ 'Hound sprite visibility is not gated on treeOpen');
+assert.ok(visual.includes('this.title.setVisible(show&&!dead)'),
+ 'Hound boss name remains visible and helps identify its location');
+
 assert.ok(visual.includes('{frameWidth:72,frameHeight:48}'),'atlas cells match PNG geometry');
 const png=readFileSync('public/assets/enemies/hellhound-final.png');
 assert.equal(png.subarray(0,8).toString('hex'),'89504e470d0a1a0a');
