@@ -1,6 +1,7 @@
 import {exitPresence} from './sharedExit';
 import type {Pose,Seat} from './network';
-import {initVitals,validVitals,spendVital,regenVitals,VITALS,type VitalAction,type Vitals} from './loopVitals';
+import {initVitals,validVitals,spendVital,regenVitals,damageVitals,VITALS,type VitalAction,type Vitals} from './loopVitals';
+import {batTouchesHero,hitBatWithSlingshot,initialBats,validBatState,type BatDownState} from './flyingBats';
 import {FRAGILE_BRANCH_INDICES} from './jamChallenges';
 
 /** Fase 03 da NOVA aventura. Independente da terceira fase clássica. */
@@ -86,12 +87,14 @@ export type TreeWorld=Vitals&{
  supporting:[Seat|null,Seat|null,Seat|null];dashAt:number;dashX:number;
  fragileAt:[number,number,number];
  windPhase:TreeWindPhase;windDirection:-1|1;windUntil:number;gustCount:number;deathByGust:boolean;
+ batDownUntil:BatDownState;
 };
 export function initTree(now=Date.now()):TreeWorld{return {
  layout:0,cycle:0,cycleStart:now,blackoutUntil:0,deadUntil:0,resetId:0,
  bridge:[false,false,false],bridgeOpen:false,tower:[false,false,false],ropeOpen:false,
  time:[false,false,false],finalOpen:false,completed:false,supporting:[null,null,null],
  dashAt:0,dashX:0,fragileAt:[0,0,0],windPhase:'calm',windDirection:1,windUntil:0,gustCount:0,deathByGust:false,
+ batDownUntil:initialBats(),
  ...initVitals()
 };}
 /** Synchronize host poses of stacked friends with their base, rather than old ground positions. */
@@ -116,6 +119,7 @@ export function validTree(value:unknown):value is TreeWorld{
  &&Array.isArray(w.fragileAt)&&w.fragileAt.length===3&&w.fragileAt.every(v=>typeof v==='number'&&Number.isFinite(v)&&v>=0)
  &&Array.isArray(w.supporting)&&w.supporting.length===3
  &&w.supporting.every((v,i)=>v===null||(i===0&&v===1)||(i===1&&v===2))
+ &&validBatState(w.batDownUntil)
  &&validVitals(w);
 }
 export function treePlatforms(w:TreeWorld):TreePlatform[]{
@@ -213,7 +217,12 @@ export class TreeAuthority{
   if(!spendVital(w,seat,kind,now))return fail('tired');
   if(kind==='jump'){this.lastJump[seat]=now;if(seat===0){this.firstJumpY=p.y;this.doubled=false;}}
   else if(kind==='doubleJump')this.doubled=true;
-  else {this.lastSkill[seat]=now;this.interact(seat,kind,poses,now,facing);}
+  else {
+   this.lastSkill[seat]=now;
+   this.interact(seat,kind,poses,now,facing);
+   if(kind==='shoot'&&seat===1)
+     hitBatWithSlingshot(3,w.batDownUntil,p,facing,now,w.cycleStart);
+  }
   return {ok:true,reason:'ok'};
  }
  tickResources(poses:Pose[],now=Date.now()):boolean{
@@ -285,6 +294,17 @@ export class TreeAuthority{
      Math.abs(p.y-(branch.y-branch.height/2-22))<=11&&
      Math.abs(p.vy)<105);
    if(landed){w.fragileAt[slot]=now;fragileChanged=true;}
+  }
+  // Host authoritative gray-bat contact damage uses the existing heart
+  // immunity, never applies during transformations or initial safe spawn.
+  let batDamage=false;
+  if(now>=protectedUntil&&w.blackoutUntil<=now){
+   for(const p of poses)
+    if(batTouchesHero(3,w.batDownUntil,p,now,w.cycleStart)&&
+      damageVitals(w,p.seat,now))batDamage=true;
+  }
+  if(w.health.some(h=>h<=0)){
+    w.deathByGust=false;w.deadUntil=now+1500;return {changed:true};
   }
   if(poses.some(p=>treeFatal(p,now,w,protectedUntil))){
    w.deathByGust=w.windPhase==='gust';w.deadUntil=now+1500;w.health=[0,0,0];
