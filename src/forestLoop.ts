@@ -1,3 +1,4 @@
+import {initRatCombat,validRatCombat,activateMonsterSkill,shootMonster,tickMonsters,type RatCombatWorld} from './ratCombat';
 import {exitPresence} from './sharedExit';
 import type { Pose, Seat } from './network';
 import type { PuzzleAction } from './puzzles';
@@ -97,7 +98,7 @@ export const ROUTES:Readonly<Record<Layout,{correct:Route;wrong:Route;barrierX:n
   2:{correct:'pedra',wrong:'oca',barrierX:LOOP_GEOMETRY.layoutWalls[2],
     returnTo:LOOP_GEOMETRY.returnCenter,advanceTo:LOOP_GEOMETRY.portalLanding},
 };
-export type LoopWorld=Vitals & {
+export type LoopWorld=Vitals & RatCombatWorld & {
   layout:Layout; cycle:number;cycleStart:number;blackoutUntil:number;observed:boolean;
   marks:[boolean,boolean,boolean];tree:[boolean,boolean,boolean];treeFallAt:number;bridge:boolean;
   suspended:[boolean,boolean,boolean];suspendedOpen:boolean;suspendedX:number;
@@ -119,7 +120,7 @@ export const initLoop=(now=Date.now()):LoopWorld=>({
   suspensionStacked:false,suspensionClimbReady:false,
   supporting:[null,null,null],stackMilestone:false,climbReady:false,teoUpperReached:false,teoSummitReached:false,
   final:[false,false,false],exit:false,lastRoute:'none',routeAt:0,routeCount:0,
-  deadUntil:0,resetId:0,completed:false,boulderAt:0,...initVitals()
+  deadUntil:0,resetId:0,completed:false,boulderAt:0,...initRatCombat(),...initVitals()
 });
 export function validLoop(value:unknown):value is LoopWorld{
   if(!value||typeof value!=='object'||Array.isArray(value))return false;
@@ -134,7 +135,7 @@ export function validLoop(value:unknown):value is LoopWorld{
     &&w.supporting.every((b:unknown,i:number)=>b===null||(i===0&&b===1)||(i===1&&b===2))
     &&bool3(w.marks)&&bool3(w.tree)&&bool3(w.final)&&bool3(w.suspended)
     &&[w.suspendedX,w.suspendedFrom,w.suspendedTo].every(x=>typeof x==='number'&&x>=SUSPENSION.initialX-500&&x<=SUSPENSION.finalX+200)
-    &&['none','wrong','right'].includes(String(w.lastRoute))&&validVitals(w);
+    &&['none','wrong','right'].includes(String(w.lastRoute))&&validRatCombat(w)&&validVitals(w);
 }
 export const allDone=(items:readonly boolean[])=>items.every(Boolean);
 export const blackoutActive=(w:LoopWorld,now:number)=>w.blackoutUntil>0&&now<w.blackoutUntil;
@@ -385,7 +386,9 @@ export class LoopAuthority{
     }else{
       this.lastSkillUse[seat]=now;
       this.act(seat,{kind:kind==='shoot'?'shoot':'dash',facing},poses,now);
+      if(kind==='shoot')shootMonster(1,w,p,facing,now,w.cycleStart);
     }
+    activateMonsterSkill(w,seat,kind,now,facing);
     return {ok:true,reason:'ok'};
   }
   /** Time-step resources only while simulation is active; paused seconds never accumulate. */
@@ -553,6 +556,11 @@ export class LoopAuthority{
     if(now-w.cycleStart>=LOOP_CYCLE_MS){
       w.blackoutUntil=now+LOOP_BLACKOUT_MS;return{changed:true};
     }
+    const combat=tickMonsters(1,w,poses,now,w.cycleStart);
+    const ratChanged=combat.changed;
+    if(w.health.some(h=>h<=0)){
+      w.deadUntil=now+2200;return{changed:true};
+    }
     if(w.suspendedX!==w.suspendedTo){
       const fraction=Math.max(0,Math.min(1,(now-w.suspendedAt)/SUSPENSION.moveMs));
       const smooth=fraction*fraction*(3-2*fraction);
@@ -586,6 +594,6 @@ export class LoopAuthority{
       w.supporting=[null,null,null];w.climbReady=false;
       return{changed:true,poses:LOOP_START.map(p=>({...p}))};
     }
-    return{changed:supportChanged};
+    return{changed:supportChanged||ratChanged};
   }
 }
