@@ -785,7 +785,7 @@ export class Network {
           safeUntil:[...msg.world.safeUntil] as FireWorld['safeUntil'],
           lastSpent:[...msg.world.lastSpent] as FireWorld['lastSpent'],
           batDownUntil:[...msg.world.batDownUntil] as FireWorld['batDownUntil'],
-          batImpacts:msg.world.batImpacts.map(hit=>hit?{...hit}:null) as FireWorld['batImpacts'],ratDownUntil:[...msg.world.ratDownUntil] as FireWorld['ratDownUntil'],ratImpacts:msg.world.ratImpacts.map(hit=>hit?{...hit}:null) as FireWorld['ratImpacts']};
+          batImpacts:msg.world.batImpacts.map(hit=>hit?{...hit}:null) as FireWorld['batImpacts'],boss:{...msg.world.boss},ratDownUntil:[...msg.world.ratDownUntil] as FireWorld['ratDownUntil'],ratImpacts:msg.world.ratImpacts.map(hit=>hit?{...hit}:null) as FireWorld['ratImpacts']};
         this.emit('fire',this.fire);
         break;
       case 'treetop':
@@ -1162,7 +1162,7 @@ export class Network {
       dashAt:[...w.dashAt],dashX:[...w.dashX],health:[...w.health],
       stamina:[...w.stamina],safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],
       batDownUntil:[...w.batDownUntil] as FireWorld['batDownUntil'],
-      batImpacts:w.batImpacts.map(hit=>hit?{...hit}:null) as FireWorld['batImpacts'],ratDownUntil:[...w.ratDownUntil] as FireWorld['ratDownUntil'],ratImpacts:w.ratImpacts.map(hit=>hit?{...hit}:null) as FireWorld['ratImpacts']};
+      batImpacts:w.batImpacts.map(hit=>hit?{...hit}:null) as FireWorld['batImpacts'],boss:{...w.boss},ratDownUntil:[...w.ratDownUntil] as FireWorld['ratDownUntil'],ratImpacts:w.ratImpacts.map(hit=>hit?{...hit}:null) as FireWorld['ratImpacts']};
     this.broadcast({t:'fire',world:this.fire});this.emit('fire',this.fire);
   }
   private shareTreetop():void{
