@@ -12,6 +12,7 @@ import {consumeTouch,clearTouch} from './mobileControls';
 import {cameraZoomFor,isCoarseDevice} from './mobileViewport';
 import {gameKeys} from './keyboard';
 import {NightArt} from './visuals';
+import {ForestChickens,preloadForestChickens} from './forestChickens';
 import type {VitalAction} from './loopVitals';
 import {temporalDrop,rainBudget,rippleAt} from './temporalRain';
 import {temporalHint,TEMP_MARK_NAMES} from './temporalGuidance';
@@ -26,6 +27,7 @@ export class TemporalForestScene extends Phaser.Scene {
  private net:Network;private touch:TouchInput;private hud?:()=>void;
  private w:TemporalWorld;
  private art!:NightArt;
+ private chickens?:ForestChickens;
  private blocks:Phaser.GameObjects.Rectangle[]=[];
  private layoutBlocks:Phaser.GameObjects.Rectangle[]=[];
  private bridge!:Phaser.GameObjects.Rectangle;
@@ -153,11 +155,12 @@ export class TemporalForestScene extends Phaser.Scene {
   this.art.water(TEMP_CHANNEL.start,TEMP_CHANNEL.end,638);
   this.text(2800,511,'CORRENTEZA PROFUNDA',14,'#efc6b3').setAlpha(.9);
  }
- preload():void{preloadOfficialLandmarks(this);preloadKenneyCharacters(this);}
+ preload():void{preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestChickens(this);}
  create():void{
   this.physics.world.setBounds(0,0,TEMP_WIDTH,900);
   this.physics.world.setBoundsCollision(true,true,false,false);
   this.woodedEnvironment();
+  this.chickens=new ForestChickens(this,2);
   this.platform(1305,678,2610,80);
   this.platform(3585,678,1230,80);
   this.platform(TEMP_ECHO[0].x,539,145,19,'root' as 'wood');
@@ -444,6 +447,7 @@ export class TemporalForestScene extends Phaser.Scene {
   this.tree.setRotation(-1.13*(1-progress*progress*(3-2*progress)));
   this.renderRain(time);
   this.art.update(time);
+  this.chickens?.update(time);
   this.art.drawTide(w.cycleStart,now,w.bridge,pause);
   this.hud?.();
   void dt;
