@@ -684,6 +684,7 @@ export class ForestLoopScene extends Phaser.Scene {
     this.useFeedbackUntil=this.time.now+2450;
   }
   private action(seat:Seat):void{
+    if(Date.now()<this.knockUntil[seat])return;
     const x=this.local.x,y=this.local.y,w=this.net.loop;
     // A supported person always detaches on E. For mounted Téo, E releases
     // the tower; PULAR starts the assisted ascent towards the high branch.
@@ -806,7 +807,7 @@ export class ForestLoopScene extends Phaser.Scene {
       // authority could see last frame's height/velocity at the high branch.
       if(base===null)this.net.report(this.local.x,this.local.y,this.body.velocity.x,this.body.velocity.y);
       this.solo?.report();
-      if(using){if(!stunned)this.action(seat);}
+      if(using)this.action(seat);
       if(special&&!stunned)this.ability(seat,time);
     }
     const v=this.net.poses;
