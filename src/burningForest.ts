@@ -139,7 +139,9 @@ export function validFire(value:unknown):value is FireWorld{
   &&w.supporting.every((seat:unknown,i:number)=>
     seat===null||(i===0&&seat===1)||(i===1&&seat===2))
   &&validBatState(w.batDownUntil)&&validBatImpacts(w.batImpacts)&&validRatCombat(w)
-  &&Array.isArray(w.reviveAt)&&w.reviveAt.length===3&&w.reviveAt.every(finite)
+  &&Array.isArray((w as Record<string,unknown>).reviveAt)&&
+  ((w as Record<string,unknown>).reviveAt as unknown[]).length===3&&
+  ((w as Record<string,unknown>).reviveAt as unknown[]).every(finite)
   &&validVitals(w)&&validEclipseBoss((w as Record<string,unknown>).boss);
 }
 export function firePlatforms(w:FireWorld):FirePlatform[]{
@@ -164,7 +166,7 @@ export function fireWind(now:number,w:FireWorld):FireWind{
 export function fireFlareActive(w:FireWorld,now:number,x:number):boolean{
  // The host broadcasts the active phase; guests must not invent local flame cycles.
  void now;
- if(x<4210)return false;
+ if(x<4210||x>=ECLIPSE_SAFE_LEFT&&x<=ECLIPSE_SAFE_RIGHT)return false;
  const frame=w.flare;
  return x<4520?frame!==1:x<4770?frame!==2:x<4930?frame===2:false;
 }

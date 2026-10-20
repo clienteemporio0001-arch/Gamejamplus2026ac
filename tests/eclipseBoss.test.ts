@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import {initVitals} from '../src/loopVitals';
 import {initRatCombat} from '../src/ratCombat';
 import {initialBatImpacts} from '../src/flyingBats';
-import {initFire,FireAuthority,FIRE_START} from '../src/burningForest';
+import {initFire,FireAuthority,FIRE_START,fireDamageZone,fireFlareActive,fireballHazards} from '../src/burningForest';
 import {ECLIPSE_MAX_HP,ECLIPSE_HOME_X,initEclipseBoss,validEclipseBoss,
  tickEclipse,shootEclipse,armEclipse,type EclipseArena} from '../src/eclipseBoss';
 import type {Pose} from '../src/network';
@@ -46,3 +46,26 @@ assert.equal(blocked.won,undefined,'final movie cannot start while guardian live
 assert.equal(authority.world.completed,false);
 assert.ok(readFileSync('src/network.ts','utf8').includes('boss:{...w.boss}'),'boss synchronized to clients');
 console.log('SENTINELA DO ECLIPSE: assets, combat, safe attacks, finale gate and sync OK');
+
+const arena=initFire(100000);
+for(const x of [4410,4520,4750,4890,5000]){
+ assert.equal(fireDamageZone(arena,{x,y:650},100500),false,'safe arena has no fire damage');
+ assert.equal(fireFlareActive(arena,100500,x),false,'safe arena displays no active flames');
+}
+assert.ok(fireballHazards(arena,140000).every(b=>b.x<4400||b.x>5030),
+ 'fireball spawns stay outside the boss arena');
+const retreat=sample();retreat.boss.awakeAt=at;retreat.boss.x=4500;
+tickEclipse(retreat,[{seat:0,x:4330,y:640,vx:0,vy:0}],at+100);
+assert.ok(retreat.boss.x>4500,'boss walks back when all friends retreat behind sign');
+const reviver=new FireAuthority();const friends=FIRE_START.map(p=>({...p,x:4310,y:640}));
+reviver.world.health[0]=0;
+reviver.world.reviveAt[0]=at+10000;
+assert.notEqual(reviver.tick(friends,at+9000).respawn,true,'one death never resets the phase');
+const rev=reviver.tick(friends,at+10001);
+assert.equal(rev.respawns?.[0].seat,0);
+assert.equal(reviver.world.health[0],3);
+const wiped=new FireAuthority();wiped.world.health=[0,0,0];
+assert.equal(wiped.tick(friends,at+100).respawn,true,'three deaths restart phase');
+const music=readFileSync('src/soundtrack.ts','utf8');
+assert.ok(music.includes("this.desired==='battle'?1.3:1"),'battle music 30% louder');
+console.log('Final boss arena: safe combat zone, 10s revives, retreat and music OK');
