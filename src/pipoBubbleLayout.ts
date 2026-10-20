@@ -20,9 +20,12 @@ export function pipoHudCoords(x:number,y:number,view:PipoViewport,zoom:number){
 }
 export function pipoSpeechLayout(view:PipoViewport,camera:PipoCameraView,
  textHeight:number):PipoSpeechLayout{
- const width=Math.min(296,Math.max(168,view.width-32));
+ const compact=view.width>view.height&&view.height<=650;
+ const width=compact?Math.min(220,Math.max(168,view.width-32)):
+  Math.min(296,Math.max(168,view.width-32));
  const scale=1;
- const height=Math.min(Math.max(90,textHeight+44),Math.max(110,view.height*.38));
+ const height=compact?Math.min(102,Math.max(68,textHeight+24)):
+  Math.min(Math.max(90,textHeight+44),Math.max(110,view.height*.38));
  const birdX=(camera.x-camera.worldX)*camera.zoom;
  const birdY=(camera.y-camera.worldY)*camera.zoom;
  const offscreen=birdX< -12||birdX>view.width+12||birdY< -22||birdY>view.height+18;

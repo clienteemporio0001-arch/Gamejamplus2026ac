@@ -5,7 +5,12 @@ export function isMobilePortrait(view:ViewSize,coarse:boolean):boolean{
   return coarse&&view.height>view.width&&view.width<=MOBILE_PORTRAIT_LIMIT;
 }
 export function cameraZoomFor(view:ViewSize,coarse:boolean):number{
-  if(coarse)return Math.max(.72,Math.min(1.02,Math.min(view.height/440,view.width/850)));
+  if(coarse){
+   // Landscape phones need more world visible above Téo's stacked climb.
+   if(view.width>view.height&&view.height<=650)
+    return Math.max(.70,Math.min(.88,Math.min(view.height/650,view.width/1100)));
+   return Math.max(.72,Math.min(1.02,Math.min(view.height/440,view.width/850)));
+  }
   // Desktop embeds and tall monitors: the old 1.16 zoom cap left a large
   // empty strip below the world ground. Leave the mobile branch unchanged.
   return Math.max(.75,Math.min(1.58,view.height/720));

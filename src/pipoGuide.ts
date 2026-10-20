@@ -122,21 +122,26 @@ export class PipoGuide {
   const hint=pipoHint(this.source());
   const message=urgent??hint.lines[this.depth];
   const view=this.scene.scale.gameSize;
-  const width=Math.min(296,Math.max(168,view.width-32));
+  const compact=view.width>view.height&&view.height<=650;
+  this.label.setFontSize(compact?11:14);
+  this.nameLabel.setFontSize(compact?10:12);
+  const width=compact?Math.min(220,Math.max(168,view.width-32)):
+    Math.min(296,Math.max(168,view.width-32));
   this.label.setWordWrapWidth(width-28);
   this.label.setText(message);
   this.offscreenMarker.setWordWrapWidth(Math.min(230,view.width-40));
   this.offscreenMarker.setText('PIPO • '+message);
   this.panelWidth=width;
-  this.panelHeight=Math.min(Math.max(90,this.label.height+44),
-    Math.max(110,view.height*.38));
+  this.panelHeight=compact?Math.min(102,Math.max(68,this.label.height+24)):
+    Math.min(Math.max(90,this.label.height+44),Math.max(110,view.height*.38));
   this.nameLabel.setY(-this.panelHeight/2+17);
   this.label.setY(10);
   if(urgent===undefined)this.currentPriority=4;
   this.lastTailX=Number.NaN;this.lastTailY=Number.NaN;
   this.bubble.setVisible(true).setAlpha(1);
   this.offscreenMarker.setVisible(false);
-  this.talkingUntil=now+duration;this.fadingUntil=this.talkingUntil+500;
+  this.talkingUntil=now+(compact?Math.min(duration,2600):duration);
+  this.fadingUntil=this.talkingUntil+350;
  }
  update(time:number,focusX:number,focusY:number,paused=false):void{
   if(!this.net.playing)return;
