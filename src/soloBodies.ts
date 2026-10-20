@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { Network, Pose, Seat } from './network';
+import {needsSoloPlatformColliders} from './soloColliderOwnership';
 
 /** Three actual Arcade bodies; no bots, no virtual peers or scripted companions. */
 export class SoloBodies {
@@ -22,7 +23,10 @@ export class SoloBodies {
       if(!actor.body)scene.physics.add.existing(actor);
       const body=actor.body as Phaser.Physics.Arcade.Body;
       body.setGravityY(850).setMaxVelocity(maxX,maxY).setCollideWorldBounds(true);
-      if(seat!==0)for(const block of blocks)scene.physics.add.collider(actor,block);
+      // This scene only registered the currently controlled seat. The player
+      // may enter stage 3 controlling Lia or Nino; never hard-code seat 0.
+      if(needsSoloPlatformColliders(seat,this.net.localSeat))
+       for(const block of blocks)scene.physics.add.collider(actor,block);
       this.bodies[seat]=body;
     }
   }
