@@ -806,8 +806,8 @@ export class ForestLoopScene extends Phaser.Scene {
       // authority could see last frame's height/velocity at the high branch.
       if(base===null)this.net.report(this.local.x,this.local.y,this.body.velocity.x,this.body.velocity.y);
       this.solo?.report();
-      if(!stunned){if(using)this.action(seat);
-      if(special)this.ability(seat,time);}
+      if(using){if(!stunned)this.action(seat);}
+      if(special&&!stunned)this.ability(seat,time);
     }
     const v=this.net.poses;
     for(const i of [0,1,2] as Seat[]){
