@@ -12,6 +12,7 @@ import { LOOP_WIDTH, LOOP_GEOMETRY, LOOP_MARKS, markPosition, LOOP_TREE, LOOP_FI
   allDone, windGuide, blackoutActive, warningActive,trailOccupants,correctRoute,TRAIL_MEET_RADIUS_X,canStack,SUSPENSION_LEVER_FEEDBACK,type LoopWorld, LOOP_START,
   UPPER_BRANCH,SUMMIT_BRANCH,upperLandingY,summitLandingY,markerBaseY,hasBranchFooting,hasSummitFooting } from './forestLoop';
 import { NightArt } from './visuals';
+import {ForestTrees,preloadForestTrees} from './forestTrees';
 import {ForestChickens,preloadForestChickens} from './forestChickens';
 import { loopContext, regionTitle } from './forestLoopUI';
 import { leafAt, swayAt, WIND_LEAVES } from './loopWind';
@@ -25,7 +26,7 @@ import type { VitalAction } from './loopVitals';
 /** 11,400px forest. Puzzle and transformation positions are host authoritative. */
 export class ForestLoopScene extends Phaser.Scene {
   private net:Network;private touch:TouchInput;private hud?:()=>void;
-  private art!:NightArt;private chickens?:ForestChickens;private w:LoopWorld;
+  private art!:NightArt;private chickens?:ForestChickens;private forestTrees?:ForestTrees;private w:LoopWorld;
   private avatars:Phaser.GameObjects.Rectangle[]=[];
   private labels:Phaser.GameObjects.Text[]=[];
   private blocks:Phaser.GameObjects.Rectangle[]=[];
@@ -112,6 +113,7 @@ export class ForestLoopScene extends Phaser.Scene {
   preload():void{
     preloadKenneyCharacters(this);
     preloadForestChickens(this);
+    preloadForestTrees(this);
     this.load.svg('loop-clearing-tree',import.meta.env.BASE_URL+'assets/clearing-tree.svg');
     preloadOfficialLandmarks(this);
     this.load.svg('loop-elevated-tree',import.meta.env.BASE_URL+'assets/loop-elevated-tree.svg');
@@ -247,6 +249,7 @@ export class ForestLoopScene extends Phaser.Scene {
     this.physics.world.setBounds(0,0,LOOP_WIDTH,900);
     this.physics.world.setBoundsCollision(true,true,false,false);
     this.background();
+    this.forestTrees=new ForestTrees(this,1);
     this.chickens=new ForestChickens(this,1);
     this.art.setReducedVisuals(this.reducedGraphics);
     // Five genuine traversal gaps before the original tree bridge, not an enlarged empty floor.
@@ -870,6 +873,7 @@ export class ForestLoopScene extends Phaser.Scene {
     }
     this.exitArt?.update(w.exit,this.net.poses,w.health,time);
     this.art.update(time);
+    this.forestTrees?.update();
     this.chickens?.update(time);
     this.art.drawBoulder(w.boulderAt,now,blackoutActive(w,now)||w.deadUntil>0||w.completed);
     if(this.frameMetricsOn){
