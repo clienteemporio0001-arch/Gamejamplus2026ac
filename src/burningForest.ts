@@ -1,4 +1,5 @@
 import {exitPresence} from './sharedExit';
+import {batTouchesHero,hitBatWithSlingshot,initialBats,validBatState,type BatDownState} from './flyingBats';
 import type {Pose,Seat} from './network';
 import {escapeWallX,escapeFireHit} from './jamChallenges';
 import {initVitals,validVitals,spendVital,regenVitals,damageVitals,VITALS,
@@ -98,7 +99,8 @@ export type FireWorld=Vitals&{
  dashAt:[number,number,number];dashX:[number,number,number];
  flare:number;windDirection:FireWind;treeStatus:'calm'|'warning'|'impact';
  treeWarningUntil:number;treeImpactUntil:number;
- collapseCycle:number;completed:boolean;damageCause:'fire'|'smoke'|'tree'|'fall'|'fireball'|'none';
+ collapseCycle:number;completed:boolean;damageCause:'fire'|'smoke'|'tree'|'fall'|'fireball'|'bat'|'none';
+ batDownUntil:BatDownState;
 };
 export function initFire(now=Date.now()):FireWorld{return {
  cycleStart:now,phaseStart:now,resetId:0,deadUntil:0,escapeAt:0,
@@ -109,7 +111,7 @@ export function initFire(now=Date.now()):FireWorld{return {
  smokeSeconds:[0,0,0],supporting:[null,null,null],
  dashAt:[0,0,0],dashX:[0,0,0],flare:0,windDirection:1,treeStatus:'calm',
  treeWarningUntil:0,treeImpactUntil:0,collapseCycle:-1,
- completed:false,damageCause:'none',...initVitals()
+ completed:false,damageCause:'none',batDownUntil:initialBats(),...initVitals()
 };}
 export function validFire(value:unknown):value is FireWorld{
  if(!value||typeof value!=='object'||Array.isArray(value))return false;
@@ -124,7 +126,7 @@ export function validFire(value:unknown):value is FireWorld{
   &&['logOpen','smokeOpen','treeOpen','completed'].every(k=>bool(w[k]))
   &&(w.windDirection===1||w.windDirection===-1)
   &&['calm','warning','impact'].includes(String(w.treeStatus))
-  &&['none','fire','smoke','tree','fall','fireball'].includes(String(w.damageCause))
+  &&['none','fire','smoke','tree','fall','fireball','bat'].includes(String(w.damageCause))
   &&['log','smoke','tree'].every(k=>Array.isArray(w[k])&&(w[k] as unknown[]).length===3
     &&(w[k] as unknown[]).every(bool))
   &&['smokeSeconds','dashAt','dashX'].every(k=>
@@ -132,6 +134,7 @@ export function validFire(value:unknown):value is FireWorld{
   &&Array.isArray(w.supporting)&&w.supporting.length===3
   &&w.supporting.every((seat:unknown,i:number)=>
     seat===null||(i===0&&seat===1)||(i===1&&seat===2))
+  &&validBatState(w.batDownUntil)
   &&validVitals(w);
 }
 export function firePlatforms(w:FireWorld):FirePlatform[]{
@@ -231,6 +234,8 @@ export class FireAuthority {
   else{
    this.lastSkill[seat]=now;
    this.interact(seat,kind,poses,now,facing);
+   if(kind==='shoot'&&seat===1)
+     hitBatWithSlingshot(4,w.batDownUntil,p,facing,now,w.cycleStart);
   }
   return {ok:true,reason:'ok'};
  }
@@ -352,6 +357,7 @@ export class FireAuthority {
     if(p.y>=FIRE_DEATH_Y)cause='fall';
     else if(escapeFireHit(p,escapeWall,w.escapeAt,now))cause='fire';
     else if(fireballHit(w,p,now))cause='fireball';
+    else if(batTouchesHero(4,w.batDownUntil,p,now,w.cycleStart))cause='bat';
     else if(fireDamageZone(w,p,now))cause='fire';
     else if(treePhase==='impact'&&Math.abs(p.x-FIRE_TREE_DANGER.x)<FIRE_TREE_DANGER.radius
       &&p.y>FIRE_TREE_DANGER.yMin)cause='tree';
