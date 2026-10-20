@@ -1,5 +1,6 @@
 import {initRatCombat,validRatCombat,activateMonsterSkill,shootMonster,tickMonsters,type RatCombatWorld} from './ratCombat';
 import {exitPresence} from './sharedExit';
+import {BAFOMET_MAX_HP,HERO_REVIVE_MS,initBafomet,validBafomet,shootBafomet,empowerBafometAttack,tickBafomet,type BafometState} from './bafometBoss';
 import type {Pose,Seat} from './network';
 import type {PuzzleAction} from './puzzles';
 import {VITALS,initVitals,validVitals,spendVital,regenVitals,damageVitals,type VitalAction,type Vitals} from './loopVitals';
@@ -26,6 +27,7 @@ export type TemporalWorld=Vitals&RatCombatWorld&{
   supporting:[Seat|null,Seat|null,Seat|null];stacked:boolean;climbReady:boolean;teoLanded:boolean;teoSummitReached:boolean;
   dashAt:number;dashX:number;teoJumpAt:number;teoJumpY:number;teoDoubled:boolean;
   skillAt:[number,number,number];resourceAt:number;
+  boss:BafometState;reviveAt:[number,number,number];
 };
 const triple=(v:unknown):v is [boolean,boolean,boolean]=>
   Array.isArray(v)&&v.length===3&&v.every(x=>typeof x==='boolean');
@@ -35,7 +37,8 @@ export function initTemporal(now=Date.now()):TemporalWorld{
   echo:[false,false,false],tree:[false,false,false],bridgeAt:0,bridge:false,
   roots:[false,false,false],exit:false,completed:false,supporting:[null,null,null],
   stacked:false,climbReady:false,teoLanded:false,teoSummitReached:false,dashAt:0,dashX:0,
-  teoJumpAt:0,teoJumpY:0,teoDoubled:false,skillAt:[0,0,0],resourceAt:now,...initRatCombat(),...initVitals()};
+  teoJumpAt:0,teoJumpY:0,teoDoubled:false,skillAt:[0,0,0],resourceAt:now,
+  boss:initBafomet(now),reviveAt:[0,0,0],...initRatCombat(),...initVitals()};
 }
 export function validTemporal(value:unknown):value is TemporalWorld{
  if(!value||typeof value!=='object'||Array.isArray(value))return false;
@@ -46,6 +49,8 @@ export function validTemporal(value:unknown):value is TemporalWorld{
    &&['bridge','exit','completed','stacked','climbReady','teoLanded','teoSummitReached','teoDoubled'].every(k=>typeof w[k]==='boolean')
    &&triple(w.echo)&&triple(w.tree)&&triple(w.roots)
    &&Array.isArray(w.skillAt)&&w.skillAt.length===3&&w.skillAt.every(nonneg)
+   &&Array.isArray(w.reviveAt)&&w.reviveAt.length===3&&w.reviveAt.every(nonneg)
+   &&validBafomet(w.boss)
    &&Array.isArray(w.supporting)&&w.supporting.length===3
    &&w.supporting.every((s,i)=>s===null||(i===0&&s===1)||(i===1&&s===2))
    &&validRatCombat(w)&&validVitals(w);
@@ -70,13 +75,14 @@ export function tempBlocks(w:TemporalWorld){
  ...TEMP_LAYOUTS.map((config,i)=>({x:config.obstacles[0],width:62,height:98,active:i===w.layout})),
  ...TEMP_LAYOUTS.map((config,i)=>({x:config.obstacles[1],width:48,height:100,active:i===w.layout})),
  {x:3410,width:44,height:530,active:w.layout!==2},
- {x:4080,width:40,height:530,active:!w.exit}];
+ {x:4080,width:40,height:530,active:!w.exit||w.boss.hp>0}];
 }
 export function temporalObjective(w:TemporalWorld):{title:string;progress:string}{
  if(!w.echo.every(Boolean))return {title:'Encontrem os três marcos.',progress:'Marcos '+w.echo.filter(Boolean).length+'/3'};
  if(!w.bridge)return {title:'Derrubem a árvore sobre a correnteza.',progress:'Amarras '+w.tree.filter(Boolean).length+'/3'};
  if(!w.roots.every(Boolean))return {title:'Esperem o estado C e liberem as raízes.',progress:'Raízes '+w.roots.filter(Boolean).length+'/3'};
- return {title:'Reúnam os três na saída da tempestade.',progress:'Passagem aberta'};
+ if(w.boss.hp>0)return {title:'Derrotem Bafomet, o guardião da passagem!',progress:'BAFOMET '+w.boss.hp+'/'+BAFOMET_MAX_HP+' ♥'};
+ return {title:'Reúnam os três na saída da tempestade.',progress:'Bafomet derrotado · Passagem aberta'};
 }
 export function tempNear(p:Pose,x:number,y:number,dx=73,dy=89):boolean{
  return Math.abs(p.x-x)<=dx&&Math.abs(p.y-y)<=dy;
@@ -85,7 +91,7 @@ export function tempLanding(p:Pose):boolean{
  return Math.abs(p.x-TEMP_UPPER.x)<=56&&Math.abs(p.y-TEMP_UPPER.landing)<=6
    &&Math.abs(p.vx)<165&&Math.abs(p.vy)<70;
 }
-export type TemporalTick={changed:boolean;poses?:Pose[];reset?:boolean;won?:boolean};
+export type TemporalTick={changed:boolean;poses?:Pose[];respawns?:Pose[];reset?:boolean;won?:boolean};
 export class TemporalAuthority{
  world:TemporalWorld=initTemporal();
  private lastJump:[number,number,number]=[0,0,0];
@@ -102,7 +108,7 @@ export class TemporalAuthority{
  }
  act(seat:Seat,a:PuzzleAction,p:Pose[],now=Date.now()):boolean{
   const w=this.world,actor=p[seat];
-  if(!this.playable(now)||!actor||actor.seat!==seat)return false;
+  if(!this.playable(now)||!actor||actor.seat!==seat||w.health[seat]===0)return false;
   if(a.kind==='support'&&(seat===0||seat===1)&&w.supporting[seat]===null){
    const base=seat===0?1:2;
    if(actor.x<2320||actor.x>2530||Math.abs(actor.x-p[base].x)>53||
@@ -158,7 +164,11 @@ export class TemporalAuthority{
   if(kind==='jump'){this.lastJump[seat]=now;this.lastJumpY[seat]=p.y;this.doubleUsed[seat]=false;}
   if(kind==='doubleJump')this.doubleUsed[0]=true;
   activateMonsterSkill(w,seat,kind,now,facing);
-  if(kind==='shoot')shootMonster(2,w,p,facing,now,w.cycleStart);
+  empowerBafometAttack(w,seat,kind,now,facing);
+  if(kind==='shoot'){
+   shootMonster(2,w,p,facing,now,w.cycleStart);
+   shootBafomet(w,p,facing,now);
+  }
   if(kind==='shoot'||kind==='dash'){
    w.skillAt[seat]=now;
    if(kind==='dash'){w.dashAt=now;w.dashX=p.x;}
@@ -180,7 +190,11 @@ export class TemporalAuthority{
  private maybeExit():void{if(this.world.roots.every(Boolean)&&this.world.layout===2)this.world.exit=true;}
  damage(seat:Seat,now=Date.now(),fatal=true):boolean{
   if(!this.playable(now)||!damageVitals(this.world,seat,now,fatal))return false;
-  if(this.world.health[seat]===0)this.world.deadUntil=now+2200;
+  if(this.world.health[seat]===0){
+   this.world.reviveAt[seat]=now+HERO_REVIVE_MS;
+   this.world.supporting[seat]=null;
+   if(seat===1)this.world.supporting[0]=null;
+  }
   return true;
  }
  tickResources(poses:Pose[],now=Date.now()):boolean{
@@ -190,6 +204,20 @@ export class TemporalAuthority{
  }
  tick(poses:Pose[],now=Date.now()):TemporalTick{
   const w=this.world;
+  // No team reset for a single fallen hero. The last death resets immediately.
+  if(w.health.every(h=>h===0)){
+   this.reset(now);return{changed:true,reset:true,poses:TEMP_START.map(p=>({...p}))};
+  }
+  const respawns:Pose[]=[];
+  for(const seat of [0,1,2] as Seat[]){
+   if(w.health[seat]===0&&w.reviveAt[seat]===0)w.reviveAt[seat]=now+HERO_REVIVE_MS;
+   if(w.health[seat]===0&&w.reviveAt[seat]>0&&now>=w.reviveAt[seat]){
+    w.health[seat]=3;w.stamina[seat]=100;w.safeUntil[seat]=now+1800;
+    w.lastSpent[seat]=now;w.reviveAt[seat]=0;
+    respawns.push({...TEMP_START[seat]});
+   }
+  }
+  if(respawns.length)return{changed:true,respawns};
   for(const seat of [1,0] as Seat[]){
    const base=w.supporting[seat];
    if(base!==null){poses[seat].x=poses[base].x;poses[seat].y=poses[base].y-44;poses[seat].vx=poses[base].vx;poses[seat].vy=0;}
@@ -222,9 +250,15 @@ export class TemporalAuthority{
    return{changed:true,poses:rescued?corrected:undefined};
   }
   if(now-w.cycleStart>=TEMP_CYCLE){w.blackoutUntil=now+TEMP_BLACKOUT;return{changed:true};}
-  const rats=tickMonsters(2,w,poses,now,w.cycleStart);
-  if(w.health.some(h=>h<=0)){
-   w.deadUntil=now+2200;return{changed:true};
+  const alive=poses.filter(p=>w.health[p.seat]>0);
+  const rats=tickMonsters(2,w,alive,now,w.cycleStart);
+  const bossChanged=tickBafomet(w,alive,now);
+  if(w.health.every(h=>h===0)){
+   this.reset(now);return{changed:true,reset:true,poses:TEMP_START.map(p=>({...p}))};
+  }
+  for(const seat of [0,1,2] as Seat[])if(w.health[seat]===0&&w.reviveAt[seat]===0){
+   w.reviveAt[seat]=now+HERO_REVIVE_MS;
+   w.supporting[seat]=null;if(seat===1)w.supporting[0]=null;
   }
   if(w.climbReady&&!w.teoLanded&&w.supporting[0]===null&&tempLanding(poses[0])){
    w.teoLanded=true;return{changed:true};
@@ -234,7 +268,7 @@ export class TemporalAuthority{
   }
   if(w.bridgeAt&&!w.bridge&&now-w.bridgeAt>=1900){w.bridge=true;return{changed:true};}
   if(w.bridge&&w.roots.every(Boolean)&&w.layout===2&&!w.exit){w.exit=true;return{changed:true};}
-  if(w.bridge&&w.exit&&exitPresence(2,poses,w.health).ready){
+  if(w.bridge&&w.exit&&w.boss.hp===0&&exitPresence(2,poses,w.health).ready){
    w.completed=true;return{changed:true,won:true};
   }
   // A deceptive detour sends the whole party to its known safe clearing.
@@ -243,6 +277,6 @@ export class TemporalAuthority{
    w.supporting=[null,null,null];w.climbReady=false;
    return{changed:true,poses:TEMP_START.map(p=>({...p}))};
   }
-  return{changed:rats.changed};
+  return{changed:rats.changed||bossChanged};
  }
 }

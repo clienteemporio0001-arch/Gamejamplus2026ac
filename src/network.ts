@@ -356,6 +356,7 @@ export class Network {
   startFireSolo():void{this.startSolo(4,false,'loop');}
   selectSoloSeat(seat: Seat): void {
     if(!this.isSolo||!this.playing||this.localSeat===seat)return;
+    if(this.experience==='loop'&&this.level===2&&this.temporal.health[seat]===0)return;
     this.localSeat=seat;
     this.lastInput=0;this.lastAction.clear();
     this.emit('solo-seat',seat);this.emit('change',undefined);
@@ -367,6 +368,7 @@ export class Network {
       const p={...input,y:Math.max(0,Math.min(this.experience==='loop'&&this.level===4?FIRE_HEIGHT:
         this.experience==='loop'&&this.level===3?TREE_HEIGHT:700,input.y))};
       if(!validPose(p))continue;
+      if(this.experience==='loop'&&this.level===2&&this.temporal.health[p.seat]===0)continue;
       const supporting=this.experience==='loop'?(this.level===4?this.fire.supporting:this.level===3?this.treetop.supporting:this.level===2?this.temporal.supporting:this.loop.supporting):this.level===1?this.forest.supporting:
         this.level===2?this.journey.supporting:null;
       if(supporting?.[p.seat]!==null && supporting?.[p.seat]!==undefined)continue;
@@ -632,6 +634,7 @@ export class Network {
         const bounds=multiplayerPoseBounds(this.experience,this.level);
         if(msg.x<0||msg.x>bounds.width||msg.y<0||msg.y>bounds.height)return;
         if (this.experience!=='loop' && this.level === 1 && this.forest.restartAt > 0) return;
+        if(this.experience==='loop'&&this.level===2&&this.temporal.health[seat]===0)return;
         if(this.experience==='loop'&&(this.level===4?this.fire.supporting[seat]:this.level===3?this.treetop.supporting[seat]:this.level===2?this.temporal.supporting[seat]:this.loop.supporting[seat])!==null)return;
         if (this.experience!=='loop' && this.level === 1 && this.forest.supporting[seat] !== null) return;
         if (this.experience!=='loop' && this.level === 2 && (this.journey.restartAt>0 || this.journey.supporting[seat]!==null)) return;
@@ -807,7 +810,8 @@ export class Network {
           health:[...msg.world.health] as TemporalWorld['health'],
           stamina:[...msg.world.stamina] as TemporalWorld['stamina'],
           safeUntil:[...msg.world.safeUntil] as TemporalWorld['safeUntil'],
-          lastSpent:[...msg.world.lastSpent] as TemporalWorld['lastSpent'],ratDownUntil:[...msg.world.ratDownUntil] as TemporalWorld['ratDownUntil'],ratImpacts:msg.world.ratImpacts.map(hit=>hit?{...hit}:null) as TemporalWorld['ratImpacts']};
+          lastSpent:[...msg.world.lastSpent] as TemporalWorld['lastSpent'],
+          reviveAt:[...msg.world.reviveAt] as TemporalWorld['reviveAt'],boss:{...msg.world.boss},ratDownUntil:[...msg.world.ratDownUntil] as TemporalWorld['ratDownUntil'],ratImpacts:msg.world.ratImpacts.map(hit=>hit?{...hit}:null) as TemporalWorld['ratImpacts']};
         this.emit('temporal',this.temporal);
         break;
       case 'loop':
@@ -1034,6 +1038,7 @@ export class Network {
     const msg = { t: 'pose' as const,
       x: Math.max(0,Math.min(bounds.width,x)),
       y: Math.max(0,Math.min(bounds.height,y)),vx,vy };
+    if(this.experience==='loop'&&this.level===2&&this.temporal.health[this.localSeat]===0)return;
     if (!finite(x) || !finite(y) || !finite(vx) || !finite(vy)) return;
     if(this.experience==='loop'&&(this.level===4?this.fire.supporting[this.localSeat]:this.level===3?this.treetop.supporting[this.localSeat]:this.level===2?this.temporal.supporting[this.localSeat]:this.loop.supporting[this.localSeat])!==null)return;
     if (this.experience!=='loop' && this.level === 1 && (this.forest.restartAt > 0 || this.forest.supporting[this.localSeat] !== null)) return;
@@ -1174,7 +1179,8 @@ export class Network {
     const w=this.temporalAuthority.world;
     this.temporal={...w,echo:[...w.echo],tree:[...w.tree],roots:[...w.roots],
       supporting:[...w.supporting],skillAt:[...w.skillAt],health:[...w.health],
-      stamina:[...w.stamina],safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],ratDownUntil:[...w.ratDownUntil] as TemporalWorld['ratDownUntil'],ratImpacts:w.ratImpacts.map(hit=>hit?{...hit}:null) as TemporalWorld['ratImpacts']};
+      stamina:[...w.stamina],safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],
+      reviveAt:[...w.reviveAt] as TemporalWorld['reviveAt'],boss:{...w.boss},ratDownUntil:[...w.ratDownUntil] as TemporalWorld['ratDownUntil'],ratImpacts:w.ratImpacts.map(hit=>hit?{...hit}:null) as TemporalWorld['ratImpacts']};
     this.broadcast({t:'temporal',world:this.temporal});
     this.emit('temporal',this.temporal);
   }
@@ -1294,6 +1300,10 @@ export class Network {
         for(const pose of this.poses){
           this.broadcast({t:'respawn',pose});this.emit('respawn',pose);
         }
+      }
+      if(state.respawns)for(const pose of state.respawns){
+        this.poses[pose.seat]={...pose};
+        this.broadcast({t:'respawn',pose});this.emit('respawn',pose);
       }
       if(state.changed)this.shareTemporal();
       this.broadcast({t:'state',poses:this.poses});this.emit('snapshot',this.poses);

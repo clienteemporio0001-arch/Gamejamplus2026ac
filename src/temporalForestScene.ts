@@ -1,4 +1,5 @@
 import {RatEnemyVisuals,preloadRatEnemies} from './ratEnemyVisuals';
+import {BafometVisual,preloadBafomet} from './bafometVisual';
 import {BAT_KNOCKBACK_MS,type BatImpact} from './flyingBats';
 import Phaser from 'phaser';
 import {preloadKenneyCharacters} from './kenneyCharacterSprites';
@@ -28,6 +29,9 @@ import {
 /** Entirely independent level-2 Phaser world, sharing characters and controls. */
 export class TemporalForestScene extends Phaser.Scene {
  private ratEnemies?:RatEnemyVisuals;
+ private bafomet?:BafometVisual;
+ private reviveLabels:Phaser.GameObjects.Text[]=[];
+ private reviveBanner!:Phaser.GameObjects.Text;
  private knockUntil=[0,0,0];private knockVx=[0,0,0];
  private net:Network;private touch:TouchInput;private hud?:()=>void;
  private w:TemporalWorld;
@@ -153,7 +157,7 @@ export class TemporalForestScene extends Phaser.Scene {
   this.art.water(TEMP_CHANNEL.start,TEMP_CHANNEL.end,638);
   this.text(2800,511,'CORRENTEZA PROFUNDA',14,'#efc6b3').setAlpha(.9);
  }
- preload():void{preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestChickens(this);preloadRatEnemies(this,2);preloadForestTrees(this);}
+ preload():void{preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestChickens(this);preloadRatEnemies(this,2);preloadBafomet(this);preloadForestTrees(this);}
  create():void{
   this.physics.world.setBounds(0,0,TEMP_WIDTH,900);
   this.physics.world.setBoundsCollision(true,true,false,false);
@@ -161,6 +165,7 @@ export class TemporalForestScene extends Phaser.Scene {
   this.forestTrees=new ForestTrees(this,2);
   this.chickens=new ForestChickens(this,2);
    this.ratEnemies=new RatEnemyVisuals(this,2);
+   this.bafomet=new BafometVisual(this);
   this.platform(1305,678,2610,80);
   this.platform(3585,678,1230,80);
   this.platform(TEMP_ECHO[0].x,539,145,19,'root' as 'wood');
@@ -190,6 +195,8 @@ export class TemporalForestScene extends Phaser.Scene {
     for(const block of this.blocks)this.physics.add.collider(avatar,block);
    }
   }
+  for(const seat of [0,1,2] as Seat[])
+   this.reviveLabels.push(this.text(0,0,'',13,'#ffe2bc').setDepth(69).setVisible(false));
   if(this.net.isSolo){
    this.solo=new SoloBodies(this,this.net,this.avatars,this.blocks,410,960);
    this.solo.select(this.net.localSeat??0);
@@ -212,6 +219,8 @@ export class TemporalForestScene extends Phaser.Scene {
   this.exitArt=new CooperativeExitArt(this,2,line=>this.pipo?.warnDanger(line));
    this.missions=new MissionDirector(this,this.net,2,this.avatars);
    this.hint=this.text(0,0,'',12,'#c6e9e0').setVisible(false).setDepth(66);
+  this.reviveBanner=this.text(this.scale.gameSize.width/2,144,'',15,'#ffddb5')
+    .setScrollFactor(0).setDepth(120).setVisible(false);
   this.region=this.text(this.scale.gameSize.width/2,110,'',14,'#d8ebed')
     .setScrollFactor(0).setDepth(100).setVisible(false);
   this.dark=this.add.rectangle(this.scale.gameSize.width/2,350,this.scale.gameSize.width+160,780,0x020d16)
@@ -258,6 +267,7 @@ export class TemporalForestScene extends Phaser.Scene {
     this.cameras.main.setZoom(cameraZoomFor({width:size.width,height:size.height},isCoarseDevice()));
     this.cameras.main.setBounds(0,0,TEMP_WIDTH,700);
     this.region.setX(size.width/2).setY(Math.min(108,size.height*.22));
+    this.reviveBanner.setX(size.width/2).setY(Math.min(144,size.height*.28));
     this.dark.setPosition(size.width/2,size.height/2).setSize(size.width+160,size.height+120);
     this.darkText.setPosition(size.width/2,size.height/2);
   };
@@ -309,7 +319,8 @@ export class TemporalForestScene extends Phaser.Scene {
    if(layoutChanged)this.pipo?.warnDanger('As raízes e as trilhas mudaram! Sigam o vento!');
     this.w={...w,echo:[...w.echo],tree:[...w.tree],roots:[...w.roots],
    supporting:[...w.supporting],health:[...w.health],stamina:[...w.stamina],
-   safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],skillAt:[...w.skillAt],ratDownUntil:[...w.ratDownUntil],ratImpacts:w.ratImpacts.map(hit=>hit?{...hit}:null) as TemporalWorld['ratImpacts']};
+   safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],skillAt:[...w.skillAt],
+   reviveAt:[...w.reviveAt],boss:{...w.boss},ratDownUntil:[...w.ratDownUntil],ratImpacts:w.ratImpacts.map(hit=>hit?{...hit}:null) as TemporalWorld['ratImpacts']};
   tempBlocks(w).forEach((b,i)=>this.setActive(this.layoutBlocks[i],b.active));
   this.setActive(this.bridge,w.bridge);
   this.setActive(this.temporary,TEMP_LAYOUTS[w.layout].temporaryBridge);
@@ -320,6 +331,10 @@ export class TemporalForestScene extends Phaser.Scene {
     if(layoutChanged)this.tweens.add({targets:p,x:TEMP_LAYOUTS[w.layout].puddles[i],duration:1800,ease:'Sine.easeInOut'});
     p.setScale(w.layout===2?1.2:w.layout===1?1.1:1,1);
   });
+  if(this.net.isSolo&&this.net.localSeat!==null&&w.health[this.net.localSeat]===0){
+   const next=([0,1,2] as Seat[]).find(seat=>w.health[seat]>0);
+   if(next!==undefined)this.net.selectSoloSeat(next);
+  }
   this.echoVisuals.forEach((visual,i)=>{
     visual.setAlpha(w.echo[i]?.5:1);
     this.echoChecks[i]?.setVisible(w.echo[i]);
@@ -370,7 +385,7 @@ export class TemporalForestScene extends Phaser.Scene {
    this.local=active.actor;this.body=active.body;
   }
   const seat=this.net.localSeat,w=this.w,now=Date.now();
-  const pause=(w.blackoutUntil>now||w.deadUntil>0||!this.net.everyoneConnected);
+  const pause=(w.blackoutUntil>now||w.deadUntil>0||w.health[seat]===0||!this.net.everyoneConnected);
   if(pause!==this.paused){
    this.paused=pause;
    if(pause){this.physics.pause();this.pending.clear();gameKeys.clear();clearTouch(this.touch);}
@@ -435,7 +450,11 @@ export class TemporalForestScene extends Phaser.Scene {
    }
    this.names[seatIndex].setPosition(actor.x,actor.y-47);
    this.names[seatIndex].setColor(seatIndex===seat?'#fff':CHARACTERS[seatIndex].hex);
-   actor.setAlpha(w.safeUntil[seatIndex]>now&&Math.floor(now/125)%2===0?.45:1);
+   actor.setAlpha(w.health[seatIndex]===0?.27:w.safeUntil[seatIndex]>now&&Math.floor(now/125)%2===0?.45:1);
+   const until=w.reviveAt[seatIndex];
+   this.reviveLabels[seatIndex]?.setVisible(w.health[seatIndex]===0&&until>now)
+     .setText('VOLTA EM '+Math.ceil(Math.max(0,until-now)/1000)+'s')
+     .setPosition(actor.x,actor.y-82);
   }
   const guidance=temporalHint(w,seat,{
     seat,x:this.local.x,y:this.local.y,
@@ -444,9 +463,12 @@ export class TemporalForestScene extends Phaser.Scene {
   this.hint.setText(time<this.tiredUntil?'SEM ESTAMINA':'')
    .setColor(time<this.tiredUntil?'#f8cb86':'#c6e9e0');
   this.hint.setVisible(Boolean(this.hint.text)).setPosition(this.local.x,this.local.y-81);
+  this.reviveBanner.setVisible(w.health[seat]===0&&w.reviveAt[seat]>now);
+  if(w.health[seat]===0)this.reviveBanner.setText('AGUARDE '+
+    Math.ceil(Math.max(0,w.reviveAt[seat]-now)/1000)+'s · OS OUTROS AINDA PODEM LUTAR');
   this.missions.update(time,pause);
    this.pipo.update(time,this.local.x,this.local.y,pause);
-   this.exitArt?.update(w.bridge&&w.roots.every(Boolean)&&w.exit,this.net.poses,w.health,time);
+   this.exitArt?.update(w.bridge&&w.roots.every(Boolean)&&w.exit&&w.boss.hp===0,this.net.poses,w.health,time);
   void guidance;
   this.echoLabels.forEach((label,i)=>{
     const marker=TEMP_ECHO[i];
@@ -470,6 +492,7 @@ export class TemporalForestScene extends Phaser.Scene {
   this.forestTrees?.update();
   this.chickens?.update(time);
    this.ratEnemies?.update(now,w.cycleStart,w.ratDownUntil,pause);
+  this.bafomet?.update(w.boss,now,true);
   this.art.drawTide(w.cycleStart,now,w.bridge,pause);
   this.hud?.();
   void dt;
