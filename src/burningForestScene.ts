@@ -12,6 +12,7 @@ import {PipoGuide} from './pipoGuide';
 import {CooperativeExitArt} from './cooperativeExitArt';
 import {MissionDirector} from './missionDirector';
 import {BurningForestArt} from './burningForestArt';
+import {ForestTrees,preloadForestTrees} from './forestTrees';
 import {BurningForestAudio} from './burningForestAudio';
 import {
  FIRE_WIDTH,FIRE_HEIGHT,FIRE_FLOOR_Y,FIRE_START,FIRE_PLATFORMS,FIRE_TARGETS,FIRE_SHIFT_ROOTS,
@@ -24,7 +25,7 @@ import {
 export class BurningForestScene extends Phaser.Scene {
  private net:Network;private touch:TouchInput;private hud?:()=>void;
  private world:FireWorld;
- private art!:BurningForestArt;private pipo!:PipoGuide;private missions!:MissionDirector;
+ private art!:BurningForestArt;private forestTrees?:ForestTrees;private pipo!:PipoGuide;private missions!:MissionDirector;
  private exitArt?:CooperativeExitArt;
  private audio!:BurningForestAudio;
  private platforms:Phaser.GameObjects.Rectangle[]=[];
@@ -59,7 +60,7 @@ export class BurningForestScene extends Phaser.Scene {
    .setOrigin(.5).setDepth(53);
  }
  preload():void{
-  preloadOfficialLandmarks(this);preloadKenneyCharacters(this);
+  preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestTrees(this);
   if(!this.textures.exists('jam-explosion'))
     this.load.spritesheet('jam-explosion',
       import.meta.env.BASE_URL+'assets/fx/explosion-4.png',
@@ -70,6 +71,7 @@ export class BurningForestScene extends Phaser.Scene {
   this.physics.world.setBounds(0,0,FIRE_WIDTH,FIRE_HEIGHT+200);
   this.physics.world.setBoundsCollision(true,true,false,false);
   this.art=new BurningForestArt(this);
+  this.forestTrees=new ForestTrees(this,4);
   // The same silhouettes appear at real cooperation points in the fire biome.
   officialLandmark(this,'hollow','fire',FIRE_TARGETS.log.teo.x,638,
     FIRE_TARGETS.log.teo.y,.55);
@@ -360,6 +362,7 @@ export class BurningForestScene extends Phaser.Scene {
    inFire?'⚠ CHAMAS ATIVAS':'';
   this.dangerText.setText(warning).setVisible(Boolean(warning)&&!pause);
   this.art.update(w,poses,time,now,this.net.isSolo);
+  this.forestTrees?.update();
   this.audio.update(w,now,this.local.x);
   this.missions.update(time,pause);
    this.pipo.update(time,this.local.x,this.local.y,pause);
