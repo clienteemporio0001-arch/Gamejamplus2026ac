@@ -15,7 +15,8 @@ const makeWorld=():MonsterCombatWorld=>({
 const poses=():Pose[]=>([0,1,2] as Seat[]).map(seat=>({
  seat,x:50000+seat*100,y:900,vx:0,vy:0
 }));
-const expectedKinds=['pink','black','king','fire'];
+const expectedKinds=['black','black','king','fire'];
+assert.equal(RAT_SKIN[1],'black','Fase 01 usa o rato cinza/escuro no lugar do rosa');
 for(const stage of [1,2,3,4] as RatLevel[]){
  assert.equal(RAT_LAYOUT[stage].length,3,'three rats in each playable phase');
  assert.equal(RAT_SKIN[stage],expectedKinds[stage-1],'fire rat only in phase four');

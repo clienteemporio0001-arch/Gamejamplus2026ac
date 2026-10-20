@@ -37,7 +37,7 @@ export const RAT_LAYOUT:Readonly<Record<RatLevel,readonly [RatSpot,RatSpot,RatSp
  ]
 };
 export const RAT_SKIN:Readonly<Record<RatLevel,RatKind>>=
- {1:'pink',2:'black',3:'king',4:'fire'};
+ {1:'black',2:'black',3:'king',4:'fire'};
 export const initialRats=():RatDownState=>[0,0,0];
 export type RatCombatWorld={
  ratDownUntil:RatDownState;
