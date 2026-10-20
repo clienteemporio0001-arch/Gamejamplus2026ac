@@ -1,3 +1,4 @@
+import {RatEnemyVisuals,preloadRatEnemies} from './ratEnemyVisuals';
 import Phaser from 'phaser';
 import {preloadKenneyCharacters} from './kenneyCharacterSprites';
 import {preloadOfficialLandmarks,officialLandmark,LANDMARK_KEYS} from './officialLandmarks';
@@ -25,6 +26,7 @@ import type { VitalAction } from './loopVitals';
 
 /** 11,400px forest. Puzzle and transformation positions are host authoritative. */
 export class ForestLoopScene extends Phaser.Scene {
+ private ratEnemies?:RatEnemyVisuals;
   private net:Network;private touch:TouchInput;private hud?:()=>void;
   private art!:NightArt;private chickens?:ForestChickens;private forestTrees?:ForestTrees;private w:LoopWorld;
   private avatars:Phaser.GameObjects.Rectangle[]=[];
@@ -112,7 +114,7 @@ export class ForestLoopScene extends Phaser.Scene {
   }
   preload():void{
     preloadKenneyCharacters(this);
-    preloadForestChickens(this);
+    preloadForestChickens(this);preloadRatEnemies(this,1);
     preloadForestTrees(this);
     this.load.svg('loop-clearing-tree',import.meta.env.BASE_URL+'assets/clearing-tree.svg');
     preloadOfficialLandmarks(this);
@@ -251,6 +253,7 @@ export class ForestLoopScene extends Phaser.Scene {
     this.background();
     this.forestTrees=new ForestTrees(this,1);
     this.chickens=new ForestChickens(this,1);
+   this.ratEnemies=new RatEnemyVisuals(this,1);
     this.art.setReducedVisuals(this.reducedGraphics);
     // Five genuine traversal gaps before the original tree bridge, not an enlarged empty floor.
     for(const terrain of LOOP_TERRAIN){
@@ -875,6 +878,7 @@ export class ForestLoopScene extends Phaser.Scene {
     this.art.update(time);
     this.forestTrees?.update();
     this.chickens?.update(time);
+   this.ratEnemies?.update(now,w.cycleStart,w.ratDownUntil,pause);
     this.art.drawBoulder(w.boulderAt,now,blackoutActive(w,now)||w.deadUntil>0||w.completed);
     if(this.frameMetricsOn){
       const end=performance.now();
