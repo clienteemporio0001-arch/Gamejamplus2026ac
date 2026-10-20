@@ -92,7 +92,7 @@ w.flare=0;
 assert.equal(fireDamageZone(w,{x:4390,y:652},start),true,'first active flare damages');
 assert.equal(fireDamageZone(w,{x:4390,y:560},start),false,'above fire safe');
 w.flare=2; // host-authoritative third active phase
-assert.equal(fireFlareActive(w,start+8800,4860),true,'third flare active in phase 2');
+assert.equal(fireFlareActive(w,start+8800,4860),false,'arena final sem fogo ativo para enfrentar o Boss');
 // Victory demands all three living and near the safe river.
 const exit=FIRE_TARGETS.exit;
 const finishing:Pose[]=([0,1,2] as Seat[]).map(seat=>

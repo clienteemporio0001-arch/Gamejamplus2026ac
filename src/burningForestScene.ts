@@ -83,6 +83,11 @@ export class BurningForestScene extends Phaser.Scene {
   this.bats=new FlyingBatVisuals(this,4);
    this.ratEnemies=new RatEnemyVisuals(this,4);
    this.eclipse=new EclipseVisual(this);
+  // Physical sign marking the Sentinel's pursuit boundary.
+  this.add.rectangle(4430,636,8,70,0x77523b).setDepth(15);
+  this.add.rectangle(4430,598,116,38,0x96714b).setStrokeStyle(2,0xd6b78b).setDepth(16);
+  this.label(4430,598,'➜',25,'#281c17').setDepth(17);
+
   // The same silhouettes appear at real cooperation points in the fire biome.
   officialLandmark(this,'hollow','fire',FIRE_TARGETS.log.teo.x,638,
     FIRE_TARGETS.log.teo.y,.55);
