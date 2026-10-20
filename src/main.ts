@@ -45,6 +45,7 @@ let activeMode:GameMode='none';
  * asynchronous teardown and intermittently leave the next scene frozen.
  */
 let rendererReady=false;
+let retiringGame:Phaser.Game|null=null;
 let activeSceneKey:string|null=null;
 let pendingScene:{mode:GameMode;scene:Phaser.Scene}|null=null;
 let info = '';
@@ -360,6 +361,10 @@ function activateGameScene(instance:Phaser.Game,mode:GameMode,scene:Phaser.Scene
   instance.scene.add(key,scene,true);
 }
 function enterGame():void{
+  // Game.destroy(true) is deferred by Phaser to the NEXT renderer frame.
+  // Creating a new WebGL context before DESTROY causes intermittent freezes
+  // when restarting from the menu, especially on lower-memory browsers.
+  if(!game&&retiringGame)return;
   setActiveAvatarSelections(([0,1,2] as const).map(seat=>net.avatarForSeat(seat)));
   const mode=(net.stage==='intro'?'intro':
     net.experience==='loop'?(net.level===4?'fire':net.level===3?'treetop':net.level===2?'temporal':'loop'):
@@ -413,7 +418,14 @@ function exitGame():void{
   const instance=game;
   if(!instance)return;
   game=null;rendererReady=false;activeMode='none';activeSceneKey=null;pendingScene=null;
-  // Destroy once, on returning to the menu, never between phases.
+  retiringGame=instance;
+  instance.events.once(Phaser.Core.Events.DESTROY,()=>{
+    if(retiringGame!==instance)return;
+    retiringGame=null;
+    if(net.role!=='idle'&&(net.playing||net.stage==='intro'))enterGame();
+  });
+  // Destroy once, on returning to menu. Its WebGL context only becomes
+  // available again after Phaser's queued next-frame destruction.
   instance.destroy(true);
   unmountMobileControls();
 }
