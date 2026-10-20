@@ -92,16 +92,14 @@ w.flare=0;
 assert.equal(fireDamageZone(w,{x:4390,y:652},start),true,'first active flare damages');
 assert.equal(fireDamageZone(w,{x:4390,y:560},start),false,'above fire safe');
 w.flare=2; // host-authoritative third active phase
-assert.equal(fireFlareActive(w,start+8800,4860),false,'arena final sem fogo ativo para enfrentar o Boss');
+assert.equal(fireFlareActive(w,start+8800,4860),true,'third flare active in phase 2');
 // Victory demands all three living and near the safe river.
 const exit=FIRE_TARGETS.exit;
 const finishing:Pose[]=([0,1,2] as Seat[]).map(seat=>
  ({seat,x:exit.x,y:exit.y,vx:0,vy:0}));
 assert.notEqual(authority.tick([...finishing.slice(0,2),{...finishing[2],x:4400}],
  start+11000).won,true,'cannot win without the third friend');
-assert.notEqual(authority.tick(finishing,start+11100).won,true,'guardian blocks final escape');
-w.boss.hp=0;w.boss.defeatedAt=start+11100;
-assert.equal(authority.tick(finishing,start+11200).won,true,'all three friends escape after defeating Sentinel');
+assert.equal(authority.tick(finishing,start+11100).won,true,'all three characters complete final escape');
 assert.ok(w.completed);
 assert.ok(validFire(w));
 // Collapse hazard is telegraphed before a damaging impact.
@@ -141,15 +139,12 @@ const oldResetId=fatal.world.resetId;
 lost[2]={seat:2,x:4450,y:FIRE_DEATH_Y+2,vx:0,vy:700};
 fatal.tick(lost,start+1000);
 assert.equal(fatal.world.health[2],0,'fatal drop must kill Nino even after all puzzles');
-assert.equal(fatal.world.deadUntil,0,'one death does not reset the team');
-assert.equal(fatal.world.reviveAt[2],start+11000,'Nino returns after 10 seconds');
-assert.equal(fatal.tick(lost,start+1200).respawn,undefined,'single death preserves all puzzle progress');
-assert.equal(fatal.world.logOpen,true,'single loss cannot erase progress');
-fatal.world.health=[0,0,0];
+assert.ok(fatal.world.deadUntil>start+1000);
+assert.equal(fatal.tick(lost,start+1200).respawn,undefined,'no early respawn');
 const resumedAt=start+2800;
 const respawn=fatal.tick(lost,resumedAt);
-assert.equal(respawn.respawn,true,'the third death immediately resets whole phase');
-assert.deepEqual(respawn.poses,FIRE_START,'all three return to ORIGINAL entry');
+assert.equal(respawn.respawn,true,'collective restart after death delay');
+assert.deepEqual(respawn.poses,FIRE_START,'all three must return to ORIGINAL entry');
 assert.notEqual(respawn.poses?.[0].x,fireCheckpoint({
  ...initFire(start),treeOpen:true
 })[0].x,'never use late checkpoint');

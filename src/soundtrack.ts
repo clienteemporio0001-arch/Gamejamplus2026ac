@@ -106,7 +106,7 @@ export class OriginalSoundtrack{
  }
  private target():number{
   if(this.musicMuted)return 0;
-  return (this.desired==='menu'?.34:.86)*(this.desired==='battle'?1.3:1)*(1+this.intensity*.20);
+  return (this.desired==='menu'?.34:.86)*(1+this.intensity*.20);
  }
  private adjust():void{
   if(!this.playing)return;
