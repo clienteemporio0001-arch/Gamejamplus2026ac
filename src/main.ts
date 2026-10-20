@@ -391,7 +391,7 @@ function enterGame():void{
     width:view.width,height:view.height,
     backgroundColor:'#091c23',
     render:{antialias:true,pixelArt:false},
-    scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.NO_CENTER},
+    scale:{mode: Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.NO_CENTER},
     physics:{default:'arcade',arcade:{debug:false,gravity:{x:0,y:0}}},
     scene:[scene]
   });
