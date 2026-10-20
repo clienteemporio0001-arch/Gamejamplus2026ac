@@ -10,7 +10,7 @@ import {ForestTrees,preloadForestTrees} from './forestTrees';
 import {FRAGILE_BRANCH_INDICES,fragilePhase} from './jamChallenges';
 import {TreetopWindAudio} from './treetopWindAudio';
 import {FlyingBatVisuals,preloadBats} from './flyingBatVisuals';
-import {batAlive,batFlight} from './flyingBats';
+import {BAT_KNOCKBACK_MS,batAlive,batFlight,type BatImpact} from './flyingBats';
 import {CHARACTERS,type Network,type Seat} from './network';
 import type {TouchInput} from './game';
 import {SoloBodies} from './soloBodies';
@@ -44,6 +44,7 @@ export class TreetopForestScene extends Phaser.Scene {
  private pending=new Map<number,{seat:Seat;kind:VitalAction}>();
  private jumps=0;private facing:-1|1=1;private lastShot=0;private lastDash=0;
  private dashUntil=0;private pendingJump=false;private paused=false;
+ private knockUntil=[0,0,0];private knockVx=[0,0,0];
  private dark!:Phaser.GameObjects.Rectangle;private darkText!:Phaser.GameObjects.Text;
  private hint!:Phaser.GameObjects.Text;private guide!:Phaser.GameObjects.Text;
  private pipo!:PipoGuide;private missions!:MissionDirector;
@@ -157,6 +158,7 @@ export class TreetopForestScene extends Phaser.Scene {
    }
   }));
   this.off.push(this.net.on('respawn',p=>{
+   this.knockUntil[p.seat]=0;this.knockVx[p.seat]=0;
    this.solo?.reset(p);
    if(this.net.localSeat===p.seat){
     this.body.reset(p.x,p.y);this.body.setAllowGravity(true);
@@ -201,7 +203,31 @@ export class TreetopForestScene extends Phaser.Scene {
    this.off.forEach(off=>off());this.scale.off(Phaser.Scale.Events.RESIZE,resize);
   });
  }
+ private applyBatKnockback(seat:Seat,hit:BatImpact):void{
+  const now=Date.now();
+  // A reconnection must never replay a stale hit from a previous snapshot.
+  if(now-hit.at>900||hit.at>now+1000||!this.net.everyoneConnected||
+     this.net.treetop.deadUntil>0)return;
+  if(!this.net.isSolo&&this.net.localSeat!==seat)return;
+  const body=this.solo?.body(seat)??this.body;
+  if(!body)return;
+  body.setAllowGravity(true);
+  body.setVelocity(hit.vx,hit.vy);
+  this.knockVx[seat]=hit.vx;
+  this.knockUntil[seat]=now+BAT_KNOCKBACK_MS;
+  const actor=this.avatars[seat];
+  if(actor){
+   const flash=this.add.circle(actor.x,actor.y-8,25,0xffdbaa,.50).setDepth(65);
+   this.tweens.add({targets:flash,scale:1.7,alpha:0,duration:240,
+    onComplete:()=>flash.destroy()});
+  }
+ }
  private sync(w:TreeWorld):void{
+  for(const seat of [0,1,2] as Seat[]){
+   const hit=w.batImpacts[seat];
+   if(hit&&hit.at!==(this.w.batImpacts[seat]?.at??0))
+    this.applyBatKnockback(seat,hit);
+  }
    if(w.blackoutUntil>0&&w.blackoutUntil!==this.w.blackoutUntil){
     const old=TREE_PLATFORMS.filter(p=>p.state===w.layout);
     const next=TREE_PLATFORMS.filter(p=>p.state===((w.layout+1)%3));
@@ -219,7 +245,9 @@ export class TreetopForestScene extends Phaser.Scene {
   this.w={...w,bridge:[...w.bridge],tower:[...w.tower],time:[...w.time],
    fragileAt:[...w.fragileAt],
    supporting:[...w.supporting],health:[...w.health],stamina:[...w.stamina],
-   safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent]};
+   safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],
+   batDownUntil:[...w.batDownUntil],
+   batImpacts:w.batImpacts.map(hit=>hit?{...hit}:null) as TreeWorld['batImpacts']};
   const active=new Set(treePlatforms(w));
   TREE_PLATFORMS.forEach((p,i)=>{
    const body=this.platforms[i].body as Phaser.Physics.Arcade.StaticBody;
@@ -329,7 +357,8 @@ export class TreetopForestScene extends Phaser.Scene {
      if(other===seat||w.supporting[other]!==null)continue;
      const b=this.solo.body(other),avatar=this.avatars[other];
      const standing=b.blocked.down||b.touching.down;
-     b.setVelocityX(treeWindVelocity(w,{x:avatar.x,y:avatar.y},standing,0));
+     b.setVelocityX(now<this.knockUntil[other]?this.knockVx[other]:
+      treeWindVelocity(w,{x:avatar.x,y:avatar.y},standing,0));
     }
    }
    const base=w.supporting[seat];
@@ -352,17 +381,19 @@ export class TreetopForestScene extends Phaser.Scene {
      ||consumeTouch(this.touch,'interact'));
    const ability=gameKeys.consumeSkill(seat)||consumeTouch(this.touch,'ability');
    this.touch.jump=false;this.touch.interact=false;this.touch.ability=false;
+   const stunned=now<this.knockUntil[seat];
    if(base===null){
     const desired=seat===2&&time<this.dashUntil?this.facing*345:dir*TREE_SPEED;
-    this.body.setVelocityX(treeWindVelocity(w,this.local,grounded,desired));
-    if(jumping&&(grounded||seat===0&&this.jumps<2))
+    this.body.setVelocityX(stunned?this.knockVx[seat]:
+      treeWindVelocity(w,this.local,grounded,desired));
+    if(!stunned&&jumping&&(grounded||seat===0&&this.jumps<2))
      this.request(grounded?'jump':'doubleJump',seat);
    }else{
     this.body.setVelocityX(0);
-    if(jumping&&!this.pendingJump)this.request('jump',seat);
+    if(!stunned&&jumping&&!this.pendingJump)this.request('jump',seat);
    }
-   if(action)this.interact(seat);
-   if(ability&&(seat===1&&time>this.lastShot||seat===2&&time>this.lastDash))
+   if(action&&!stunned)this.interact(seat);
+   if(!stunned&&ability&&(seat===1&&time>this.lastShot||seat===2&&time>this.lastDash))
     this.request(seat===1?'shoot':'dash',seat);
    if(base===null)this.net.report(this.local.x,this.local.y,this.body.velocity.x,this.body.velocity.y);
    this.solo?.report();
