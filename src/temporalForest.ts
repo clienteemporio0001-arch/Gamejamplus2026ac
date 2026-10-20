@@ -82,7 +82,7 @@ export function tempBlocks(w:TemporalWorld){
 export function temporalObjective(w:TemporalWorld):{title:string;progress:string}{
  if(!w.echo.every(Boolean))return {title:'Encontrem os três marcos.',progress:'Marcos '+w.echo.filter(Boolean).length+'/3'};
  if(!w.bridge)return {title:'Derrubem a árvore sobre a correnteza.',progress:'Amarras '+w.tree.filter(Boolean).length+'/3'};
- if(!w.roots.every(Boolean))return {title:'Esperem o estado C e liberem as raízes.',progress:'Raízes '+w.roots.filter(Boolean).length+'/3'};
+ if(!w.roots.every(Boolean))return {title:'Ativem os três círculos para liberar a passagem.',progress:'Raízes '+w.roots.filter(Boolean).length+'/3'};
  if(w.boss.hp>0)return {title:'Derrotem o Guardião da Passagem!',progress:'GUARDIÃO '+w.boss.hp+'/'+BAFOMET_MAX_HP+' ♥'};
  return {title:'Reúnam os três na saída da tempestade.',progress:'Guardião derrotado · Passagem aberta'};
 }
@@ -128,16 +128,16 @@ export class TemporalAuthority{
   if(a.kind==='lever'&&seat===0){
    if(!w.echo[0]&&tempNear(actor,TEMP_ECHO[0].x,TEMP_ECHO[0].y,85,94)){w.echo[0]=true;return true;}
    if(w.echo.every(Boolean)&&w.teoLanded&&w.teoSummitReached&&!w.tree[0]&&tempSummitFooting(actor)){w.tree[0]=true;this.maybeFall(now);return true;}
-   if(w.bridge&&w.layout===2&&!w.roots[0]&&tempNear(actor,TEMP_ROOTS[0].x,TEMP_ROOTS[0].y,75,80)){
+   if(w.bridge&&!w.roots[0]&&tempNear(actor,TEMP_ROOTS[0].x,TEMP_ROOTS[0].y,110,115)){
     w.roots[0]=true;this.maybeExit();return true;
    }
   }
-  if(a.kind==='switch'&&seat===2&&now-w.dashAt<3200&&actor.x-w.dashX>=95){
+  if(a.kind==='switch'&&seat===2&&w.dashAt>0&&now-w.dashAt<1700&&actor.x-w.dashX>=65){
    if(!w.echo[2]&&tempNear(actor,TEMP_ECHO[2].x,TEMP_ECHO[2].y,75,85)){w.echo[2]=true;return true;}
    if(w.echo.every(Boolean)&&!w.tree[2]&&tempNear(actor,TEMP_TREE[2].x,TEMP_TREE[2].y,73,85)){
     w.tree[2]=true;this.maybeFall(now);return true;
    }
-   if(w.bridge&&w.layout===2&&!w.roots[2]&&tempNear(actor,TEMP_ROOTS[2].x,TEMP_ROOTS[2].y,77,85)){
+   if(w.bridge&&!w.roots[2]&&tempNear(actor,TEMP_ROOTS[2].x,TEMP_ROOTS[2].y,125,100)){
     w.roots[2]=true;this.maybeExit();return true;
    }
   }
@@ -179,7 +179,7 @@ export class TemporalAuthority{
       Math.abs(p.y-18-target.y)<=75;
     if(!w.echo[1]&&canShoot(TEMP_ECHO[1]))w.echo[1]=true;
     else if(w.echo.every(Boolean)&&!w.tree[1]&&canShoot(TEMP_TREE[1])){w.tree[1]=true;this.maybeFall(now);}
-    else if(w.bridge&&w.layout===2&&!w.roots[1]&&canShoot(TEMP_ROOTS[1])){
+    else if(w.bridge&&!w.roots[1]&&p.x<=TEMP_ROOTS[1].x+20&&canShoot(TEMP_ROOTS[1])){
       w.roots[1]=true;this.maybeExit();
     }
    }
@@ -189,7 +189,7 @@ export class TemporalAuthority{
  private maybeFall(now:number):void{
   if(this.world.tree.every(Boolean)&&!this.world.bridgeAt)this.world.bridgeAt=now;
  }
- private maybeExit():void{if(this.world.roots.every(Boolean)&&this.world.layout===2)this.world.exit=true;}
+ private maybeExit():void{if(this.world.bridge&&this.world.roots.every(Boolean))this.world.exit=true;}
  damage(seat:Seat,now=Date.now(),fatal=true):boolean{
   if(!this.playable(now)||!damageVitals(this.world,seat,now,fatal))return false;
   if(this.world.health[seat]===0){
@@ -255,7 +255,7 @@ export class TemporalAuthority{
   // Host checks Nino's traveled dash against the existing targets; no E needed.
   const nino=poses[2];
   const dashSolved=nino&&w.health[2]>0&&w.dashAt>0&&now-w.dashAt<=1700&&
-   nino.x-w.dashX>=95&&this.act(2,{kind:'switch'},poses,now);
+   nino.x-w.dashX>=65&&this.act(2,{kind:'switch'},poses,now);
   const alive=poses.filter(p=>w.health[p.seat]>0);
   const rats=tickMonsters(2,w,alive,now,w.cycleStart);
   const bossChanged=tickBafomet(w,alive,now);
@@ -273,7 +273,7 @@ export class TemporalAuthority{
     w.teoSummitReached=true;return{changed:true};
   }
   if(w.bridgeAt&&!w.bridge&&now-w.bridgeAt>=1900){w.bridge=true;return{changed:true};}
-  if(w.bridge&&w.roots.every(Boolean)&&w.layout===2&&!w.exit){w.exit=true;return{changed:true};}
+  if(w.bridge&&w.roots.every(Boolean)&&!w.exit){w.exit=true;return{changed:true};}
   if(w.bridge&&w.exit&&w.boss.hp===0&&exitPresence(2,poses,w.health).ready){
    w.completed=true;return{changed:true,won:true};
   }

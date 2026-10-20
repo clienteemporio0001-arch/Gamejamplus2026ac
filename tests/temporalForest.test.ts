@@ -131,7 +131,7 @@ ok(act(a,2,'switch',17700)&&a.world.tree.every(Boolean)&&a.world.bridgeAt===1770
 ok(!a.world.bridge,'ponte não tem colisão durante queda');
 ok(!a.tick(p,17800).changed,'sem ponte antes da animação');
 ok(a.tick(p,19700).changed&&a.world.bridge,'ponte obtém colisão após 1,9s');
-ok(temporalObjective(a.world).title.includes('estado C'),'segunda prova exige o ciclo');
+ok(temporalObjective(a.world).title.includes('círculos'),'segunda prova pede os círculos da passagem');
 ok(a.world.health.every(x=>x===3),'sucesso não altera vida');
 ok(a.world.stamina[1]<100&&a.world.stamina[2]<100,'habilidades cobram estamina real');
 
@@ -208,3 +208,27 @@ ok(scene.includes('this.physics.pause()')&&scene.includes('this.physics.resume()
 ok(scene.includes("this.renderRain(time)")&&scene.includes('this.art.update(time)'),
   'chuva, poças e parallax com atualização por quadro');
 console.log('APROVADO: '+checks+' verificações da Fase 02 — Floresta Temporal.');
+
+
+const rootFix=new TemporalAuthority();
+rootFix.reset(30000);
+rootFix.world.echo=[true,true,true];
+rootFix.world.bridge=true;
+rootFix.world.tree=[true,true,true];
+rootFix.world.layout=0;
+const rootPlayers=TEMP_START.map(p=>({...p}));
+rootPlayers[0]={seat:0,x:TEMP_ROOTS[0].x,y:TEMP_ROOTS[0].y,vx:0,vy:0};
+ok(rootFix.act(0,{kind:'lever'},rootPlayers,31000),'Téo conclui círculo verde mesmo no estado A');
+rootPlayers[1]={seat:1,x:TEMP_ROOTS[1].x-110,y:TEMP_ROOTS[1].y+18,vx:0,vy:0};
+ok(rootFix.authorizeEnergy(1,'shoot',rootPlayers,32000,1).ok&&rootFix.world.roots[1],
+  'Lia acerta círculo azul com J sem esperar estado C');
+rootPlayers[2]={seat:2,x:TEMP_ROOTS[2].x-140,y:TEMP_ROOTS[2].y,vx:0,vy:0};
+ok(rootFix.authorizeEnergy(2,'dash',rootPlayers,33000,1).ok,'Nino ativa Dash');
+rootPlayers[2].x=TEMP_ROOTS[2].x;
+rootFix.tick(rootPlayers,33300);
+ok(rootFix.world.roots.every(Boolean)&&rootFix.world.exit,'Dash sem E fecha 3/3 e libera passagem');
+rootFix.world.layout=1;
+ok(rootFix.world.exit&&rootFix.world.roots.every(Boolean),'progresso persiste após mudança para B');
+ok(tempBlocks(rootFix.world).at(-1)?.active===true,'Guardião vivo ainda bloqueia saída');
+rootFix.world.boss.hp=0;
+ok(tempBlocks(rootFix.world).at(-1)?.active===false,'saída abre após círculos e derrota do Boss');

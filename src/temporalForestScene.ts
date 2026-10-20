@@ -58,6 +58,7 @@ export class TemporalForestScene extends Phaser.Scene {
  private tree!:Phaser.GameObjects.Container;
  private roots:Phaser.GameObjects.Graphics[]=[];
  private treeSignals:Phaser.GameObjects.Arc[]=[];
+ private rootSignals:Phaser.GameObjects.Arc[]=[];
  private echoVisuals:Phaser.GameObjects.Container[]=[];
  private echoLabels:Phaser.GameObjects.Text[]=[];
  private echoChecks:Phaser.GameObjects.Text[]=[];
@@ -150,8 +151,9 @@ export class TemporalForestScene extends Phaser.Scene {
   }
   const markColor=[0x8fd9a3,0xf4c293,0x9accea];
   for(const [i,p] of TEMP_ROOTS.entries()){
-   this.add.circle(p.x,p.y,12,markColor[i],.52).setDepth(14)
-    .setStrokeStyle(2,0xe0e9bc,.55);
+   const circle=this.add.circle(p.x,p.y,15,markColor[i],.58).setDepth(48)
+    .setStrokeStyle(3,0xe0e9bc,.85);
+   this.rootSignals.push(circle);
   }
   // Visible wet surfaces are the SAME coordinates as the authoritative friction zones.
   // Deep water is drawn separately by NightArt and has fatal bounds in Network.
@@ -336,6 +338,7 @@ export class TemporalForestScene extends Phaser.Scene {
   this.setActive(this.temporary,TEMP_LAYOUTS[w.layout].temporaryBridge);
   this.roots.forEach((r,i)=>r.setVisible(!w.tree[i]));
   this.treeSignals.forEach((ring,i)=>ring.setVisible(w.echo.every(Boolean)&&!w.tree[i]));
+  this.rootSignals.forEach((ring,i)=>ring.setVisible(w.bridge&&!w.roots[i]));
   this.stormShade.setFillStyle([0x1b3b46,0x254d64,0x112639][w.layout])
    .setAlpha([.12,.20,.27][w.layout]);
   this.pools.forEach((p,i)=>{
@@ -361,7 +364,7 @@ export class TemporalForestScene extends Phaser.Scene {
    if(!w.echo[0]&&Math.abs(p.x-TEMP_ECHO[0].x)<95)this.net.act({kind:'lever'});
    else if(w.echo.every(Boolean)&&w.teoLanded&&w.teoSummitReached&&!w.tree[0]&&
       tempSummitFooting({seat,x:p.x,y:p.y,vx:body.velocity.x,vy:body.velocity.y}))this.net.act({kind:'lever'});
-   else if(w.bridge&&w.layout===2&&!w.roots[0]&&
+   else if(w.bridge&&!w.roots[0]&&
       tempNear({seat,x:p.x,y:p.y,vx:0,vy:0},TEMP_ROOTS[0].x,TEMP_ROOTS[0].y))
      this.net.act({kind:'lever'});
   }
