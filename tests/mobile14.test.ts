@@ -151,8 +151,9 @@ ok(forest.includes("consumeTouch(this.touch,'jump')"),
 ok(main.includes("this.net")===false,'main não substitui as regras autoritativas da cena');
 ok(network.includes("this.setPhase('transition',1,Date.now()+5000)"),
   'a Boca da Noite ainda transiciona à Fase 2');
-ok(main.includes("mode === 'temporal' ? new TemporalForestScene"),
-  'Fase 2 continua em Phaser Scene independente');
+ok(main.includes("new TemporalForestScene(net,touch,refreshHud)")&&
+   main.includes("instance.scene.add(key,scene,true)"),
+  'Fase 2 continua em cena Phaser independente, sem recriar o renderizador');
 ok(css.includes('#ui.in-game .interlevel{')&&
    css.includes('max-height:calc(100dvh - env(safe-area-inset-top)'),
   'transição fixa em viewport com altura segura');
