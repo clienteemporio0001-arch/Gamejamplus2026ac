@@ -1,5 +1,6 @@
+import {initRatCombat,validRatCombat,activateMonsterSkill,shootMonster,tickMonsters,type RatCombatWorld} from './ratCombat';
 import {exitPresence} from './sharedExit';
-import {batContactImpact,batTouchesHero,hitBatWithSlingshot,initialBats,initialBatImpacts,validBatState,validBatImpacts,type BatDownState,type BatImpacts} from './flyingBats';
+import {initialBats,initialBatImpacts,validBatState,validBatImpacts,type BatDownState,type BatImpacts} from './flyingBats';
 import type {Pose,Seat} from './network';
 import {escapeWallX,escapeFireHit} from './jamChallenges';
 import {initVitals,validVitals,spendVital,regenVitals,damageVitals,VITALS,
@@ -89,7 +90,7 @@ export function fireShiftLayout(w:FireWorld,now:number):0|1|2{
  return Math.floor(Math.max(0,now-w.phaseStart)/(FIRE_SHIFT_PERIOD+FIRE_SHIFT_DURATION))%3 as 0|1|2;
 }
 export type FireWind=-1|1;
-export type FireWorld=Vitals&{
+export type FireWorld=Vitals&RatCombatWorld&{
  cycleStart:number;phaseStart:number;resetId:number;deadUntil:number;escapeAt:number;
  layout:0|1|2;cycle:number;blackoutUntil:number;
  log:[boolean,boolean,boolean];logOpen:boolean;
@@ -99,7 +100,7 @@ export type FireWorld=Vitals&{
  dashAt:[number,number,number];dashX:[number,number,number];
  flare:number;windDirection:FireWind;treeStatus:'calm'|'warning'|'impact';
  treeWarningUntil:number;treeImpactUntil:number;
- collapseCycle:number;completed:boolean;damageCause:'fire'|'smoke'|'tree'|'fall'|'fireball'|'bat'|'none';
+ collapseCycle:number;completed:boolean;damageCause:'fire'|'smoke'|'tree'|'fall'|'fireball'|'bat'|'rat'|'none';
  batDownUntil:BatDownState;batImpacts:BatImpacts;
 };
 export function initFire(now=Date.now()):FireWorld{return {
@@ -111,7 +112,7 @@ export function initFire(now=Date.now()):FireWorld{return {
  smokeSeconds:[0,0,0],supporting:[null,null,null],
  dashAt:[0,0,0],dashX:[0,0,0],flare:0,windDirection:1,treeStatus:'calm',
  treeWarningUntil:0,treeImpactUntil:0,collapseCycle:-1,
- completed:false,damageCause:'none',batDownUntil:initialBats(),batImpacts:initialBatImpacts(),...initVitals()
+ completed:false,damageCause:'none',batDownUntil:initialBats(),batImpacts:initialBatImpacts(),...initRatCombat(),...initVitals()
 };}
 export function validFire(value:unknown):value is FireWorld{
  if(!value||typeof value!=='object'||Array.isArray(value))return false;
@@ -126,7 +127,7 @@ export function validFire(value:unknown):value is FireWorld{
   &&['logOpen','smokeOpen','treeOpen','completed'].every(k=>bool(w[k]))
   &&(w.windDirection===1||w.windDirection===-1)
   &&['calm','warning','impact'].includes(String(w.treeStatus))
-  &&['none','fire','smoke','tree','fall','fireball','bat'].includes(String(w.damageCause))
+  &&['none','fire','smoke','tree','fall','fireball','bat','rat'].includes(String(w.damageCause))
   &&['log','smoke','tree'].every(k=>Array.isArray(w[k])&&(w[k] as unknown[]).length===3
     &&(w[k] as unknown[]).every(bool))
   &&['smokeSeconds','dashAt','dashX'].every(k=>
@@ -134,7 +135,7 @@ export function validFire(value:unknown):value is FireWorld{
   &&Array.isArray(w.supporting)&&w.supporting.length===3
   &&w.supporting.every((seat:unknown,i:number)=>
     seat===null||(i===0&&seat===1)||(i===1&&seat===2))
-  &&validBatState(w.batDownUntil)&&validBatImpacts(w.batImpacts)
+  &&validBatState(w.batDownUntil)&&validBatImpacts(w.batImpacts)&&validRatCombat(w)
   &&validVitals(w);
 }
 export function firePlatforms(w:FireWorld):FirePlatform[]{
@@ -235,8 +236,9 @@ export class FireAuthority {
    this.lastSkill[seat]=now;
    this.interact(seat,kind,poses,now,facing);
    if(kind==='shoot'&&seat===1)
-     hitBatWithSlingshot(4,w.batDownUntil,p,facing,now,w.cycleStart);
+     shootMonster(4,w,p,facing,now,w.cycleStart);
   }
+  activateMonsterSkill(w,seat,kind,now,facing);
   return {ok:true,reason:'ok'};
  }
  interact(seat:Seat,kind:'lever'|'switch'|'shoot'|'dash'|'support'|'detach',
@@ -351,28 +353,21 @@ export class FireAuthority {
   if(w.treeFallAt&&now>=w.treeFallAt&&!w.treeOpen){
    w.treeOpen=true;w.treeFallAt=0;changed=true;
   }
-  if(now>=safeUntil){
+  if(now>=safeUntil&&w.blackoutUntil<=now){
+   const monsters=tickMonsters(4,w,poses,now,w.cycleStart,safeUntil);
+   if(monsters.changed){
+    changed=true;
+    if(monsters.hitType)w.damageCause=monsters.hitType;
+   }
    for(const p of poses){
     let cause:FireWorld['damageCause']='none';
     if(p.y>=FIRE_DEATH_Y)cause='fall';
     else if(escapeFireHit(p,escapeWall,w.escapeAt,now))cause='fire';
     else if(fireballHit(w,p,now))cause='fireball';
-    else if(batTouchesHero(4,w.batDownUntil,p,now,w.cycleStart))cause='bat';
     else if(fireDamageZone(w,p,now))cause='fire';
     else if(treePhase==='impact'&&Math.abs(p.x-FIRE_TREE_DANGER.x)<FIRE_TREE_DANGER.radius
       &&p.y>FIRE_TREE_DANGER.yMin)cause='tree';
     if(cause!=='none'&&damageVitals(w,p.seat,now,cause==='fall')){
-     if(cause==='bat'){
-      const impact=batContactImpact(4,w.batDownUntil,p,now,w.cycleStart);
-      if(impact){
-       w.batImpacts[p.seat]=impact;
-       // Release any supported actor so the hit actually knocks them away.
-       if(w.supporting[p.seat]!==null){
-        w.supporting[p.seat]=null;
-        if(p.seat===1)w.supporting[0]=null;
-       }
-      }
-     }
      w.damageCause=cause;changed=true;
     }
    }
