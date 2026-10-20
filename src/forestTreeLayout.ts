@@ -39,16 +39,10 @@ export const FOREST_TREE_LAYOUTS:Readonly<Record<ForestTreeStage,readonly Forest
     {x:10490,baseY:639,height:398,frame:'tree01',alpha:.70,tint:0xa0bca6,depth:-13,flipX:true},
     {x:11100,baseY:640,height:265,frame:'tree03',alpha:.74,tint:0xa5b9a6,depth:-13}
   ],
-  // Floresta Temporal: keep the river (2610–2970) and its warning readable.
-  2:[
-    {x:320,baseY:640,height:385,frame:'tree01',alpha:.65,tint:0x83aaa9,depth:-13},
-    {x:850,baseY:638,height:260,frame:'tree03',alpha:.69,tint:0x97b9b2,depth:-13,flipX:true},
-    {x:1520,baseY:639,height:360,frame:'tree00',alpha:.68,tint:0x8ca8aa,depth:-13},
-    {x:2130,baseY:641,height:392,frame:'tree01',alpha:.64,tint:0x8bafaf,depth:-13,flipX:true},
-    {x:3260,baseY:639,height:282,frame:'tree03',alpha:.66,tint:0x83acab,depth:-13},
-    {x:3690,baseY:641,height:342,frame:'tree00',alpha:.65,tint:0x94b5ad,depth:-13},
-    {x:4070,baseY:638,height:261,frame:'tree03',alpha:.61,tint:0x8eafa9,depth:-13,flipX:true}
-  ],
+  // Floresta Temporal (stage 02): no imported foreground/midground trees.
+  // Their trunks/crowns looked suspended above the terrain in the rainy
+  // scene. The native scenery from woodedEnvironment() is retained intact.
+  2:[],
   // Caminho das Árvores: just a few distant, misty tree crowns below the
   // cooperative branches. Nothing can hide prompts or jumping platforms.
   3:[
