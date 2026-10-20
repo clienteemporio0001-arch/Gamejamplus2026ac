@@ -1,4 +1,5 @@
 import {RatEnemyVisuals,preloadRatEnemies} from './ratEnemyVisuals';
+import {preloadHound,HoundVisual} from './hellHoundVisual';
 import Phaser from 'phaser';
 import {preloadKenneyCharacters} from './kenneyCharacterSprites';
 import {preloadOfficialLandmarks,officialLandmark} from './officialLandmarks';
@@ -27,6 +28,7 @@ import {
 /** Final act of the new adventure. Separate from classic phase 4. */
 export class BurningForestScene extends Phaser.Scene {
  private ratEnemies?:RatEnemyVisuals;
+ private hound?:HoundVisual;
  private net:Network;private touch:TouchInput;private hud?:()=>void;
  private world:FireWorld;
  private art!:BurningForestArt;private forestTrees?:ForestTrees;private pipo!:PipoGuide;private missions!:MissionDirector;
@@ -66,7 +68,7 @@ export class BurningForestScene extends Phaser.Scene {
    .setOrigin(.5).setDepth(53);
  }
  preload():void{
-  preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestTrees(this);preloadBats(this,4);preloadRatEnemies(this,4);
+  preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestTrees(this);preloadBats(this,4);preloadRatEnemies(this,4);preloadHound(this);
   if(!this.textures.exists('jam-explosion'))
     this.load.spritesheet('jam-explosion',
       import.meta.env.BASE_URL+'assets/fx/explosion-4.png',
@@ -80,6 +82,7 @@ export class BurningForestScene extends Phaser.Scene {
   this.forestTrees=new ForestTrees(this,4);
   this.bats=new FlyingBatVisuals(this,4);
    this.ratEnemies=new RatEnemyVisuals(this,4);
+   this.hound=new HoundVisual(this);
   // The same silhouettes appear at real cooperation points in the fire biome.
   officialLandmark(this,'hollow','fire',FIRE_TARGETS.log.teo.x,638,
     FIRE_TARGETS.log.teo.y,.55);
@@ -262,7 +265,7 @@ export class BurningForestScene extends Phaser.Scene {
    smokeSeconds:[...w.smokeSeconds],health:[...w.health],stamina:[...w.stamina],
    safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],
    batDownUntil:[...w.batDownUntil],
-   batImpacts:w.batImpacts.map(hit=>hit?{...hit}:null) as FireWorld['batImpacts']};
+   batImpacts:w.batImpacts.map(hit=>hit?{...hit}:null) as FireWorld['batImpacts'],hound:{...w.hound}};
   if(this.shiftingRoots.length){
    this.shiftingRoots.forEach((root,i)=>{
     const target=FIRE_SHIFT_ROOTS[w.layout][i];
@@ -413,12 +416,13 @@ export class BurningForestScene extends Phaser.Scene {
    protectedFromFire?'✦ ABRIGADO DO FOGO':
    inFire?'⚠ CHAMAS ATIVAS':'';
   this.dangerText.setText(warning).setVisible(Boolean(warning)&&!pause);
+  this.hound?.update(w.hound,now,w.treeOpen);
   this.art.update(w,poses,time,now,this.net.isSolo);
   this.forestTrees?.update();
   this.audio.update(w,now,this.local.x);
   this.missions.update(time,pause);
    this.pipo.update(time,this.local.x,this.local.y,pause);
-   this.exitArt?.update(w.logOpen&&w.smokeOpen&&w.treeOpen,this.net.poses,w.health,time);
+   this.exitArt?.update(w.logOpen&&w.smokeOpen&&w.treeOpen&&w.hound.hp===0,this.net.poses,w.health,time);
   // Favor the direction of escape without shifting the physics body.
   const camera=this.cameras.main;
   const viewW=this.scale.gameSize.width/Math.max(.6,camera.zoom);

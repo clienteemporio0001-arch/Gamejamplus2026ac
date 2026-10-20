@@ -1,0 +1,6 @@
+Hell Hound artwork by Luis Zuno (@ansimuz).
+Creative Commons Attribution 3.0 (CC BY 3.0):
+https://creativecommons.org/licenses/by/3.0/
+Modified into a unified, transparent spritesheet for A Floresta Mente.
+Original asset license was supplied in the uploaded ZIP package.
+This art is distributed as part of the game, not as a standalone game-art bundle.

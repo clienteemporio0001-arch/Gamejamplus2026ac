@@ -101,7 +101,9 @@ const finishing:Pose[]=([0,1,2] as Seat[]).map(seat=>
  ({seat,x:exit.x,y:exit.y,vx:0,vy:0}));
 assert.notEqual(authority.tick([...finishing.slice(0,2),{...finishing[2],x:4400}],
  start+11000).won,true,'cannot win without the third friend');
-assert.equal(authority.tick(finishing,start+11100).won,true,'all three characters complete final escape');
+assert.notEqual(authority.tick(finishing,start+11100).won,true,'boss prevents the final escape');
+w.hound.hp=0;w.hound.defeatedAt=start+11100;
+assert.equal(authority.tick(finishing,start+11200).won,true,'all three characters escape after the Hound dies');
 assert.ok(w.completed);
 assert.ok(validFire(w));
 // Collapse hazard is telegraphed before a damaging impact.

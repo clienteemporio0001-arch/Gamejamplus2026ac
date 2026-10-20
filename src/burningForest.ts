@@ -1,5 +1,6 @@
 import {initRatCombat,validRatCombat,activateMonsterSkill,shootMonster,tickMonsters,type RatCombatWorld} from './ratCombat';
 import {exitPresence} from './sharedExit';
+import {HOUND_HP,HOUND_NAME,initHound,validHound,armHound,shootHound,tickHound,type HoundState} from './hellHoundBoss';
 import {initialBats,initialBatImpacts,validBatState,validBatImpacts,type BatDownState,type BatImpacts} from './flyingBats';
 import type {Pose,Seat} from './network';
 import {escapeWallX,escapeFireHit} from './jamChallenges';
@@ -103,7 +104,7 @@ export type FireWorld=Vitals&RatCombatWorld&{
  flare:number;windDirection:FireWind;treeStatus:'calm'|'warning'|'impact';
  treeWarningUntil:number;treeImpactUntil:number;
  collapseCycle:number;completed:boolean;damageCause:'fire'|'smoke'|'tree'|'fall'|'fireball'|'bat'|'rat'|'none';
- batDownUntil:BatDownState;batImpacts:BatImpacts;
+ batDownUntil:BatDownState;batImpacts:BatImpacts;hound:HoundState;
 };
 export function initFire(now=Date.now()):FireWorld{return {
  cycleStart:now,phaseStart:now,resetId:0,deadUntil:0,escapeAt:0,
@@ -114,7 +115,7 @@ export function initFire(now=Date.now()):FireWorld{return {
  smokeSeconds:[0,0,0],supporting:[null,null,null],
  dashAt:[0,0,0],dashX:[0,0,0],flare:0,windDirection:1,treeStatus:'calm',
  treeWarningUntil:0,treeImpactUntil:0,collapseCycle:-1,
- completed:false,damageCause:'none',batDownUntil:initialBats(),batImpacts:initialBatImpacts(),...initRatCombat(),...initVitals()
+ completed:false,damageCause:'none',batDownUntil:initialBats(),batImpacts:initialBatImpacts(),hound:initHound(now),...initRatCombat(),...initVitals()
 };}
 export function validFire(value:unknown):value is FireWorld{
  if(!value||typeof value!=='object'||Array.isArray(value))return false;
@@ -138,7 +139,7 @@ export function validFire(value:unknown):value is FireWorld{
   &&w.supporting.every((seat:unknown,i:number)=>
     seat===null||(i===0&&seat===1)||(i===1&&seat===2))
   &&validBatState(w.batDownUntil)&&validBatImpacts(w.batImpacts)&&validRatCombat(w)
-  &&validVitals(w);
+  &&validVitals(w)&&validHound(w.hound);
 }
 export function firePlatforms(w:FireWorld):FirePlatform[]{
  return FIRE_PLATFORMS.filter(p=>!p.requires||
@@ -151,8 +152,9 @@ export function fireObjective(w:FireWorld):{title:string;progress:string}{
   progress:w.smoke.filter(Boolean).length+'/3'};
  if(!w.treeOpen)return {title:'ÁRVORES CAINDO · Orientem a queda',
   progress:w.tree.filter(Boolean).length+'/3'};
+ if(w.hound.hp>0)return {title:HOUND_NAME+' · Derrotem o guardião',progress:'VIDA '+w.hound.hp+'/'+HOUND_HP};
  return {title:'CORRIDA FINAL · Reúnam os três na margem segura',
-  progress:'ESCAPE'};
+  progress:'GUARDIÃO DERROTADO'};
 }
 export function fireWind(now:number,w:FireWorld):FireWind{
  return Math.floor(Math.max(0,now-w.cycleStart)/FIRE_WIND_PERIOD)%2===0?1:-1;
@@ -239,10 +241,13 @@ export class FireAuthority {
    this.lastSkill[seat]=now;
    if(kind!=='dash')this.interact(seat,kind,poses,now,facing);
    else {w.dashAt[2]=now;w.dashX[2]=p.x;}
-   if(kind==='shoot'&&seat===1)
+   if(kind==='shoot'&&seat===1){
      shootMonster(4,w,p,facing,now,w.cycleStart);
+     shootHound(w,p,facing,now);
+   }
   }
   activateMonsterSkill(w,seat,kind,now,facing);
+  armHound(w,seat,kind,now,facing);
   return {ok:true,reason:'ok'};
  }
  interact(seat:Seat,kind:'lever'|'switch'|'shoot'|'dash'|'support'|'detach',
@@ -372,6 +377,7 @@ export class FireAuthority {
    w.treeOpen=true;w.treeFallAt=0;changed=true;
   }
   if(now>=safeUntil&&w.blackoutUntil<=now){
+   if(tickHound(w,poses,now))changed=true;
    const monsters=tickMonsters(4,w,poses,now,w.cycleStart,safeUntil);
    if(monsters.changed){
     changed=true;
@@ -395,7 +401,7 @@ export class FireAuthority {
    this.world.safeUntil=[now+1600,now+1600,now+1600];
    return {changed:true,poses:FIRE_START.map(p=>({...p})),respawn:true};
   }
-  if(!w.deadUntil&&w.treeOpen&&w.smokeOpen&&w.logOpen&&exitPresence(4,poses,w.health).ready){
+  if(!w.deadUntil&&w.treeOpen&&w.smokeOpen&&w.logOpen&&w.hound.hp===0&&exitPresence(4,poses,w.health).ready){
    w.completed=true;return {changed:true,won:true};
   }
   return {changed};
