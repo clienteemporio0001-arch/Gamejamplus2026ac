@@ -1,4 +1,5 @@
 import {RatEnemyVisuals,preloadRatEnemies} from './ratEnemyVisuals';
+import {BAT_KNOCKBACK_MS,type BatImpact} from './flyingBats';
 import Phaser from 'phaser';
 import {preloadKenneyCharacters} from './kenneyCharacterSprites';
 import {preloadOfficialLandmarks,officialLandmark,LANDMARK_KEYS} from './officialLandmarks';
@@ -27,6 +28,7 @@ import {
 /** Entirely independent level-2 Phaser world, sharing characters and controls. */
 export class TemporalForestScene extends Phaser.Scene {
  private ratEnemies?:RatEnemyVisuals;
+ private knockUntil=[0,0,0];private knockVx=[0,0,0];
  private net:Network;private touch:TouchInput;private hud?:()=>void;
  private w:TemporalWorld;
  private art!:NightArt;
@@ -225,6 +227,7 @@ export class TemporalForestScene extends Phaser.Scene {
    }
   }));
   this.off.push(this.net.on('respawn',p=>{
+   this.knockUntil[p.seat]=0;this.knockVx[p.seat]=0;
    this.solo?.reset(p);
    if(this.net.localSeat===p.seat){
     this.body.reset(p.x,p.y);this.body.setAllowGravity(true);
@@ -272,7 +275,22 @@ export class TemporalForestScene extends Phaser.Scene {
   const label=this.text(actor.x,actor.y-43,'−1 ♥',13,'#ffabab');
   this.tweens.add({targets:label,y:label.y-17,alpha:0,duration:700,onComplete:()=>label.destroy()});
  }
- private sync(w:TemporalWorld):void{  if(this.avatars.length===3)for(const seat of [0,1,2] as Seat[]){
+ private applyRatKnockback(seat:Seat,hit:BatImpact):void{
+  const now=Date.now();
+  if(now-hit.at>900||hit.at>now+1000||!this.net.everyoneConnected||
+    !this.net.playing||!this.net.isSolo&&this.net.localSeat!==seat)return;
+  const body=this.solo?.body(seat)??this.body;
+  if(!body)return;
+  body.setAllowGravity(true).setVelocity(hit.vx,hit.vy);
+  this.knockUntil[seat]=now+BAT_KNOCKBACK_MS;
+  this.knockVx[seat]=hit.vx;
+ }
+ private sync(w:TemporalWorld):void{
+  for(const seat of [0,1,2] as Seat[]){
+   const hit=w.ratImpacts[seat];
+   if(hit&&hit.at!==(this.w.ratImpacts[seat]?.at??0))
+    this.applyRatKnockback(seat,hit);
+  }  if(this.avatars.length===3)for(const seat of [0,1,2] as Seat[]){
     if(w.health[seat]<this.w.health[seat])this.fallImpact(seat,true);
   }
 
@@ -291,7 +309,7 @@ export class TemporalForestScene extends Phaser.Scene {
    if(layoutChanged)this.pipo?.warnDanger('As raízes e as trilhas mudaram! Sigam o vento!');
     this.w={...w,echo:[...w.echo],tree:[...w.tree],roots:[...w.roots],
    supporting:[...w.supporting],health:[...w.health],stamina:[...w.stamina],
-   safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],skillAt:[...w.skillAt]};
+   safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],skillAt:[...w.skillAt],ratDownUntil:[...w.ratDownUntil],ratImpacts:w.ratImpacts.map(hit=>hit?{...hit}:null) as TemporalWorld['ratImpacts']};
   tempBlocks(w).forEach((b,i)=>this.setActive(this.layoutBlocks[i],b.active));
   this.setActive(this.bridge,w.bridge);
   this.setActive(this.temporary,TEMP_LAYOUTS[w.layout].temporaryBridge);
@@ -367,6 +385,9 @@ export class TemporalForestScene extends Phaser.Scene {
    this.solo?.report();
   }else{
    this.solo?.beforeFrame(w.supporting);
+   if(this.solo)for(const other of [0,1,2] as Seat[])
+    if(other!==seat&&now<this.knockUntil[other])
+      this.solo.body(other).setVelocityX(this.knockVx[other]);
    const base=w.supporting[seat];
    if(base!==null){
     const parent=this.avatars[base];
@@ -388,20 +409,21 @@ export class TemporalForestScene extends Phaser.Scene {
    const action=Boolean((this.keys?.E&&Phaser.Input.Keyboard.JustDown(this.keys.E))||consumeTouch(this.touch,'interact'));
    const ability=gameKeys.consumeSkill(seat)||consumeTouch(this.touch,'ability');
    this.touch.jump=false;this.touch.interact=false;this.touch.ability=false;
+   const stunned=now<this.knockUntil[seat];
    if(base===null){
     const surface=tempSurface(w,this.local.x);
     const speed=surface==='mud'?145:235;
     const target=(seat===2&&time<this.dashUntil)?this.facing*340:dir*speed;
-    this.body.setVelocityX(surface==='wet'?Phaser.Math.Linear(this.body.velocity.x,target,.045):target);
-    if(jumping&&(grounded||(seat===0&&this.jumps<2)))
+    this.body.setVelocityX(stunned?this.knockVx[seat]:surface==='wet'?Phaser.Math.Linear(this.body.velocity.x,target,.045):target);
+    if(!stunned&&jumping&&(grounded||(seat===0&&this.jumps<2)))
      this.request(grounded?'jump':'doubleJump',seat);
    }else{
     this.body.setVelocityX(0);
-    if(jumping&&!this.pendingJump)this.request('jump',seat);
+    if(!stunned&&jumping&&!this.pendingJump)this.request('jump',seat);
    }
-   if(action)this.interact(seat);
+   if(!stunned){if(action)this.interact(seat);
    if(ability&&(seat===1&&time>this.lastShot||seat===2&&time>this.lastDash))
-    this.request(seat===1?'shoot':'dash',seat);
+    this.request(seat===1?'shoot':'dash',seat);}
    if(base===null)this.net.report(this.local.x,this.local.y,this.body.velocity.x,this.body.velocity.y);
    this.solo?.report();
   }
