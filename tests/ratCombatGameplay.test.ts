@@ -10,7 +10,7 @@ import type {Pose,Seat} from '../src/network';
 const now=160_000,start=now-2000;
 const makeWorld=():MonsterCombatWorld=>({
  ...initVitals(),...initRatCombat(),supporting:[null,null,null],
- batDownUntil:initialBats(),batImpacts:initialBatImpacts()
+ batDownUntil:[now+RAT_RESPAWN_MS,now+RAT_RESPAWN_MS],batImpacts:initialBatImpacts()
 });
 const poses=():Pose[]=>([0,1,2] as Seat[]).map(seat=>({
  seat,x:50000+seat*100,y:900,vx:0,vy:0
@@ -29,13 +29,14 @@ for(const stage of [1,2,3,4] as RatLevel[]){
  assert.equal(first.changed,true,'rat contact triggers a real host state update');
  assert.equal(first.hitType,'rat','host knows a rat caused the impact');
  assert.equal(w.health[2],2,'each rat costs exactly one heart');
- assert.ok(w.ratImpacts[2]&&w.ratImpacts[2]!.vx>0,
+ const hits=stage>=3?w.batImpacts!:w.ratImpacts;
+ assert.ok(hits[2]&&hits[2]!.vx>0,
   'rat contact pushes Nino AWAY from the enemy');
- assert.ok(w.ratImpacts[2]!.vy<0,'impact also creates a brief upward jolt');
- const prev=w.ratImpacts[2];
+ assert.ok(hits[2]!.vy<0,'impact also creates a brief upward jolt');
+ const prev=hits[2];
  tickMonsters(stage,w,team,now+60,start);
  assert.equal(w.health[2],2,'1.2 second hit protection prevents rapid repeat damage');
- assert.deepEqual(w.ratImpacts[2],prev,'no repeated push during immunity');
+ assert.deepEqual(hits[2],prev,'no repeated push during immunity');
  assert.ok(validRatCombat(w),'rat state valid for host/guest snapshots');
  const shot=makeWorld(),lia={x:p.x-100,y:p.y+18};
  assert.equal(shootMonster(stage,shot,lia,1,now,start),'rat',
@@ -113,6 +114,7 @@ for(const world of ['LoopWorld','TemporalWorld','TreeWorld','FireWorld']){
   'host and guest copy authoritative rat state for '+world);
 }
 const batWorld=makeWorld(),batPos=batFlight(3,0,now,start);
+batWorld.batDownUntil=initialBats();
 batWorld.ratDownUntil=[now+RAT_RESPAWN_MS,now+RAT_RESPAWN_MS,now+RAT_RESPAWN_MS];
 const batTeam=poses();batTeam[2]={seat:2,x:batPos.x,y:batPos.y,vx:0,vy:0};
 activateMonsterSkill(batWorld,2,'dash',now,1);batTeam[2].vx=270;
