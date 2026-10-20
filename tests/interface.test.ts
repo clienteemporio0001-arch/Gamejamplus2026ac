@@ -298,4 +298,13 @@ w.completed=true;
 expect('A equipe encontrou a saída.','3 / 3');
 ok(regionTitle(5660)==='CLAREIRA CENTRAL'&&regionTitle(8150)==='PLATAFORMA SUSPENSA',
   'regiões etiquetadas por entrada, não legendas permanentes');
+ok(main.includes('<b>OBJETIVO:</b> escapem da floresta no menor tempo possível!')&&
+ main.includes('sigam os sinais e avisos do Pipo')&&
+ main.includes('Ninguém fica para trás!'),
+ 'lobby mostra a missão atual de fuga cronometrada, cooperação e dicas do Pipo');
+ok(!main.includes('encontrem o Guia Indígena, apoiem-se uns nos outros, coletem 3 cipós'),
+ 'lobby não exibe o objetivo antigo de busca de cipós');
+ok(main.includes('Três amigos, quatro fases e uma missão:')&&
+ main.includes('Superem os perigos juntos e cheguem à saída o mais rápido possível.'),
+ 'tela COMO JOGAR descreve a mesma meta atualizada');
 console.log('APROVADO: '+count+' verificações da Etapa 10 (HUD, menu, sessões e contexto).');
