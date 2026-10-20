@@ -31,6 +31,7 @@ import {AVATAR_CATALOG,DEFAULT_AVATARS,avatarInfo,isAvatarId,uniqueAvatars,
  loadSoloAvatars,saveSoloAvatars,selectSoloAvatar,type AvatarChoices,type AvatarId} from './avatarCatalog';
 import {avatarGrid,roleLabel,ROLE_SKILLS} from './avatarSelectionUI';
 import {setActiveAvatarSelections} from './kenneyCharacterSprites';
+import {CinematicProgressWatch} from './cinematicHealth';
 
 const net = new Network();
 const ui = document.querySelector<HTMLDivElement>('#ui')!;
@@ -262,10 +263,12 @@ function openPanel(kind:PanelKind):void{
 /** HTML5 intro sourced from the committed repository video; no duplicate players. */
 let introVideo:HTMLVideoElement|null=null;
 let introLayer:HTMLDivElement|null=null;
+let cinematicWatchTimer:ReturnType<typeof setInterval>|null=null;
 let introStageShown=false;
 /** Prevent replay during phase snapshots, Pipo updates and video buffering. */
 let finalStageShown=false;
 function stopIntroVideo():void{
+ if(cinematicWatchTimer!==null){clearInterval(cinematicWatchTimer);cinematicWatchTimer=null;}
  const video=introVideo;
  introVideo=null;
  if(video){
@@ -312,6 +315,14 @@ function playIntroVideo(onComplete:()=>void,allowSkip=true,onSkip=onComplete,
  document.body.appendChild(holder);
  // Only the movie's soundtrack should be heard during the prologue.
  audio.setScore('none');
+ // MP4 may remain stalled without 'ended' or 'error' and otherwise block
+ // phase 01 forever. Recover only after 14 seconds of zero video progress.
+ const health=new CinematicProgressWatch(Date.now());
+ cinematicWatchTimer=setInterval(()=>{
+   if(introVideo!==video)return;
+   if(health.sample(video.currentTime,Date.now(),document.hidden))
+     complete(allowSkip?onSkip:onComplete);
+ },1000);
  void video.play().catch(()=>{
   if(introVideo!==video)return;
   // Browsers may require a direct gesture before starting video with sound.
