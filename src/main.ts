@@ -396,15 +396,18 @@ function enterGame():void{
     scene:[scene]
   });
   game=instance;
-  instance.events.once(Phaser.Core.Events.READY,()=>{
-    if(game!==instance)return;
+  const onRendererReady=()=>{
+    if(game!==instance||rendererReady)return;
     rendererReady=true;
     if(pendingScene){
       const pending=pendingScene;pendingScene=null;
-      // The last phase may have changed again while assets were loading.
       activateGameScene(instance,pending.mode,pending.scene);
     }
-  });
+  };
+  // Phaser READY may fire within the Game constructor on a warm texture
+  // cache. Checking isRunning avoids missing the event and freezing forever.
+  if(instance.isRunning)onRendererReady();
+  else instance.events.once(Phaser.Core.Events.READY,onRendererReady);
 }
 function exitGame():void{
   const instance=game;
