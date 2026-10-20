@@ -780,7 +780,8 @@ export class Network {
           health:[...msg.world.health] as FireWorld['health'],
           stamina:[...msg.world.stamina] as FireWorld['stamina'],
           safeUntil:[...msg.world.safeUntil] as FireWorld['safeUntil'],
-          lastSpent:[...msg.world.lastSpent] as FireWorld['lastSpent']};
+          lastSpent:[...msg.world.lastSpent] as FireWorld['lastSpent'],
+          batDownUntil:[...msg.world.batDownUntil] as FireWorld['batDownUntil']};
         this.emit('fire',this.fire);
         break;
       case 'treetop':
@@ -791,7 +792,8 @@ export class Network {
           health:[...msg.world.health] as TreeWorld['health'],
           stamina:[...msg.world.stamina] as TreeWorld['stamina'],
           safeUntil:[...msg.world.safeUntil] as TreeWorld['safeUntil'],
-          lastSpent:[...msg.world.lastSpent] as TreeWorld['lastSpent']};
+          lastSpent:[...msg.world.lastSpent] as TreeWorld['lastSpent'],
+          batDownUntil:[...msg.world.batDownUntil] as TreeWorld['batDownUntil']};
         this.emit('treetop',this.treetop);
         break;
       case 'temporal':
@@ -1151,7 +1153,8 @@ export class Network {
     this.fire={...w,log:[...w.log],smoke:[...w.smoke],tree:[...w.tree],
       smokeSeconds:[...w.smokeSeconds],supporting:[...w.supporting],
       dashAt:[...w.dashAt],dashX:[...w.dashX],health:[...w.health],
-      stamina:[...w.stamina],safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent]};
+      stamina:[...w.stamina],safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],
+      batDownUntil:[...w.batDownUntil] as FireWorld['batDownUntil']};
     this.broadcast({t:'fire',world:this.fire});this.emit('fire',this.fire);
   }
   private shareTreetop():void{
@@ -1159,7 +1162,8 @@ export class Network {
     this.treetop={...w,bridge:[...w.bridge],tower:[...w.tower],time:[...w.time],
       fragileAt:[...w.fragileAt],
       supporting:[...w.supporting],health:[...w.health],stamina:[...w.stamina],
-      safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent]};
+      safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],
+      batDownUntil:[...w.batDownUntil] as TreeWorld['batDownUntil']};
     this.broadcast({t:'treetop',world:this.treetop});this.emit('treetop',this.treetop);
   }
   private shareTemporal():void{
