@@ -1,3 +1,4 @@
+import {RatEnemyVisuals,preloadRatEnemies} from './ratEnemyVisuals';
 import Phaser from 'phaser';
 import {preloadKenneyCharacters} from './kenneyCharacterSprites';
 import {preloadOfficialLandmarks,officialLandmark,LANDMARK_KEYS} from './officialLandmarks';
@@ -25,6 +26,7 @@ import {
 
 /** Entirely independent level-2 Phaser world, sharing characters and controls. */
 export class TemporalForestScene extends Phaser.Scene {
+ private ratEnemies?:RatEnemyVisuals;
  private net:Network;private touch:TouchInput;private hud?:()=>void;
  private w:TemporalWorld;
  private art!:NightArt;
@@ -149,13 +151,14 @@ export class TemporalForestScene extends Phaser.Scene {
   this.art.water(TEMP_CHANNEL.start,TEMP_CHANNEL.end,638);
   this.text(2800,511,'CORRENTEZA PROFUNDA',14,'#efc6b3').setAlpha(.9);
  }
- preload():void{preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestChickens(this);preloadForestTrees(this);}
+ preload():void{preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestChickens(this);preloadRatEnemies(this,2);preloadForestTrees(this);}
  create():void{
   this.physics.world.setBounds(0,0,TEMP_WIDTH,900);
   this.physics.world.setBoundsCollision(true,true,false,false);
   this.woodedEnvironment();
   this.forestTrees=new ForestTrees(this,2);
   this.chickens=new ForestChickens(this,2);
+   this.ratEnemies=new RatEnemyVisuals(this,2);
   this.platform(1305,678,2610,80);
   this.platform(3585,678,1230,80);
   this.platform(TEMP_ECHO[0].x,539,145,19,'root' as 'wood');
@@ -444,6 +447,7 @@ export class TemporalForestScene extends Phaser.Scene {
   this.art.update(time);
   this.forestTrees?.update();
   this.chickens?.update(time);
+   this.ratEnemies?.update(now,w.cycleStart,w.ratDownUntil,pause);
   this.art.drawTide(w.cycleStart,now,w.bridge,pause);
   this.hud?.();
   void dt;
