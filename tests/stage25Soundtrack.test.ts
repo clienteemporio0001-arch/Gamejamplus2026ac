@@ -7,8 +7,10 @@ const main=SRC('main'),audio=SRC('sharedAudio'),music=SRC('soundtrack');
 const workflow=readFileSync('.github/workflows/pages.yml','utf8');
 const composer=readFileSync('scripts/compose_soundtrack.py','utf8');
 const manifest=JSON.parse(readFileSync('public/audio/manifest.json','utf8'));
-assert.equal(Object.keys(SCORE_CATALOG).length,5);
+assert.equal(Object.keys(SCORE_CATALOG).length,6);
+assert.equal(SCORE_CATALOG.battle.seconds,64,'new original Guardian battle composition');
 for(const [key,spec] of Object.entries(SCORE_CATALOG)){
+ if(key==='battle')continue; // Synthesized locally, not one of the five MP3 level themes.
  const file='public/audio/'+spec.file;
  assert.ok(existsSync(file),key+' must be an actual MP3, not a placeholder');
  assert.ok(statSync(file).size>100_000,'a real playable audio file is required: '+file);
