@@ -12,6 +12,7 @@ const now=100_000;
 const state: BafometArena={...initVitals(),...initRatCombat(),exit:true,boss:initBafomet(now),supporting:[null,null,null]};
 assert.equal(validBafomet(state.boss),true);
 assert.equal(state.boss.hp,BAFOMET_MAX_HP);
+state.boss.aggroAt=now;
 const lia:Pose={seat:1,x:3660,y:606,vx:0,vy:0};
 assert.equal(shootBafomet(state,lia,1,now+100),true,'Lia hits guard from the correct side');
 assert.equal(state.boss.hp,BAFOMET_MAX_HP-1);
@@ -21,7 +22,11 @@ assert.equal(shootBafomet(state,lia,1,now+500),true,'a later approved shot hits'
 assert.equal(state.boss.hp,BAFOMET_MAX_HP-2);
 
 const unready:BafometArena={...initVitals(),...initRatCombat(),exit:false,boss:initBafomet(now),supporting:[null,null,null]};
-assert.equal(shootBafomet(unready,lia,1,now+100),false,'guardian is invincible until the exit puzzle opens');
+assert.equal(shootBafomet(unready,lia,1,now+100),false,'guardian cannot be damaged before crossing the arrow');
+tickBafomet(unready,[{seat:2,x:3371,y:608,vx:0,vy:0}],now+150);
+assert.equal(unready.boss.aggroAt,now+150,'crossing sign initiates battle without solving the roots');
+assert.equal(shootBafomet(unready,lia,1,now+500),true,'boss is vulnerable during encounter before puzzle completion');
+assert.ok(unready.boss.x>=3370,'guardian cannot move left of sign');
 
 const inArena:Pose={seat:0,x:3900,y:606,vx:0,vy:0};
 assert.equal(tickBafomet(state,[inArena],now+1100),true);
@@ -75,7 +80,9 @@ const encounter={exit:true,hp:8};
 assert.equal(scoreForEncounter('playing',2,'loop',encounter,[3550,2100,2100]),'night');
 assert.equal(scoreForEncounter('playing',2,'loop',encounter,[3200,3200,3200]),'rain');
 assert.equal(scoreForEncounter('playing',2,'loop',{exit:true,hp:0},[3900]),'rain');
-assert.equal(scoreForEncounter('playing',2,'loop',{exit:false,hp:12},[3900]),'rain');
+assert.equal(scoreForEncounter('playing',2,'loop',{exit:false,hp:12},[3900]),'night');
+assert.equal(scoreForEncounter('playing',2,'loop',{exit:false,hp:12,aggroAt:now},[3250]),'night');
+assert.equal(scoreForEncounter('playing',2,'loop',{exit:false,hp:12},[3250]),'rain');
 assert.equal(scoreForEncounter('playing',3,'loop',encounter,[3900]),'treetop');
 assert.equal(scoreForEncounter('transition',2,'loop',encounter,[3900]),'treetop');
 const bossVisual=readFileSync('src/bafometVisual.ts','utf8');

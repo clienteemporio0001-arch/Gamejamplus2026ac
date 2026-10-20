@@ -27,10 +27,10 @@ export function scoreForStage(stage:string,level:number,experience:string):Score
 /** Battle score reuses the original suspense composition with crossfades,
  * not a second AudioContext or an unmanaged looping sound. */
 export function scoreForEncounter(stage:string,level:number,experience:string,
- guardian:{exit:boolean;hp:number},partyX:readonly number[]):ScoreCue{
+ guardian:{exit:boolean;hp:number;aggroAt?:number},partyX:readonly number[]):ScoreCue{
  const regular=scoreForStage(stage,level,experience);
- if(regular==='rain'&&guardian.exit&&guardian.hp>0&&
-    partyX.some(x=>Number.isFinite(x)&&x>=3500&&x<=4200))return 'night';
+ if(regular==='rain'&&guardian.hp>0&&
+    (Boolean(guardian.aggroAt)||partyX.some(x=>Number.isFinite(x)&&x>3370&&x<=4200)))return 'night';
  return regular;
 }
 type Playing={key:keyof typeof SCORE_CATALOG;source:AudioBufferSourceNode;gain:GainNode};

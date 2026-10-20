@@ -6,10 +6,10 @@ import type {BatImpacts} from './flyingBats';
 export const BAFOMET_MAX_HP=12;
 export const BAFOMET_SPAWN_X=3900;
 export const BAFOMET_GROUND_Y=610;
-export const BAFOMET_ARENA_LEFT=3500;
+export const BAFOMET_ARENA_LEFT=3370; // forward arrow sign: hard left pursuit limit
 export const HERO_REVIVE_MS=10000;
 export type BafometState={
- hp:number;x:number;y:number;facing:-1|1;
+ hp:number;x:number;y:number;facing:-1|1;aggroAt:number;
  lastStepAt:number;leapAt:number;nextLeapAt:number;
  hurtUntil:number;lastHitAt:number;lastSwingAt:number;defeatedAt:number;
  stompUntil:number;dashUntil:number;dashFacing:-1|1;
@@ -20,7 +20,7 @@ export type BafometArena=Vitals&{
  supporting:[Seat|null,Seat|null,Seat|null];
 };
 export function initBafomet(now=Date.now()):BafometState{
- return {hp:BAFOMET_MAX_HP,x:BAFOMET_SPAWN_X,y:BAFOMET_GROUND_Y,facing:-1,
+ return {hp:BAFOMET_MAX_HP,x:BAFOMET_SPAWN_X,y:BAFOMET_GROUND_Y,facing:-1,aggroAt:0,
   lastStepAt:now,leapAt:0,nextLeapAt:now+1600,hurtUntil:0,
   lastHitAt:0,lastSwingAt:0,defeatedAt:0,stompUntil:0,dashUntil:0,dashFacing:1};
 }
@@ -30,15 +30,15 @@ export function validBafomet(value:unknown):value is BafometState{
  return typeof b.hp==='number'&&Number.isInteger(b.hp)&&Number(b.hp)>=0&&Number(b.hp)<=BAFOMET_MAX_HP
   &&b.facing!==undefined&&(b.facing===1||b.facing===-1)
   &&(b.dashFacing===1||b.dashFacing===-1)
-  &&['x','y','lastStepAt','leapAt','nextLeapAt','hurtUntil','lastHitAt',
+  &&['aggroAt','x','y','lastStepAt','leapAt','nextLeapAt','hurtUntil','lastHitAt',
       'lastSwingAt','defeatedAt','stompUntil','dashUntil'].every(k=>
       typeof b[k]==='number'&&Number.isFinite(b[k])&&Number(b[k])>=0)
   &&Number(b.x)>=BAFOMET_ARENA_LEFT&&Number(b.x)<=4070
   &&Number(b.y)>=405&&Number(b.y)<=BAFOMET_GROUND_Y;
 }
 export function bafometAwake(w:BafometArena):boolean{
- // The encounter unlocks after the cooperation puzzle opens the final trail.
- return w.exit&&w.boss.hp>0;
+ // Crossing the arrow awakens the guardian, independently of the vine puzzles.
+ return w.boss.aggroAt>0&&w.boss.hp>0;
 }
 export function hurtBafomet(w:BafometArena,now:number,damage=1):boolean{
  const b=w.boss;
@@ -75,11 +75,13 @@ export function tickBafomet(w:BafometArena,poses:Pose[],now:number):boolean{
  const b=w.boss;
  const dt=Math.min(90,Math.max(0,now-b.lastStepAt));
  b.lastStepAt=now;
+ // The host alone latches the encounter once ANY living hero crosses the sign.
+ if(b.aggroAt===0&&b.hp>0&&poses.some(p=>w.health[p.seat]>0&&p.x>BAFOMET_ARENA_LEFT))b.aggroAt=now;
  if(!bafometAwake(w))return false;
  // Only living heroes in the final arena can aggro the guard.
  const living=poses.filter(p=>w.health[p.seat]>0&&p.x>=BAFOMET_ARENA_LEFT&&p.x<=4095);
  const target=living.sort((a,c)=>Math.abs(a.x-b.x)-Math.abs(c.x-b.x))[0];
- let changed=false;
+ let changed=b.aggroAt===now;
  if(target){
   if(now>=b.nextLeapAt&&now>=b.hurtUntil){
    b.leapAt=now;

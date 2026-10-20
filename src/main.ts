@@ -440,7 +440,7 @@ function refreshHud(): void {
   // theme immediately after the guardian falls or the team leaves the arena.
   if(net.playing&&net.experience==='loop'&&net.level===2)
    audio.setScore(scoreForEncounter(net.stage,net.level,net.experience,
-     {exit:net.temporal.exit,hp:net.temporal.boss.hp},net.poses.map(p=>p.x)));
+     {exit:net.temporal.exit,hp:net.temporal.boss.hp,aggroAt:net.temporal.boss.aggroAt},net.poses.map(p=>p.x)));
   if(net.playing&&net.experience==='loop'&&net.localSeat!==null){
     const world=net.level===4?net.fire:net.level===3?net.treetop:net.level===2?net.temporal:net.loop;
     const update=(id:string,value:string)=>{
