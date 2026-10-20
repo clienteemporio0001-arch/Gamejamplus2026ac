@@ -9,6 +9,8 @@ import {TreetopArt} from './treetopArt';
 import {ForestTrees,preloadForestTrees} from './forestTrees';
 import {FRAGILE_BRANCH_INDICES,fragilePhase} from './jamChallenges';
 import {TreetopWindAudio} from './treetopWindAudio';
+import {FlyingBatVisuals,preloadBats} from './flyingBatVisuals';
+import {batAlive,batFlight} from './flyingBats';
 import {CHARACTERS,type Network,type Seat} from './network';
 import type {TouchInput} from './game';
 import {SoloBodies} from './soloBodies';
@@ -31,6 +33,7 @@ export class TreetopForestScene extends Phaser.Scene {
  private art!:TreetopArt;
  private forestTrees?:ForestTrees;
  private windAudio!:TreetopWindAudio;
+ private bats?:FlyingBatVisuals;private batAlertAt=0;
  private avatars:Phaser.GameObjects.Rectangle[]=[];
  private names:Phaser.GameObjects.Text[]=[];
  private local!:Phaser.GameObjects.Rectangle;private body!:Phaser.Physics.Arcade.Body;
@@ -56,7 +59,7 @@ export class TreetopForestScene extends Phaser.Scene {
   return this.add.text(x,y,value,{fontFamily:'Arial',fontSize:size+'px',fontStyle:'bold',
    color,stroke:'#071c1b',strokeThickness:4,align:'center'}).setOrigin(.5).setDepth(55);
  }
- preload():void{preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestTrees(this);}
+ preload():void{preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestTrees(this);preloadBats(this,3);}
 
  private makeEnvironment():void{
   this.art=new TreetopArt(this,TREE_WIDTH,TREE_HEIGHT);
@@ -92,6 +95,7 @@ export class TreetopForestScene extends Phaser.Scene {
   this.physics.world.setBounds(0,0,TREE_WIDTH,TREE_HEIGHT+250);
   this.physics.world.setBoundsCollision(true,true,false,false);
   this.makeEnvironment();
+  this.bats=new FlyingBatVisuals(this,3);
   this.windAudio=new TreetopWindAudio();
   for(const p of TREE_PLATFORMS){
    const platform=this.add.rectangle(p.x,p.y,p.width,p.height,0xffffff,0.001).setDepth(15);
@@ -293,6 +297,16 @@ export class TreetopForestScene extends Phaser.Scene {
   }
   const seat=this.net.localSeat,w=this.w,now=Date.now();
   const pause=w.blackoutUntil>now||w.deadUntil>0||!this.net.everyoneConnected;
+  this.bats?.update(now,w.cycleStart,w.batDownUntil,pause);
+  if(!pause&&now-this.batAlertAt>8500&&
+    ([0,1] as const).some(id=>{
+      if(!batAlive(w.batDownUntil,id,now))return false;
+      const bat=batFlight(3,id,now,w.cycleStart);
+      return Math.abs(this.local.x-bat.x)<215&&Math.abs(this.local.y-bat.y)<135;
+    })){
+    this.batAlertAt=now;
+    this.pipo.warnDanger('Morcegos nas copas! Lia pode derrubá-los com a baladeira!');
+  }
   this.updateFragileBranches(now,pause);
   if(pause!==this.paused){
    this.paused=pause;
