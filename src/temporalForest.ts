@@ -71,11 +71,12 @@ export function tempSurface(w:TemporalWorld,x:number):'normal'|'mud'|'wet'{
  return 'normal';
 }
 export function tempBlocks(w:TemporalWorld){
- return [/* Remove the unintended early wall; retain its slot for stable collider indexing. */
- {x:2310,width:40,height:550,active:false},
+ return [/* Keep the original gate before the tree until the three rain landmarks are solved. */
+ {x:2310,width:40,height:550,active:!w.echo.every(Boolean)},
  ...TEMP_LAYOUTS.map((config,i)=>({x:config.obstacles[0],width:62,height:98,active:i===w.layout})),
  ...TEMP_LAYOUTS.map((config,i)=>({x:config.obstacles[1],width:48,height:100,active:i===w.layout})),
- {x:3410,width:44,height:530,active:w.layout!==2},
+ /* No wall beside the forward arrow after the fallen-tree crossing. */
+ {x:3410,width:44,height:530,active:false},
  {x:4080,width:40,height:530,active:!w.exit||w.boss.hp>0}];
 }
 export function temporalObjective(w:TemporalWorld):{title:string;progress:string}{

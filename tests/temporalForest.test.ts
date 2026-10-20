@@ -28,9 +28,10 @@ ok(temporalObjective(a.world).title.includes('marcos'),'objetivo inicial progres
 
 const b0=tempBlocks(a.world);
 ok(b0.filter(b=>b.active).length>=4,'obstáculos reais permanecem no layout A');
-ok(b0[0].x===2310&&!b0[0].active,'muro inicial não pode bloquear o avanço para a Fase 02');
-ok(tempBlocks({...a.world,echo:[true,true,true]})[0].active===false,'muro permanece ausente após os marcos');
-ok(tempBlocks({...a.world,layout:2})[0].active===false,'muro permanece ausente durante a mudança de estado');
+ok(b0[0].x===2310&&b0[0].active,'barreira antes da árvore deve permanecer até os marcos');
+ok(tempBlocks({...a.world,echo:[true,true,true]})[0].active===false,'barreira inicial abre depois dos três marcos');
+ok([0,1,2].every(layout=>tempBlocks({...a.world,layout:layout as 0|1|2})[7].active===false),
+ 'barreira ao lado da placa (x=3410) fica removida em todos os estados');
 ok(b0.at(-1)?.x===4080&&b0.at(-1)?.active===true,'guardião e saída final mantêm barreira');
 ok(tempBlocks({...a.world,layout:1}).some((b,i)=>b.active!==b0[i].active),
   'layout B muda colisões físicas');
