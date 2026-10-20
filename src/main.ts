@@ -38,6 +38,13 @@ const controls = document.querySelector<HTMLDivElement>('#mobile-controls')!;
 const touch: TouchInput = { left: false, right: false, jump: false, interact: false, ability: false };
 let game: Phaser.Game | null = null;
 let activeMode: 'none' | 'intro' | 'level1' | 'level2' | 'level3' | 'level4' | 'loop' | 'temporal' | 'treetop' | 'fire' = 'none';
+/** Keep ONE Phaser renderer/WebGL context through all four phases.
+ * Creating a new Game immediately after destroy(true) can race Phaser's
+ * asynchronous teardown and intermittently leave the next scene frozen.
+ */
+let rendererReady=false;
+let activeSceneKey:string|null=null;
+let pendingScene:{mode:typeof activeMode;scene:Phaser.Scene}|null=null;
 let info = '';
 let phaseMapOpen=false;
 let rankingsOpen=false;
@@ -326,38 +333,73 @@ function startSoloAdventure(level:1|2|3|4,avatars:AvatarChoices=loadSoloAvatars(
  }
  net.startSolo(level,false,'loop',avatars);net.setNickname(profile.nickname);
 }
-function enterGame(): void {
+function activateGameScene(instance:Phaser.Game,mode:typeof activeMode,scene:Phaser.Scene):void{
+  if(game!==instance)return; // an old async renderer boot must not revive a left room
+  const key=scene.sys.settings.key;
+  if(activeSceneKey===key)return;
+  // Shutdown unsubscribes each level from Network and Phaser events.
+  // Unlike Game.destroy(), SceneManager transitions do NOT lose WebGL context.
+  const previous=activeSceneKey;
+  activeMode=mode;activeSceneKey=key;
+  if(previous){
+    instance.scene.stop(previous);
+    instance.scene.remove(previous);
+  }
+  instance.scene.add(key,scene,true);
+}
+function enterGame():void{
   setActiveAvatarSelections(([0,1,2] as const).map(seat=>net.avatarForSeat(seat)));
-  const mode = net.stage === 'intro' ? 'intro' : net.experience==='loop'?(net.level===4?'fire':net.level===3?'treetop':net.level===2?'temporal':'loop'):('level' + net.level) as 'level1' | 'level2' | 'level3' | 'level4';
-  if (game && activeMode === mode) return;
-  exitGame();
-  activeMode = mode;
-  const scene = mode === 'intro' ? new IntroScene() :
-    mode === 'loop' ? new ForestLoopScene(net,touch,refreshHud) :
-    mode === 'temporal' ? new TemporalForestScene(net,touch,refreshHud) :
-    mode === 'treetop' ? new TreetopForestScene(net,touch,refreshHud) :
-    mode === 'fire' ? new BurningForestScene(net,touch,refreshHud) :
-    mode === 'level2' ? new JourneyScene(net, touch, refreshHud) :
-    net.level >= 3 ? new LateScene(net, touch, refreshHud) : new ForestScene(net, touch, refreshHud);
-  // Render at the actual CSS viewport dimensions. World physics remains unchanged.
+  const mode=(net.stage==='intro'?'intro':
+    net.experience==='loop'?(net.level===4?'fire':net.level===3?'treetop':net.level===2?'temporal':'loop'):
+    'level'+net.level) as typeof activeMode;
+  if(game&&activeMode===mode)return;
+  const scene=mode==='intro'?new IntroScene():
+    mode==='loop'?new ForestLoopScene(net,touch,refreshHud):
+    mode==='temporal'?new TemporalForestScene(net,touch,refreshHud):
+    mode==='treetop'?new TreetopForestScene(net,touch,refreshHud):
+    mode==='fire'?new BurningForestScene(net,touch,refreshHud):
+    mode==='level2'?new JourneyScene(net,touch,refreshHud):
+    net.level>=3?new LateScene(net,touch,refreshHud):new ForestScene(net,touch,refreshHud);
+  if(game){
+    if(rendererReady)activateGameScene(game,mode,scene);
+    else {
+      // A movie can finish while the initial renderer is still booting.
+      // Keep only the latest phase; activating an outdated scene causes hangs.
+      pendingScene={mode,scene};activeMode=mode;
+    }
+    return;
+  }
+  activeMode=mode;
+  activeSceneKey=scene.sys.settings.key;
+  rendererReady=false;pendingScene=null;
   const view=viewportSize(window);
-  game = new Phaser.Game({
-    type: Phaser.AUTO,
-    parent: 'game',
-    width: view.width,
-    height: view.height,
-    backgroundColor: '#091c23',
-    render: { antialias: true, pixelArt: false },
-    scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.NO_CENTER },
-    physics: { default: 'arcade', arcade: { debug: false, gravity: { x: 0, y: 0 } } },
-    scene: [scene],
+  const instance=new Phaser.Game({
+    type:Phaser.AUTO,
+    parent:'game',
+    width:view.width,height:view.height,
+    backgroundColor:'#091c23',
+    render:{antialias:true,pixelArt:false},
+    scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.NO_CENTER},
+    physics:{default:'arcade',arcade:{debug:false,gravity:{x:0,y:0}}},
+    scene:[scene]
+  });
+  game=instance;
+  instance.events.once(Phaser.Core.Events.READY,()=>{
+    if(game!==instance)return;
+    rendererReady=true;
+    if(pendingScene){
+      const pending=pendingScene;pendingScene=null;
+      // The last phase may have changed again while assets were loading.
+      activateGameScene(instance,pending.mode,pending.scene);
+    }
   });
 }
-function exitGame(): void {
-  if (!game) return;
-  game.destroy(true);
-  game = null;
-  activeMode = 'none';
+function exitGame():void{
+  const instance=game;
+  if(!instance)return;
+  game=null;rendererReady=false;activeMode='none';activeSceneKey=null;pendingScene=null;
+  // Destroy once, on returning to the menu, never between phases.
+  instance.destroy(true);
   unmountMobileControls();
 }
 function currentMission(){
