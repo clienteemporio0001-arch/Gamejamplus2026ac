@@ -1,3 +1,4 @@
+import {RatEnemyVisuals,preloadRatEnemies} from './ratEnemyVisuals';
 import Phaser from 'phaser';
 import {preloadKenneyCharacters} from './kenneyCharacterSprites';
 import {preloadOfficialLandmarks,officialLandmark} from './officialLandmarks';
@@ -25,6 +26,7 @@ import {TREE_WIDTH,TREE_HEIGHT,TREE_START,TREE_PLATFORMS,TREE_SHELTERS,TREE_TARG
 
 /** Fase 3 da aventura principal. Nenhum chão é criado abaixo dos galhos. */
 export class TreetopForestScene extends Phaser.Scene {
+ private ratEnemies?:RatEnemyVisuals;
  private net:Network;private touch:TouchInput;private hud?:()=>void;
  private w:TreeWorld;
  private markers:Array<{ring:Phaser.GameObjects.Arc;label?:Phaser.GameObjects.Text;stage:'bridge'|'tower'|'time';seat:Seat}>=[];
@@ -60,7 +62,7 @@ export class TreetopForestScene extends Phaser.Scene {
   return this.add.text(x,y,value,{fontFamily:'Arial',fontSize:size+'px',fontStyle:'bold',
    color,stroke:'#071c1b',strokeThickness:4,align:'center'}).setOrigin(.5).setDepth(55);
  }
- preload():void{preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestTrees(this);preloadBats(this,3);}
+ preload():void{preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestTrees(this);preloadBats(this,3);preloadRatEnemies(this,3);}
 
  private makeEnvironment():void{
   this.art=new TreetopArt(this,TREE_WIDTH,TREE_HEIGHT);
@@ -97,6 +99,7 @@ export class TreetopForestScene extends Phaser.Scene {
   this.physics.world.setBoundsCollision(true,true,false,false);
   this.makeEnvironment();
   this.bats=new FlyingBatVisuals(this,3);
+   this.ratEnemies=new RatEnemyVisuals(this,3);
   this.windAudio=new TreetopWindAudio();
   for(const p of TREE_PLATFORMS){
    const platform=this.add.rectangle(p.x,p.y,p.width,p.height,0xffffff,0.001).setDepth(15);
@@ -326,6 +329,7 @@ export class TreetopForestScene extends Phaser.Scene {
   const seat=this.net.localSeat,w=this.w,now=Date.now();
   const pause=w.blackoutUntil>now||w.deadUntil>0||!this.net.everyoneConnected;
   this.bats?.update(now,w.cycleStart,w.batDownUntil,pause);
+   this.ratEnemies?.update(now,w.cycleStart,w.ratDownUntil,pause);
   if(!pause&&now-this.batAlertAt>8500&&
     ([0,1] as const).some(id=>{
       if(!batAlive(w.batDownUntil,id,now))return false;
