@@ -15,7 +15,7 @@ import {BurningForestArt} from './burningForestArt';
 import {ForestTrees,preloadForestTrees} from './forestTrees';
 import {BurningForestAudio} from './burningForestAudio';
 import {FlyingBatVisuals,preloadBats} from './flyingBatVisuals';
-import {batAlive,batFlight} from './flyingBats';
+import {BAT_KNOCKBACK_MS,batAlive,batFlight,type BatImpact} from './flyingBats';
 import {
  FIRE_WIDTH,FIRE_HEIGHT,FIRE_FLOOR_Y,FIRE_START,FIRE_PLATFORMS,FIRE_TARGETS,FIRE_SHIFT_ROOTS,
  firePlatforms,fireVisualTreePhase,fireHeavySmoke,fireDamageZone,fireFlareActive,
@@ -47,6 +47,7 @@ export class BurningForestScene extends Phaser.Scene {
  private pending=new Map<number,{seat:Seat;kind:VitalAction}>();
  private jumps=0;private facing:-1|1=1;private pendingJump=false;
  private dashUntil=0;private shotReadyAt=0;private dashReadyAt=0;
+ private knockUntil=[0,0,0];private knockVx=[0,0,0];
  private paused=false;private dark!:Phaser.GameObjects.Rectangle;
  private darkText!:Phaser.GameObjects.Text;
  private dangerText!:Phaser.GameObjects.Text;
@@ -177,6 +178,7 @@ export class BurningForestScene extends Phaser.Scene {
    }
   }));
   this.off.push(this.net.on('respawn',p=>{
+   this.knockUntil[p.seat]=0;this.knockVx[p.seat]=0;
    this.solo?.reset(p);
    if(this.net.localSeat===p.seat){
     this.body.reset(p.x,p.y);
@@ -217,7 +219,30 @@ export class BurningForestScene extends Phaser.Scene {
    this.off.forEach(off=>off());this.scale.off(Phaser.Scale.Events.RESIZE,onResize);
   });
  }
+ private applyBatKnockback(seat:Seat,hit:BatImpact):void{
+  const now=Date.now();
+  if(now-hit.at>900||hit.at>now+1000||!this.net.everyoneConnected||
+     this.net.fire.deadUntil>0)return;
+  if(!this.net.isSolo&&this.net.localSeat!==seat)return;
+  const body=this.solo?.body(seat)??this.body;
+  if(!body)return;
+  body.setAllowGravity(true);
+  body.setVelocity(hit.vx,hit.vy);
+  this.knockVx[seat]=hit.vx;
+  this.knockUntil[seat]=now+BAT_KNOCKBACK_MS;
+  const actor=this.avatars[seat];
+  if(actor){
+   const flash=this.add.circle(actor.x,actor.y-8,27,0xffaf80,.55).setDepth(66);
+   this.tweens.add({targets:flash,scale:1.6,alpha:0,duration:240,
+    onComplete:()=>flash.destroy()});
+  }
+ }
  private sync(w:FireWorld):void{
+  for(const seat of [0,1,2] as Seat[]){
+   const hit=w.batImpacts[seat];
+   if(hit&&hit.at!==(this.world.batImpacts[seat]?.at??0))
+    this.applyBatKnockback(seat,hit);
+  }
   const old=this.world;
   const shiftingStarts=w.blackoutUntil>0&&old.blackoutUntil!==w.blackoutUntil;
   if(shiftingStarts&&this.shiftingRoots.length){
@@ -232,7 +257,9 @@ export class BurningForestScene extends Phaser.Scene {
   this.world={...w,log:[...w.log],smoke:[...w.smoke],tree:[...w.tree],
    supporting:[...w.supporting],dashAt:[...w.dashAt],dashX:[...w.dashX],
    smokeSeconds:[...w.smokeSeconds],health:[...w.health],stamina:[...w.stamina],
-   safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent]};
+   safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],
+   batDownUntil:[...w.batDownUntil],
+   batImpacts:w.batImpacts.map(hit=>hit?{...hit}:null) as FireWorld['batImpacts']};
   if(this.shiftingRoots.length){
    this.shiftingRoots.forEach((root,i)=>{
     const target=FIRE_SHIFT_ROOTS[w.layout][i];
@@ -308,6 +335,9 @@ export class BurningForestScene extends Phaser.Scene {
    'AGUARDANDO A EQUIPE...');
   if(!pause){
    this.solo?.beforeFrame(w.supporting);
+   if(this.solo)for(const other of [0,1,2] as Seat[])
+    if(other!==seat&&now<this.knockUntil[other])
+     this.solo.body(other).setVelocityX(this.knockVx[other]);
    let dir=0;
    if(this.cursors?.left.isDown||this.keys?.A?.isDown)dir--;
    if(this.cursors?.right.isDown||this.keys?.D?.isDown)dir++;
@@ -321,12 +351,13 @@ export class BurningForestScene extends Phaser.Scene {
     consumeTouch(this.touch,'interact'));
    const ability=gameKeys.consumeSkill(seat)||consumeTouch(this.touch,'ability');
    this.touch.jump=false;this.touch.interact=false;this.touch.ability=false;
-   this.body.setVelocityX(seat===2&&time<this.dashUntil?
-    this.facing*340:dir*236);
-   if(jumping&&(grounded||seat===0&&this.jumps<2))
+   const stunned=now<this.knockUntil[seat];
+   this.body.setVelocityX(stunned?this.knockVx[seat]:
+    seat===2&&time<this.dashUntil?this.facing*340:dir*236);
+   if(!stunned&&jumping&&(grounded||seat===0&&this.jumps<2))
     this.request(grounded?'jump':'doubleJump',seat);
-   if(action)this.interact(seat);
-   if(ability&&(seat===1&&time>this.shotReadyAt||
+   if(action&&!stunned)this.interact(seat);
+   if(!stunned&&ability&&(seat===1&&time>this.shotReadyAt||
     seat===2&&time>this.dashReadyAt))
     this.request(seat===1?'shoot':'dash',seat);
    this.net.report(this.local.x,this.local.y,
