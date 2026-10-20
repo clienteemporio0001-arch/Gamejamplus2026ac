@@ -782,7 +782,7 @@ export class Network {
           safeUntil:[...msg.world.safeUntil] as FireWorld['safeUntil'],
           lastSpent:[...msg.world.lastSpent] as FireWorld['lastSpent'],
           batDownUntil:[...msg.world.batDownUntil] as FireWorld['batDownUntil'],
-          batImpacts:msg.world.batImpacts.map(hit=>hit?{...hit}:null) as FireWorld['batImpacts']};
+          batImpacts:msg.world.batImpacts.map(hit=>hit?{...hit}:null) as FireWorld['batImpacts'],ratDownUntil:[...msg.world.ratDownUntil] as FireWorld['ratDownUntil'],ratImpacts:msg.world.ratImpacts.map(hit=>hit?{...hit}:null) as FireWorld['ratImpacts']};
         this.emit('fire',this.fire);
         break;
       case 'treetop':
@@ -795,7 +795,7 @@ export class Network {
           safeUntil:[...msg.world.safeUntil] as TreeWorld['safeUntil'],
           lastSpent:[...msg.world.lastSpent] as TreeWorld['lastSpent'],
           batDownUntil:[...msg.world.batDownUntil] as TreeWorld['batDownUntil'],
-          batImpacts:msg.world.batImpacts.map(hit=>hit?{...hit}:null) as TreeWorld['batImpacts']};
+          batImpacts:msg.world.batImpacts.map(hit=>hit?{...hit}:null) as TreeWorld['batImpacts'],ratDownUntil:[...msg.world.ratDownUntil] as TreeWorld['ratDownUntil'],ratImpacts:msg.world.ratImpacts.map(hit=>hit?{...hit}:null) as TreeWorld['ratImpacts']};
         this.emit('treetop',this.treetop);
         break;
       case 'temporal':
@@ -807,11 +807,11 @@ export class Network {
           health:[...msg.world.health] as TemporalWorld['health'],
           stamina:[...msg.world.stamina] as TemporalWorld['stamina'],
           safeUntil:[...msg.world.safeUntil] as TemporalWorld['safeUntil'],
-          lastSpent:[...msg.world.lastSpent] as TemporalWorld['lastSpent']};
+          lastSpent:[...msg.world.lastSpent] as TemporalWorld['lastSpent'],ratDownUntil:[...msg.world.ratDownUntil] as TemporalWorld['ratDownUntil'],ratImpacts:msg.world.ratImpacts.map(hit=>hit?{...hit}:null) as TemporalWorld['ratImpacts']};
         this.emit('temporal',this.temporal);
         break;
       case 'loop':
-        this.loop={...msg.world,marks:[...msg.world.marks] as LoopWorld['marks'],suspended:[...msg.world.suspended] as LoopWorld['suspended'],tree:[...msg.world.tree] as LoopWorld['tree'],final:[...msg.world.final] as LoopWorld['final'],supporting:[...msg.world.supporting] as LoopWorld['supporting'],health:[...msg.world.health] as LoopWorld['health'],stamina:[...msg.world.stamina] as LoopWorld['stamina'],safeUntil:[...msg.world.safeUntil] as LoopWorld['safeUntil'],lastSpent:[...msg.world.lastSpent] as LoopWorld['lastSpent']};
+        this.loop={...msg.world,marks:[...msg.world.marks] as LoopWorld['marks'],suspended:[...msg.world.suspended] as LoopWorld['suspended'],tree:[...msg.world.tree] as LoopWorld['tree'],final:[...msg.world.final] as LoopWorld['final'],supporting:[...msg.world.supporting] as LoopWorld['supporting'],health:[...msg.world.health] as LoopWorld['health'],stamina:[...msg.world.stamina] as LoopWorld['stamina'],safeUntil:[...msg.world.safeUntil] as LoopWorld['safeUntil'],lastSpent:[...msg.world.lastSpent] as LoopWorld['lastSpent'],ratDownUntil:[...msg.world.ratDownUntil] as LoopWorld['ratDownUntil'],ratImpacts:msg.world.ratImpacts.map(hit=>hit?{...hit}:null) as LoopWorld['ratImpacts']};
         this.emit('loop',this.loop);
         break;
       case 'forest':
@@ -1139,7 +1139,7 @@ export class Network {
   }
   private shareLoop():void{
     const w=this.loopAuthority.world;
-    this.loop={...w,marks:[...w.marks] as LoopWorld['marks'],suspended:[...w.suspended] as LoopWorld['suspended'],tree:[...w.tree] as LoopWorld['tree'],final:[...w.final] as LoopWorld['final'],supporting:[...w.supporting] as LoopWorld['supporting'],health:[...w.health] as LoopWorld['health'],stamina:[...w.stamina] as LoopWorld['stamina'],safeUntil:[...w.safeUntil] as LoopWorld['safeUntil'],lastSpent:[...w.lastSpent] as LoopWorld['lastSpent']};
+    this.loop={...w,marks:[...w.marks] as LoopWorld['marks'],suspended:[...w.suspended] as LoopWorld['suspended'],tree:[...w.tree] as LoopWorld['tree'],final:[...w.final] as LoopWorld['final'],supporting:[...w.supporting] as LoopWorld['supporting'],health:[...w.health] as LoopWorld['health'],stamina:[...w.stamina] as LoopWorld['stamina'],safeUntil:[...w.safeUntil] as LoopWorld['safeUntil'],lastSpent:[...w.lastSpent] as LoopWorld['lastSpent'],ratDownUntil:[...w.ratDownUntil] as LoopWorld['ratDownUntil'],ratImpacts:w.ratImpacts.map(hit=>hit?{...hit}:null) as LoopWorld['ratImpacts']};
     this.broadcast({t:'loop',world:this.loop});
     this.emit('loop',this.loop);
   }
@@ -1157,7 +1157,7 @@ export class Network {
       dashAt:[...w.dashAt],dashX:[...w.dashX],health:[...w.health],
       stamina:[...w.stamina],safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],
       batDownUntil:[...w.batDownUntil] as FireWorld['batDownUntil'],
-      batImpacts:w.batImpacts.map(hit=>hit?{...hit}:null) as FireWorld['batImpacts']};
+      batImpacts:w.batImpacts.map(hit=>hit?{...hit}:null) as FireWorld['batImpacts'],ratDownUntil:[...w.ratDownUntil] as FireWorld['ratDownUntil'],ratImpacts:w.ratImpacts.map(hit=>hit?{...hit}:null) as FireWorld['ratImpacts']};
     this.broadcast({t:'fire',world:this.fire});this.emit('fire',this.fire);
   }
   private shareTreetop():void{
@@ -1167,14 +1167,14 @@ export class Network {
       supporting:[...w.supporting],health:[...w.health],stamina:[...w.stamina],
       safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],
       batDownUntil:[...w.batDownUntil] as TreeWorld['batDownUntil'],
-      batImpacts:w.batImpacts.map(hit=>hit?{...hit}:null) as TreeWorld['batImpacts']};
+      batImpacts:w.batImpacts.map(hit=>hit?{...hit}:null) as TreeWorld['batImpacts'],ratDownUntil:[...w.ratDownUntil] as TreeWorld['ratDownUntil'],ratImpacts:w.ratImpacts.map(hit=>hit?{...hit}:null) as TreeWorld['ratImpacts']};
     this.broadcast({t:'treetop',world:this.treetop});this.emit('treetop',this.treetop);
   }
   private shareTemporal():void{
     const w=this.temporalAuthority.world;
     this.temporal={...w,echo:[...w.echo],tree:[...w.tree],roots:[...w.roots],
       supporting:[...w.supporting],skillAt:[...w.skillAt],health:[...w.health],
-      stamina:[...w.stamina],safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent]};
+      stamina:[...w.stamina],safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],ratDownUntil:[...w.ratDownUntil] as TemporalWorld['ratDownUntil'],ratImpacts:w.ratImpacts.map(hit=>hit?{...hit}:null) as TemporalWorld['ratImpacts']};
     this.broadcast({t:'temporal',world:this.temporal});
     this.emit('temporal',this.temporal);
   }
