@@ -392,9 +392,11 @@ export class TreetopForestScene extends Phaser.Scene {
     this.body.setVelocityX(0);
     if(!stunned&&jumping&&!this.pendingJump)this.request('jump',seat);
    }
-   if(action&&!stunned)this.interact(seat);
-   if(!stunned&&ability&&(seat===1&&time>this.lastShot||seat===2&&time>this.lastDash))
-    this.request(seat===1?'shoot':'dash',seat);
+   if(!stunned){
+    if(action)this.interact(seat);
+    if(ability&&(seat===1&&time>this.lastShot||seat===2&&time>this.lastDash))
+     this.request(seat===1?'shoot':'dash',seat);
+   }
    if(base===null)this.net.report(this.local.x,this.local.y,this.body.velocity.x,this.body.velocity.y);
    this.solo?.report();
   }
