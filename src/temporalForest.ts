@@ -82,8 +82,8 @@ export function temporalObjective(w:TemporalWorld):{title:string;progress:string
  if(!w.echo.every(Boolean))return {title:'Encontrem os três marcos.',progress:'Marcos '+w.echo.filter(Boolean).length+'/3'};
  if(!w.bridge)return {title:'Derrubem a árvore sobre a correnteza.',progress:'Amarras '+w.tree.filter(Boolean).length+'/3'};
  if(!w.roots.every(Boolean))return {title:'Esperem o estado C e liberem as raízes.',progress:'Raízes '+w.roots.filter(Boolean).length+'/3'};
- if(w.boss.hp>0)return {title:'Derrotem Bafomet, o guardião da passagem!',progress:'BAFOMET '+w.boss.hp+'/'+BAFOMET_MAX_HP+' ♥'};
- return {title:'Reúnam os três na saída da tempestade.',progress:'Bafomet derrotado · Passagem aberta'};
+ if(w.boss.hp>0)return {title:'Derrotem o Guardião da Passagem!',progress:'GUARDIÃO '+w.boss.hp+'/'+BAFOMET_MAX_HP+' ♥'};
+ return {title:'Reúnam os três na saída da tempestade.',progress:'Guardião derrotado · Passagem aberta'};
 }
 export function tempNear(p:Pose,x:number,y:number,dx=73,dy=89):boolean{
  return Math.abs(p.x-x)<=dx&&Math.abs(p.y-y)<=dy;

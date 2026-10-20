@@ -1,5 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {inflateSync} from 'node:zlib';
+import {scoreForEncounter} from '../src/soundtrack';
 import assert from 'node:assert/strict';
 import {initVitals} from '../src/loopVitals';
 import {initRatCombat} from '../src/ratCombat';
@@ -69,3 +70,17 @@ const visuals=readFileSync('src/bafometVisual.ts','utf8');
 assert.ok(visuals.includes('bafomet-sprites.png?v=20261020-2'),'versioned asset avoids cached missing texture');
 assert.ok(visuals.includes('setScale(2.25)'),'boss remains larger than ordinary enemies');
 console.log('Bafomet spritesheet PNG: all 16 frames decoded, no corrupted asset');
+
+const encounter={exit:true,hp:8};
+assert.equal(scoreForEncounter('playing',2,'loop',encounter,[3550,2100,2100]),'night');
+assert.equal(scoreForEncounter('playing',2,'loop',encounter,[3200,3200,3200]),'rain');
+assert.equal(scoreForEncounter('playing',2,'loop',{exit:true,hp:0},[3900]),'rain');
+assert.equal(scoreForEncounter('playing',2,'loop',{exit:false,hp:12},[3900]),'rain');
+assert.equal(scoreForEncounter('playing',3,'loop',encounter,[3900]),'treetop');
+assert.equal(scoreForEncounter('transition',2,'loop',encounter,[3900]),'treetop');
+const bossVisual=readFileSync('src/bafometVisual.ts','utf8');
+assert.ok(bossVisual.includes("GUARDIÃO DA PASSAGEM"));
+assert.ok(!bossVisual.includes("'BAFOMET · GUARDIÃO DA PASSAGEM'"));
+assert.ok(bossVisual.includes('b.y+28-260*ascent')&&bossVisual.includes('setAlpha(rising?'),
+ 'defeated guardian rises and fades without changing game state');
+console.log('GUARDIÃO: ascension animation, encounter soundtrack and scene restore passed');

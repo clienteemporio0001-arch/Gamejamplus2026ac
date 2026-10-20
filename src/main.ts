@@ -22,7 +22,7 @@ import { loopObjective, loopWind } from './forestLoopUI';
 import { LOOP_CYCLE_MS } from './forestLoop';
 import {getAudioSettings,setAudioSettings} from './audioSettings';
 import {GameAudio,type SoundBiome} from './sharedAudio';
-import {scoreForStage} from './soundtrack';
+import {scoreForStage,scoreForEncounter} from './soundtrack';
 import {fireVisualTreePhase} from './burningForest';
 import {missionSnapshot} from './missionChapters';
 import {elapsedMs,formatTime,cleanName} from './speedrun';
@@ -436,6 +436,11 @@ function currentMission(){
    missionSnapshot(1,net.loop);
 }
 function refreshHud(): void {
+  // The shared soundtrack owns the battle crossfade and returns to the rain
+  // theme immediately after the guardian falls or the team leaves the arena.
+  if(net.playing&&net.experience==='loop'&&net.level===2)
+   audio.setScore(scoreForEncounter(net.stage,net.level,net.experience,
+     {exit:net.temporal.exit,hp:net.temporal.boss.hp},net.poses.map(p=>p.x)));
   if(net.playing&&net.experience==='loop'&&net.localSeat!==null){
     const world=net.level===4?net.fire:net.level===3?net.treetop:net.level===2?net.temporal:net.loop;
     const update=(id:string,value:string)=>{

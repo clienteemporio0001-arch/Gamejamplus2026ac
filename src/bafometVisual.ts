@@ -20,12 +20,14 @@ export class BafometVisual {
   this.actor=scene.add.sprite(3900,638,KEY,0).setOrigin(.5,1).setScale(2.25).setDepth(39);
   this.actor.setFlipX(true);
   this.bar=scene.add.graphics().setDepth(45);
-  this.name=scene.add.text(0,0,'BAFOMET · GUARDIÃO DA PASSAGEM',{
+  this.name=scene.add.text(0,0,'GUARDIÃO DA PASSAGEM',{
     fontFamily:'Arial',fontSize:'12px',fontStyle:'bold',color:'#ffcfb0',
     stroke:'#230b09',strokeThickness:4,align:'center'}).setOrigin(.5).setDepth(46);
  }
  update(b:BafometState,now:number,awake:boolean):void{
-  const visible=awake||b.hp===0&&b.defeatedAt>0&&now-b.defeatedAt<2500;
+  const rising=b.hp===0&&b.defeatedAt>0;
+  const ascent=rising?Math.max(0,Math.min(1,(now-b.defeatedAt)/1800)):0;
+  const visible=awake||rising&&ascent<1;
   this.actor.setVisible(visible);
   this.bar.clear();
   this.name.setVisible(visible&&b.hp>0);
@@ -36,7 +38,8 @@ export class BafometVisual {
     striking?10+Math.floor(now/100)%4:
     leaping?7+Math.floor((now-b.leapAt)/170)%3:
     Math.floor(now/125)%7;
-  this.actor.setFrame(frame).setPosition(b.x,b.y+28).setFlipX(b.facing<0);
+  this.actor.setFrame(frame).setPosition(b.x,b.y+28-260*ascent).setFlipX(b.facing<0);
+  this.actor.setAlpha(rising?1-Math.pow(ascent,1.7):1);
   this.actor.setTint(now<b.hurtUntil?0xff6464:0xffffff);
   this.name.setPosition(b.x,b.y-147);
   if(b.hp===0)return;
