@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type {Seat} from './network';
-import {AVATAR_CATALOG,DEFAULT_AVATARS,isAvatarId,avatarInfo,type AvatarId,type AvatarChoices} from './avatarCatalog';
+import {DEFAULT_AVATARS,isAvatarId,avatarInfo,type AvatarId,type AvatarChoices} from './avatarCatalog';
 
 /**
  * Licensed CC0 visual overlays from Kenney Toon Characters 1.
@@ -19,8 +19,12 @@ export function kenneyKeyForSeat(seat:Seat):string{
  return 'kenney-'+avatarInfo(activeAvatars[seat]).file;
 }
 export function preloadKenneyCharacters(scene:Phaser.Scene):void{
- // Load all six locally so skin switching never requires runtime downloads.
- for(const avatar of AVATAR_CATALOG){
+ // The six portraits are small and shown in the lobby. A running match uses
+ // only three unique skins, so load only those THREE texture atlases (~half
+ // the texture uploads), which is especially important at Stage 01 startup.
+ // Later phases reuse the cached atlases of the same persistent Phaser Game.
+ for(const id of activeAvatars){
+  const avatar=avatarInfo(id);
   const key='kenney-'+avatar.file;
   if(scene.textures.exists(key))continue;
   scene.load.atlasXML(key,
