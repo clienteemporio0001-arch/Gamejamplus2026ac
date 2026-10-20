@@ -1,5 +1,5 @@
 import {exitPresence} from './sharedExit';
-import {batTouchesHero,hitBatWithSlingshot,initialBats,validBatState,type BatDownState} from './flyingBats';
+import {batContactImpact,batTouchesHero,hitBatWithSlingshot,initialBats,initialBatImpacts,validBatState,validBatImpacts,type BatDownState,type BatImpacts} from './flyingBats';
 import type {Pose,Seat} from './network';
 import {escapeWallX,escapeFireHit} from './jamChallenges';
 import {initVitals,validVitals,spendVital,regenVitals,damageVitals,VITALS,
@@ -100,7 +100,7 @@ export type FireWorld=Vitals&{
  flare:number;windDirection:FireWind;treeStatus:'calm'|'warning'|'impact';
  treeWarningUntil:number;treeImpactUntil:number;
  collapseCycle:number;completed:boolean;damageCause:'fire'|'smoke'|'tree'|'fall'|'fireball'|'bat'|'none';
- batDownUntil:BatDownState;
+ batDownUntil:BatDownState;batImpacts:BatImpacts;
 };
 export function initFire(now=Date.now()):FireWorld{return {
  cycleStart:now,phaseStart:now,resetId:0,deadUntil:0,escapeAt:0,
@@ -111,7 +111,7 @@ export function initFire(now=Date.now()):FireWorld{return {
  smokeSeconds:[0,0,0],supporting:[null,null,null],
  dashAt:[0,0,0],dashX:[0,0,0],flare:0,windDirection:1,treeStatus:'calm',
  treeWarningUntil:0,treeImpactUntil:0,collapseCycle:-1,
- completed:false,damageCause:'none',batDownUntil:initialBats(),...initVitals()
+ completed:false,damageCause:'none',batDownUntil:initialBats(),batImpacts:initialBatImpacts(),...initVitals()
 };}
 export function validFire(value:unknown):value is FireWorld{
  if(!value||typeof value!=='object'||Array.isArray(value))return false;
@@ -134,7 +134,7 @@ export function validFire(value:unknown):value is FireWorld{
   &&Array.isArray(w.supporting)&&w.supporting.length===3
   &&w.supporting.every((seat:unknown,i:number)=>
     seat===null||(i===0&&seat===1)||(i===1&&seat===2))
-  &&validBatState(w.batDownUntil)
+  &&validBatState(w.batDownUntil)&&validBatImpacts(w.batImpacts)
   &&validVitals(w);
 }
 export function firePlatforms(w:FireWorld):FirePlatform[]{
@@ -362,6 +362,17 @@ export class FireAuthority {
     else if(treePhase==='impact'&&Math.abs(p.x-FIRE_TREE_DANGER.x)<FIRE_TREE_DANGER.radius
       &&p.y>FIRE_TREE_DANGER.yMin)cause='tree';
     if(cause!=='none'&&damageVitals(w,p.seat,now,cause==='fall')){
+     if(cause==='bat'){
+      const impact=batContactImpact(4,w.batDownUntil,p,now,w.cycleStart);
+      if(impact){
+       w.batImpacts[p.seat]=impact;
+       // Release any supported actor so the hit actually knocks them away.
+       if(w.supporting[p.seat]!==null){
+        w.supporting[p.seat]=null;
+        if(p.seat===1)w.supporting[0]=null;
+       }
+      }
+     }
      w.damageCause=cause;changed=true;
     }
    }
