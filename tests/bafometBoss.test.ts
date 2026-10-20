@@ -1,3 +1,5 @@
+import {readFileSync} from 'node:fs';
+import {inflateSync} from 'node:zlib';
 import assert from 'node:assert/strict';
 import {initVitals} from '../src/loopVitals';
 import {initRatCombat} from '../src/ratCombat';
@@ -46,3 +48,24 @@ assert.equal(wipe.reset,true,'the last death resets the entire phase immediately
 assert.equal(wipe.poses?.length,3);
 assert.deepEqual(allOut.world.health,[3,3,3]);
 console.log('Bafomet and 10-second individual revival rules: OK');
+
+/** Regression: reject corrupt PNG blobs even if the dimensions appear correct. */
+const bytes=readFileSync('public/assets/enemies/bafomet-sprites.png');
+assert.equal(bytes.subarray(0,8).toString('hex'),'89504e470d0a1a0a','real PNG header');
+assert.equal(bytes.readUInt32BE(16),256,'eight 32px frames per row');
+assert.equal(bytes.readUInt32BE(20),128,'two 64px rows');
+let pos=8;const compressed:Buffer[]=[];let ended=false;
+while(pos+12<=bytes.length){
+ const size=bytes.readUInt32BE(pos);const kind=bytes.toString('ascii',pos+4,pos+8);
+ assert.ok(size>=0&&pos+size+12<=bytes.length,'well-formed PNG chunk');
+ if(kind==='IDAT')compressed.push(bytes.subarray(pos+8,pos+8+size));
+ pos+=size+12;
+ if(kind==='IEND'){ended=true;break;}
+}
+assert.ok(ended&&compressed.length>0&&pos===bytes.length,'complete PNG file with image data');
+const pixels=inflateSync(Buffer.concat(compressed));
+assert.equal(pixels.length,128*(256+1),'all 16 palette frames decode without zlib errors');
+const visuals=readFileSync('src/bafometVisual.ts','utf8');
+assert.ok(visuals.includes('bafomet-sprites.png?v=20261020-2'),'versioned asset avoids cached missing texture');
+assert.ok(visuals.includes('setScale(2.25)'),'boss remains larger than ordinary enemies');
+console.log('Bafomet spritesheet PNG: all 16 frames decoded, no corrupted asset');

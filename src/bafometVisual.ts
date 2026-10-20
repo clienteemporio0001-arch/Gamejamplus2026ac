@@ -5,15 +5,19 @@ import {BAFOMET_MAX_HP,type BafometState} from './bafometBoss';
 const KEY='boss-bafomet';
 export function preloadBafomet(scene:Phaser.Scene):void{
  if(!scene.textures.exists(KEY))scene.load.spritesheet(KEY,
-  import.meta.env.BASE_URL+'assets/enemies/bafomet-sprites.png',
+  import.meta.env.BASE_URL+'assets/enemies/bafomet-sprites.png?v=20261020-2',
   {frameWidth:32,frameHeight:64});
+ /** If this fires, Phaser would otherwise render the green missing-texture square. */
+ scene.load.on('loaderror',(file:Phaser.Loader.File)=>{
+  if(file.key===KEY)console.error('Bafomet: falha ao carregar o PNG de animações',file.src);
+ });
 }
 export class BafometVisual {
  private actor:Phaser.GameObjects.Sprite;
  private bar:Phaser.GameObjects.Graphics;
  private name:Phaser.GameObjects.Text;
  constructor(private scene:Phaser.Scene){
-  this.actor=scene.add.sprite(3900,570,KEY,0).setScale(1.62).setDepth(39);
+  this.actor=scene.add.sprite(3900,638,KEY,0).setOrigin(.5,1).setScale(2.25).setDepth(39);
   this.actor.setFlipX(true);
   this.bar=scene.add.graphics().setDepth(45);
   this.name=scene.add.text(0,0,'BAFOMET · GUARDIÃO DA PASSAGEM',{
@@ -32,11 +36,11 @@ export class BafometVisual {
     striking?10+Math.floor(now/100)%4:
     leaping?7+Math.floor((now-b.leapAt)/170)%3:
     Math.floor(now/125)%7;
-  this.actor.setFrame(frame).setPosition(b.x,b.y-31).setFlipX(b.facing<0);
+  this.actor.setFrame(frame).setPosition(b.x,b.y+28).setFlipX(b.facing<0);
   this.actor.setTint(now<b.hurtUntil?0xff6464:0xffffff);
-  this.name.setPosition(b.x,b.y-125);
+  this.name.setPosition(b.x,b.y-147);
   if(b.hp===0)return;
-  const x=b.x-66,y=b.y-112,width=132;
+  const x=b.x-66,y=b.y-130,width=132;
   this.bar.fillStyle(0x180d15,.9);this.bar.fillRoundedRect(x-4,y-4,width+8,16,4);
   this.bar.fillStyle(0x683a31,1);this.bar.fillRect(x,y,width,8);
   this.bar.fillStyle(b.hp<=4?0xf45850:0xe7a766,1);
