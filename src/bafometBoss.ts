@@ -7,6 +7,7 @@ export const BAFOMET_MAX_HP=12;
 export const BAFOMET_SPAWN_X=3900;
 export const BAFOMET_GROUND_Y=610;
 export const BAFOMET_ARENA_LEFT=3370; // forward arrow sign: hard left pursuit limit
+export const BAFOMET_RETREAT_SPEED=175;
 export const HERO_REVIVE_MS=10000;
 export type BafometState={
  hp:number;x:number;y:number;facing:-1|1;aggroAt:number;
@@ -75,8 +76,22 @@ export function tickBafomet(w:BafometArena,poses:Pose[],now:number):boolean{
  const b=w.boss;
  const dt=Math.min(90,Math.max(0,now-b.lastStepAt));
  b.lastStepAt=now;
- // The host alone latches the encounter once ANY living hero crosses the sign.
- if(b.aggroAt===0&&b.hp>0&&poses.some(p=>w.health[p.seat]>0&&p.x>BAFOMET_ARENA_LEFT))b.aggroAt=now;
+ // The host is authoritative: crossing the sign starts pursuit, retreating
+ // to the near-exit guard post resets aggro without healing or resetting puzzles.
+ const active=poses.filter(p=>w.health[p.seat]>0);
+ const beyond=active.some(p=>p.x>BAFOMET_ARENA_LEFT);
+ if(b.hp<=0)return false;
+ if(!beyond&&b.aggroAt>0){
+  const oldX=b.x,oldY=b.y;
+  b.x=Math.min(BAFOMET_SPAWN_X,b.x+BAFOMET_RETREAT_SPEED*dt/1000);
+  b.y=BAFOMET_GROUND_Y;
+  b.facing=1;b.leapAt=0;
+  if(b.x>=BAFOMET_SPAWN_X-0.01){
+   b.x=BAFOMET_SPAWN_X;b.aggroAt=0;b.nextLeapAt=now+1400;
+  }
+  return b.x!==oldX||b.y!==oldY||b.aggroAt===0;
+ }
+ if(b.aggroAt===0&&beyond)b.aggroAt=now;
  if(!bafometAwake(w))return false;
  // Only living heroes in the final arena can aggro the guard.
  const living=poses.filter(p=>w.health[p.seat]>0&&p.x>=BAFOMET_ARENA_LEFT&&p.x<=4095);

@@ -78,11 +78,12 @@ console.log('Bafomet spritesheet PNG: all 16 frames decoded, no corrupted asset'
 
 const encounter={exit:true,hp:8};
 assert.equal(scoreForEncounter('playing',2,'loop',encounter,[3550,2100,2100]),'night');
-assert.equal(scoreForEncounter('playing',2,'loop',encounter,[3200,3200,3200]),'rain');
+assert.equal(scoreForEncounter('playing',2,'loop',encounter,[3200,3200,3200]),'night');
 assert.equal(scoreForEncounter('playing',2,'loop',{exit:true,hp:0},[3900]),'rain');
 assert.equal(scoreForEncounter('playing',2,'loop',{exit:false,hp:12},[3900]),'night');
 assert.equal(scoreForEncounter('playing',2,'loop',{exit:false,hp:12,aggroAt:now},[3250]),'night');
-assert.equal(scoreForEncounter('playing',2,'loop',{exit:false,hp:12},[3250]),'rain');
+assert.equal(scoreForEncounter('playing',2,'loop',{exit:false,hp:12},[3250]),'night');
+assert.equal(scoreForEncounter('playing',2,'loop',{exit:false,hp:12},[2900]),'rain');
 assert.equal(scoreForEncounter('playing',3,'loop',encounter,[3900]),'treetop');
 assert.equal(scoreForEncounter('transition',2,'loop',encounter,[3900]),'treetop');
 const bossVisual=readFileSync('src/bafometVisual.ts','utf8');
@@ -91,3 +92,19 @@ assert.ok(!bossVisual.includes("'BAFOMET · GUARDIÃO DA PASSAGEM'"));
 assert.ok(bossVisual.includes('b.y+28-260*ascent')&&bossVisual.includes('setAlpha(rising?'),
  'defeated guardian rises and fades without changing game state');
 console.log('GUARDIÃO: ascension animation, encounter soundtrack and scene restore passed');
+
+const retreat:BafometArena={...initVitals(),...initRatCombat(),exit:false,boss:initBafomet(now),supporting:[null,null,null]};
+const hero=(x:number):Pose=>({seat:0,x,y:606,vx:0,vy:0});
+tickBafomet(retreat,[hero(3500)],now+100);
+assert.ok(retreat.boss.aggroAt>0,'arrow starts pursuit');
+for(let t=now+200;t<now+3800;t+=90)tickBafomet(retreat,[hero(3420)],t);
+assert.ok(retreat.boss.x<3900,'guard advances toward sign');
+const approached=retreat.boss.x;
+tickBafomet(retreat,[hero(3350)],now+3900);
+assert.ok(retreat.boss.x>approached,'when all heroes retreat, guardian walks back');
+for(let t=now+4000;t<now+8000;t+=90)tickBafomet(retreat,[hero(3300)],t);
+assert.equal(retreat.boss.x,3900,'guardian returns to passage without teleporting');
+assert.equal(retreat.boss.aggroAt,0,'guardian resets pursuit on returning');
+tickBafomet(retreat,[hero(3400)],now+8100);
+assert.ok(retreat.boss.aggroAt>0,'crossing arrow again starts new chase');
+assert.equal(retreat.boss.hp,12,'retreat does not heal or alter combat health');
