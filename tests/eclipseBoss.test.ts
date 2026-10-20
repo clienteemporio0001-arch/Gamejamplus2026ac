@@ -69,3 +69,19 @@ assert.equal(wiped.tick(friends,at+100).respawn,true,'three deaths restart phase
 const music=readFileSync('src/soundtrack.ts','utf8');
 assert.ok(music.includes("this.desired==='battle'?1.3:1"),'battle music 30% louder');
 console.log('Final boss arena: safe combat zone, 10s revives, retreat and music OK');
+
+
+const vulnerable=sample();
+vulnerable.boss.awakeAt=at;
+vulnerable.boss.x=ECLIPSE_HOME_X;
+vulnerable.boss.nextLeapAt=at+20000;
+const standing:Pose={seat:1,x:ECLIPSE_HOME_X-15,y:638,vx:0,vy:0};
+for(const n of [at+200,at+1500,at+2800]){
+ tickEclipse(vulnerable,[standing],n);
+}
+assert.equal(vulnerable.health[1],0,'Boss contact must defeat a hero in three separated hits');
+assert.equal(vulnerable.health[0],3,'other heroes retain their health');
+const visual=readFileSync('src/eclipseVisual.ts','utf8');
+assert.ok(visual.includes('fillRoundedRect')&&visual.includes('0xc079ff'),
+  'Sentinel has solid high-contrast Phaser graphics instead of translucent sprite frames');
+assert.ok(!visual.includes('setFrame('),'do not crop the boss atlas into invalid 36px frames');

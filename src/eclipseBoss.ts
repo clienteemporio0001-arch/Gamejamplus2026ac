@@ -102,12 +102,12 @@ export function tickEclipse(w:EclipseArena,poses:Pose[],now:number):boolean{
  }
  for(const p of living){
   if(w.safeUntil[p.seat]>now)continue;
-  const touching=Math.abs(p.x-b.x)<43&&Math.abs(p.y-b.y)<73;
+  const touching=Math.abs(p.x-b.x)<57&&Math.abs(p.y-b.y)<145;
   const travel=now-b.attackAt;
   const boltX=b.x+b.facing*travel*.25;
-  const boltY=b.y-38;
+  const boltY=Math.max(b.y-38,ECLIPSE_FLOOR_Y-62);
   const projectile=b.attackAt>0&&travel>=80&&travel<900&&
-   b.projectileHitAt!==b.attackAt&&Math.abs(p.x-boltX)<35&&Math.abs(p.y-boltY)<48;
+   b.projectileHitAt!==b.attackAt&&Math.abs(p.x-boltX)<46&&Math.abs(p.y-boltY)<84;
   if(!touching&&!projectile)continue;
   if(!damageVitals(w,p.seat,now,false))continue;
   if(projectile)b.projectileHitAt=b.attackAt;
