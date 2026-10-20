@@ -320,7 +320,7 @@ export class TreeAuthority{
    if(startedGust)w.gustCount++;
    return {changed:true};
   }
-  return {changed:fragileChanged};
+  return {changed:fragileChanged||batDamage};
  }
  /** All puzzle actions use the host's validated positions and actual skill events. */
  interact(seat:Seat,kind:'lever'|'switch'|'shoot'|'support'|'detach'|'dash',
