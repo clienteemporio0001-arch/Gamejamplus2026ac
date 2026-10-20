@@ -1,3 +1,4 @@
+import {RatEnemyVisuals,preloadRatEnemies} from './ratEnemyVisuals';
 import Phaser from 'phaser';
 import {preloadKenneyCharacters} from './kenneyCharacterSprites';
 import {preloadOfficialLandmarks,officialLandmark} from './officialLandmarks';
@@ -25,6 +26,7 @@ import {
 
 /** Final act of the new adventure. Separate from classic phase 4. */
 export class BurningForestScene extends Phaser.Scene {
+ private ratEnemies?:RatEnemyVisuals;
  private net:Network;private touch:TouchInput;private hud?:()=>void;
  private world:FireWorld;
  private art!:BurningForestArt;private forestTrees?:ForestTrees;private pipo!:PipoGuide;private missions!:MissionDirector;
@@ -64,7 +66,7 @@ export class BurningForestScene extends Phaser.Scene {
    .setOrigin(.5).setDepth(53);
  }
  preload():void{
-  preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestTrees(this);preloadBats(this,4);
+  preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestTrees(this);preloadBats(this,4);preloadRatEnemies(this,4);
   if(!this.textures.exists('jam-explosion'))
     this.load.spritesheet('jam-explosion',
       import.meta.env.BASE_URL+'assets/fx/explosion-4.png',
@@ -77,6 +79,7 @@ export class BurningForestScene extends Phaser.Scene {
   this.art=new BurningForestArt(this);
   this.forestTrees=new ForestTrees(this,4);
   this.bats=new FlyingBatVisuals(this,4);
+   this.ratEnemies=new RatEnemyVisuals(this,4);
   // The same silhouettes appear at real cooperation points in the fire biome.
   officialLandmark(this,'hollow','fire',FIRE_TARGETS.log.teo.x,638,
     FIRE_TARGETS.log.teo.y,.55);
@@ -311,6 +314,7 @@ export class BurningForestScene extends Phaser.Scene {
   const seat=this.net.localSeat,w=this.world,now=Date.now();
   const pause=w.deadUntil>0||!this.net.everyoneConnected;
   this.bats?.update(now,w.cycleStart,w.batDownUntil,pause);
+   this.ratEnemies?.update(now,w.cycleStart,w.ratDownUntil,pause);
   if(!pause&&now-this.batAlertAt>8000&&
     ([0,1] as const).some(id=>{
       if(!batAlive(w.batDownUntil,id,now))return false;
