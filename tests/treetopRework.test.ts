@@ -80,13 +80,13 @@ party[2]={seat:2,x:3000,y:456,vx:0,vy:0};
 assert.equal(authority.interact(0,'lever',party,base+1000),true);
 assert.equal(authority.authorizeEnergy(1,'shoot',party,base+1200,1).ok,true);
 assert.equal(w.bridge[1],true);
-assert.equal(authority.interact(2,'switch',party,base+1300),false,
- 'Nino must be near the bridge switch to use E');
+assert.equal(authority.interact(2,'dash',party,base+1300),false,
+ 'Nino must Dash near the bridge target');
 assert.equal(w.dashAt,0,'no dash has been activated for the bridge');
 party[2]={seat:2,x:TREE_TARGETS.bridge.nino.x,y:TREE_TARGETS.bridge.nino.y,vx:0,vy:0};
-assert.equal(authority.interact(2,'switch',party,base+1850),true,
- 'Nino presses E without dash to finish the first bridge');
-assert.equal(w.dashAt,0,'bridge interaction does not require or trigger dash');
+assert.equal(authority.interact(2,'dash',party,base+1850),true,
+ 'Nino uses Dash to finish the first bridge');
+assert.equal(w.dashAt,base+1850,'bridge marker uses Dash to activate');
 assert.ok(w.bridgeOpen,'bridge is fully unlocked only by three participants');
 assert.ok(treePlatforms(w).some(p=>p.puzzle==='bridge'));
 party[2]={seat:2,x:TREE_TARGETS.tower.base.x,y:TREE_TARGETS.tower.base.y,vx:0,vy:0};
@@ -119,10 +119,10 @@ party[0]={seat:0,x:TREE_TARGETS.time.teo.x,y:TREE_TARGETS.time.teo.y,vx:0,vy:0};
 assert.equal(authority.interact(0,'lever',party,base+3200),true);
 w.layout=2;
 party[2]={seat:2,x:4840,y:232,vx:0,vy:0};
-assert.equal(authority.interact(2,'switch',party,base+5400),false,'E still requires proximity');
+assert.equal(authority.interact(2,'dash',party,base+5400),false,'Dash still requires proximity');
 party[2]={seat:2,x:TREE_TARGETS.time.nino.x,y:TREE_TARGETS.time.nino.y,vx:0,vy:0};
-assert.equal(w.dashAt,0,'Nino has not dashed');
-assert.equal(authority.interact(2,'switch',party,base+6000),true,'last circle uses E alone');
+assert.equal(w.dashAt,base+1850,'prior dash timestamp remains until new dash');
+assert.equal(authority.interact(2,'dash',party,base+6000),true,'last circle uses Dash alone');
 assert.ok(w.finalOpen,'all timed branches unlock last crossing');
 assert.ok(treePlatforms(w).some(p=>p.puzzle==='final'));
 const nearExit=party.map(p=>({...p,x:TREE_TARGETS.exit.x,y:TREE_TARGETS.exit.y,vx:0,vy:0}));
@@ -190,7 +190,7 @@ console.log('APROVADO: Etapa 18 — geometria, rajada, abrigos, multiplayer stat
  solo.world.layout=2;
  party[2]={seat:2,x:TREE_TARGETS.time.nino.x,y:ninoBranch.y-33,vx:0,vy:0};
  assert.equal(solo.world.dashAt,0);
- assert.equal(solo.interact(2,'switch',party,base+35600),true);
+ assert.equal(solo.interact(2,'dash',party,base+35600),true);
  assert.equal(solo.world.time[2],true);
 }
 
@@ -210,10 +210,10 @@ console.log('APROVADO: Etapa 18 — geometria, rajada, abrigos, multiplayer stat
  assert.equal(final.world.time[0],true);
  assert.ok(treePlatforms(final.world).some(p=>p.x===5085));
  party[2]={seat:2,x:TREE_TARGETS.time.nino.x+145,y:TREE_TARGETS.time.nino.y+25,vx:0,vy:0};
- assert.equal(final.interact(2,'switch',party,base+71400),false,'distance still validated');
+ assert.equal(final.interact(2,'dash',party,base+71400),false,'distance still validated');
  party[2]={seat:2,x:TREE_TARGETS.time.nino.x,y:TREE_TARGETS.time.nino.y+25,vx:0,vy:0};
  assert.equal(final.world.dashAt,0);
- assert.equal(final.interact(2,'switch',party,base+77000),true,'E alone in final circle');
+ assert.equal(final.interact(2,'dash',party,base+77000),true,'Dash alone in final circle');
  assert.deepEqual(final.world.time,[true,true,true]);
  assert.equal(final.world.finalOpen,true,'last crossing opens immediately');
 }
