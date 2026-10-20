@@ -1,4 +1,5 @@
 import {RatEnemyVisuals,preloadRatEnemies} from './ratEnemyVisuals';
+import {BAT_KNOCKBACK_MS,type BatImpact} from './flyingBats';
 import Phaser from 'phaser';
 import {preloadKenneyCharacters} from './kenneyCharacterSprites';
 import {preloadOfficialLandmarks,officialLandmark,LANDMARK_KEYS} from './officialLandmarks';
@@ -27,6 +28,7 @@ import type { VitalAction } from './loopVitals';
 /** 11,400px forest. Puzzle and transformation positions are host authoritative. */
 export class ForestLoopScene extends Phaser.Scene {
  private ratEnemies?:RatEnemyVisuals;
+ private knockUntil=[0,0,0];private knockVx=[0,0,0];
   private net:Network;private touch:TouchInput;private hud?:()=>void;
   private art!:NightArt;private chickens?:ForestChickens;private forestTrees?:ForestTrees;private w:LoopWorld;
   private avatars:Phaser.GameObjects.Rectangle[]=[];
@@ -478,6 +480,7 @@ export class ForestLoopScene extends Phaser.Scene {
       for(const p of poses)if(p.seat!==this.net.localSeat)this.remote[p.seat]={...p};
     }));
     this.off.push(this.net.on('respawn',p=>{
+      this.knockUntil[p.seat]=0;this.knockVx[p.seat]=0;
       this.remote[p.seat]={...p};
       this.avatars[p.seat].setPosition(p.x,p.y);
       if(this.net.isSolo)this.solo?.reset(p);
@@ -513,7 +516,22 @@ export class ForestLoopScene extends Phaser.Scene {
     }).setOrigin(.5).setDepth(70);
     this.tweens.add({targets:label,y:label.y-17,alpha:0,duration:700,onComplete:()=>label.destroy()});
   }
-  private sync(w:LoopWorld):void{    if(this.avatars.length===3)for(const seat of [0,1,2] as Seat[]){
+  private applyRatKnockback(seat:Seat,hit:BatImpact):void{
+    const now=Date.now();
+    if(now-hit.at>900||hit.at>now+1000||!this.net.everyoneConnected||
+      !this.net.playing||!this.net.isSolo&&this.net.localSeat!==seat)return;
+    const body=this.solo?.body(seat)??this.body;
+    if(!body)return;
+    body.setAllowGravity(true).setVelocity(hit.vx,hit.vy);
+    this.knockUntil[seat]=now+BAT_KNOCKBACK_MS;
+    this.knockVx[seat]=hit.vx;
+  }
+  private sync(w:LoopWorld):void{
+    for(const seat of [0,1,2] as Seat[]){
+      const hit=w.ratImpacts[seat];
+      if(hit&&hit.at!==(this.w.ratImpacts[seat]?.at??0))
+       this.applyRatKnockback(seat,hit);
+    }    if(this.avatars.length===3)for(const seat of [0,1,2] as Seat[]){
       if(w.health[seat]<this.w.health[seat])this.fallImpact(seat,false);
     }
 
@@ -524,7 +542,7 @@ export class ForestLoopScene extends Phaser.Scene {
     const finalWasOpen=this.w.exit;
     const oldSupporting=[...this.w.supporting];
     this.w={...w,marks:[...w.marks],tree:[...w.tree],final:[...w.final],
-      suspended:[...w.suspended],supporting:[...w.supporting]};
+      suspended:[...w.suspended],supporting:[...w.supporting],ratDownUntil:[...w.ratDownUntil],ratImpacts:w.ratImpacts.map(hit=>hit?{...hit}:null) as LoopWorld['ratImpacts']};
     if(!leverWasReleased&&w.suspended[0]&&this.leverArt){
       this.tweens.add({targets:this.leverArt,angle:-28,duration:380,
        ease:'Back.easeOut'});
@@ -744,6 +762,9 @@ export class ForestLoopScene extends Phaser.Scene {
       this.solo?.report();
     }else{
       this.solo?.beforeFrame(w.supporting);
+      if(this.solo)for(const other of [0,1,2] as Seat[])
+        if(other!==seat&&now<this.knockUntil[other])
+          this.solo.body(other).setVelocityX(this.knockVx[other]);
       const base=w.supporting[seat];
       if(base!==null){
         const parent=this.avatars[base];
@@ -770,22 +791,23 @@ export class ForestLoopScene extends Phaser.Scene {
       const using=Boolean((this.keys?.E&&Phaser.Input.Keyboard.JustDown(this.keys.E))||touchUse);
       const special=gameKeys.consumeSkill(seat)||touchSkill;
       this.touch.jump=false;this.touch.interact=false;this.touch.ability=false;
+      const stunned=now<this.knockUntil[seat];
       if(base===null){
         const dashing=seat===2&&time<this.dashUntil;
-        this.body.setVelocityX(dashing?this.facing*340:dir*235);
-        if(jumping&&(grounded||(seat===0&&this.jumps<2))){
+        this.body.setVelocityX(stunned?this.knockVx[seat]:dashing?this.facing*340:dir*235);
+        if(!stunned&&jumping&&(grounded||(seat===0&&this.jumps<2))){
           this.requestVital(grounded?'jump':'doubleJump',seat);
         }
       }else{
         this.body.setVelocityX(0);
-        if(jumping&&!this.pendingJump)this.requestVital('jump',seat);
+        if(!stunned&&jumping&&!this.pendingJump)this.requestVital('jump',seat);
       }
       // Refresh host-owned poses BEFORE testing E/USAR. Previously the
       // authority could see last frame's height/velocity at the high branch.
       if(base===null)this.net.report(this.local.x,this.local.y,this.body.velocity.x,this.body.velocity.y);
       this.solo?.report();
-      if(using)this.action(seat);
-      if(special)this.ability(seat,time);
+      if(!stunned){if(using)this.action(seat);
+      if(special)this.ability(seat,time);}
     }
     const v=this.net.poses;
     for(const i of [0,1,2] as Seat[]){
