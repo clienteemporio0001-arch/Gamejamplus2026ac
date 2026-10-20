@@ -36,7 +36,7 @@ for(const [name,data,phase] of [
   data.includes('this.chickens?.update(time)'),
   name+' preloads and updates ambient chickens in Phaser scene');
  const paths=CHICKEN_PATHS[phase];
- assert.ok(paths.length>=3&&paths.length<=6,name+' shows a handful of lightweight runners');
+ assert.equal(paths.length,1,name+' contains exactly one decorative chicken');
  for(const [index,patrol] of paths.entries()){
   assert.ok(patrol.to>patrol.from+30,'each chicken has a real route '+index);
   assert.ok(patrol.speed>=50&&patrol.speed<=130,'movement speed is gentle and natural');
@@ -57,8 +57,8 @@ for(const [name,data,phase] of [
   assert.ok(Math.abs(edge.x-patrol.to)<.001);
   assert.ok(Math.abs(returnTrip.x-middle.x)<.001);
   assert.ok(Math.abs(loop.x-onset.x)<.001);
-  assert.equal(onset.flipX,false);
-  assert.equal(edge.flipX,true);
+  assert.equal(onset.flipX,true,'rightward movement flips the original left-facing sprite');
+  assert.equal(edge.flipX,false,'leftward movement uses the source-facing direction');
  }
 }
 assert.ok(!s3.includes('ForestChickens')&&!s4.includes('ForestChickens'),
@@ -72,4 +72,4 @@ assert.deepEqual(TEMP_START.map(p=>p.x),[1920,1984,2048],
 const spriteSource=readFileSync('public/assets/animals/README.md','utf8');
 assert.ok(spriteSource.includes('Shepardskin')&&spriteSource.includes('CC0')&&
  spriteSource.includes('chickenprofilewalkx4.gif'),'attribution/provenance preserved');
-console.log('AMBIENT CHICKENS: alpha, 4 frames, 9 safe patrols, scene scope and no physics passed');
+console.log('AMBIENT CHICKENS: transparent sprites, four animation frames, one chicken per map, correct facing, no physics');
