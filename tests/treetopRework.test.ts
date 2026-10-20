@@ -121,7 +121,7 @@ w.layout=2;
 party[2]={seat:2,x:4840,y:232,vx:0,vy:0};
 assert.equal(authority.interact(2,'dash',party,base+5400),false,'Dash still requires proximity');
 party[2]={seat:2,x:TREE_TARGETS.time.nino.x,y:TREE_TARGETS.time.nino.y,vx:0,vy:0};
-assert.equal(w.dashAt,base+1850,'prior dash timestamp remains until new dash');
+assert.equal(w.dashAt,base+5400,'latest Dash is recorded even when the target is out of range');
 assert.equal(authority.interact(2,'dash',party,base+6000),true,'last circle uses Dash alone');
 assert.ok(w.finalOpen,'all timed branches unlock last crossing');
 assert.ok(treePlatforms(w).some(p=>p.puzzle==='final'));
@@ -212,7 +212,7 @@ console.log('APROVADO: Etapa 18 — geometria, rajada, abrigos, multiplayer stat
  party[2]={seat:2,x:TREE_TARGETS.time.nino.x+145,y:TREE_TARGETS.time.nino.y+25,vx:0,vy:0};
  assert.equal(final.interact(2,'dash',party,base+71400),false,'distance still validated');
  party[2]={seat:2,x:TREE_TARGETS.time.nino.x,y:TREE_TARGETS.time.nino.y+25,vx:0,vy:0};
- assert.equal(final.world.dashAt,0);
+ assert.equal(final.world.dashAt,base+71400);
  assert.equal(final.interact(2,'dash',party,base+77000),true,'Dash alone in final circle');
  assert.deepEqual(final.world.time,[true,true,true]);
  assert.equal(final.world.finalOpen,true,'last crossing opens immediately');

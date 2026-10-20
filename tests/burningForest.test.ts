@@ -42,7 +42,7 @@ assert.equal(w.log[1],true,'Lia hit first log target');
 assert.equal(authority.interact(2,'dash',characters,start+1300),true);
 assert.equal(w.log[2],false,'Nino must still be near the correct circle');
 characters[2]={seat:2,x:FIRE_TARGETS.log.nino.x,y:FIRE_TARGETS.log.nino.y,vx:0,vy:0};
-assert.equal(w.dashAt[2],0,'Dash is registered by the interaction');
+assert.equal(w.dashAt[2],start+1300,'Dash is registered by the interaction');
 assert.equal(authority.interact(2,'dash',characters,start+1800),true,'Dash alone activates log circle');
 assert.equal(w.log[2],true);
 assert.ok(w.logOpen,'burning log opens only with all three actions');
