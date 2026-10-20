@@ -71,7 +71,8 @@ export function tempSurface(w:TemporalWorld,x:number):'normal'|'mud'|'wet'{
  return 'normal';
 }
 export function tempBlocks(w:TemporalWorld){
- return [{x:2310,width:40,height:550,active:!w.echo.every(Boolean)},
+ return [/* Remove the unintended early wall; retain its slot for stable collider indexing. */
+ {x:2310,width:40,height:550,active:false},
  ...TEMP_LAYOUTS.map((config,i)=>({x:config.obstacles[0],width:62,height:98,active:i===w.layout})),
  ...TEMP_LAYOUTS.map((config,i)=>({x:config.obstacles[1],width:48,height:100,active:i===w.layout})),
  {x:3410,width:44,height:530,active:w.layout!==2},
