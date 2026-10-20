@@ -5,7 +5,7 @@ import {FOREST_TREE_LAYOUTS,type ForestTreeStage} from '../src/forestTreeLayout'
 
 const imagePath='public/assets/trees/forest-trees.webp';
 const descriptorPath='public/assets/trees/forest-trees.json';
-assert.ok(existsSync(imagePath),'the user's original trees are committed for offline itch.io builds');
+assert.ok(existsSync(imagePath),"The original trees are committed for offline itch.io builds");
 assert.ok(existsSync(descriptorPath),'atlas descriptor is available without network');
 const image=readFileSync(imagePath);
 assert.equal(image.subarray(0,4).toString('ascii'),'RIFF','valid lossless WebP container');
