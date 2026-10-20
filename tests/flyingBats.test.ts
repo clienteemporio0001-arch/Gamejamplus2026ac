@@ -58,6 +58,7 @@ for(const stage of [3,4] as const){
 const now=100_000;
 const tree=new TreeAuthority();
 tree.world=initTree(now-1800);
+tree.world.ratDownUntil=[now+12000,now+12000,now+12000];
 const treeBat=batFlight(3,0,now,tree.world.cycleStart);
 const positions:Pose[]=([0,1,2] as Seat[]).map(seat=>({
  seat,x:1800+seat*60,y:780,vx:0,vy:0
@@ -80,6 +81,7 @@ tree.tick(positions,now+200,0);
 assert.equal(tree.world.health[2],old-1,'existing 1.2-second invulnerability protects again');
 const fire=new FireAuthority();
 fire.world=initFire(now-1200);
+fire.world.ratDownUntil=[now+12000,now+12000,now+12000];
 const redBat=batFlight(4,0,now,fire.world.cycleStart);
 positions[1]={seat:1,x:redBat.x-110,y:redBat.y+18,vx:0,vy:0};
 reply=fire.authorizeEnergy(1,'shoot',positions,now,1);
