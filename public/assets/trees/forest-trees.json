@@ -1,0 +1,72 @@
+{
+  "frames": {
+    "tree00": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 146,
+        "h": 188
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 146,
+        "h": 188
+      },
+      "sourceSize": {
+        "w": 146,
+        "h": 188
+      }
+    },
+    "tree01": {
+      "frame": {
+        "x": 150,
+        "y": 0,
+        "w": 129,
+        "h": 211
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 129,
+        "h": 211
+      },
+      "sourceSize": {
+        "w": 129,
+        "h": 211
+      }
+    },
+    "tree03": {
+      "frame": {
+        "x": 283,
+        "y": 0,
+        "w": 89,
+        "h": 126
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 89,
+        "h": 126
+      },
+      "sourceSize": {
+        "w": 89,
+        "h": 126
+      }
+    }
+  },
+  "meta": {
+    "image": "forest-trees.webp",
+    "size": {
+      "w": 376,
+      "h": 216
+    },
+    "scale": "1"
+  }
+}
