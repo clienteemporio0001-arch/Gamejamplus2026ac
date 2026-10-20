@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import type {Pose,Seat} from '../src/network';
 import {
  FIRE_WIDTH,FIRE_HEIGHT,FIRE_FLOOR_Y,FIRE_DEATH_Y,FIRE_START,FIRE_PLATFORMS,FIRE_TARGETS,
- FIRE_BOSS_REVIVE_MS,FIRE_BOSS_RESPAWNS,
+ FIRE_BOSS_REVIVE_MS,FIRE_BOSS_RESPAWNS,FIRE_ABYSS_RESET_Y,
  FIRE_SMOKE_ZONE,FIRE_WIND_PERIOD,FIRE_COLLAPSE_PERIOD,
  FireAuthority,initFire,validFire,firePlatforms,fireGrounded,fireObjective,
  fireWind,fireFlareActive,fireDamageZone,fireHeavySmoke,fireTreePhase,fireCheckpoint,
@@ -320,4 +320,54 @@ console.log('ETAPA 19: host authority, fire, smoke, timed tree collapse, all 3 p
  const corpse=arena.map(clone);corpse[2].y=FIRE_DEATH_Y+12;
  assert.equal(stopped.tick(corpse,start+500).respawn,undefined,
   'a fallen corpse cannot cause repeated team resets');
+}
+
+{
+ // Regression: the old 803px kill boundary let bodies run far below the
+ // visible floor. Death must be recognized right after slipping off it.
+ const early=new FireAuthority();early.reset(start);
+ early.world.treeOpen=true;early.world.bossEncounterStarted=true;
+ const posed=FIRE_BOSS_RESPAWNS.map(clone);
+ posed[0]={...posed[0],x:4120,y:FIRE_ABYSS_RESET_Y+1};
+ const fall=early.tick(posed,start+200);
+ assert.equal(fall.respawn,true,'a hero under floor instantly restarts all three');
+ assert.deepEqual(fall.poses,FIRE_START);
+ assert.deepEqual(early.world.health,[3,3,3]);
+ assert.equal(early.world.bossEncounterStarted,false);
+
+ const pit=new FireAuthority();pit.reset(start);
+ const bridge=FIRE_START.map(clone);
+ bridge[1]={...bridge[1],x:1400,y:FIRE_FLOOR_Y+35};
+ assert.equal(pit.tick(bridge,start+250).respawn,true,
+  'falling into the first gap resets the team before the death boundary');
+ const timber=new FireAuthority();timber.reset(start);
+ const timberPose=FIRE_START.map(clone);
+ timberPose[2]={...timberPose[2],x:4050,y:FIRE_FLOOR_Y+35};
+ assert.equal(timber.tick(timberPose,start+300).respawn,true,
+  'missing final tree bridge cannot trap Nino under the floor');
+
+ const corpse=new FireAuthority();corpse.reset(start);
+ corpse.world.treeOpen=true;corpse.world.bossEncounterStarted=true;
+ corpse.world.safeUntil=[start+20000,start+20000,start+20000];
+ const same=FIRE_BOSS_RESPAWNS.map(clone);
+ same[1]={...same[1],y:FIRE_ABYSS_RESET_Y+80};
+ corpse.world.health[1]=0;
+ assert.equal(corpse.tick(same,start+400).respawn,undefined,
+  'an already dead body below screen cannot repeatedly reset the phase');
+ assert.equal(corpse.world.reviveAt[1],start+10400);
+ const revived=corpse.tick(same,start+10401);
+ assert.deepEqual(revived.respawns?.[0],FIRE_BOSS_RESPAWNS[1],
+  'dead Lia returns to a safe boss checkpoint after 10 seconds');
+ assert.equal(corpse.world.health[1],3);
+
+ const scene=readFileSync('src/burningForestScene.ts','utf8');
+ const sprites=readFileSync('src/burningForestArt.ts','utf8');
+ assert.ok(scene.includes('this.net.selectSoloSeat(alive)'),
+  'solo control switches to a living hero when the selected one dies');
+ assert.ok(scene.includes('frozen.setAllowGravity(false).setVelocity(0,0)'),
+  'dead actors cannot fall or walk below the world');
+ assert.ok(scene.includes('this.reviveText.setVisible(pending.length>0)'),
+  'screen shows the 10-second countdown');
+ assert.ok(sprites.includes('entry.sprite?.setVisible(alive)'),
+  'dead hero character art is hidden until the respawn event');
 }

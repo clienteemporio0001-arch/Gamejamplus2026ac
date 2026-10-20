@@ -55,6 +55,7 @@ export class BurningForestScene extends Phaser.Scene {
  private paused=false;private dark!:Phaser.GameObjects.Rectangle;
  private darkText!:Phaser.GameObjects.Text;
  private dangerText!:Phaser.GameObjects.Text;
+ private reviveText!:Phaser.GameObjects.Text;
  private lastTreePhase:'calm'|'warning'|'impact'='calm';
  private lastDanger='';private lastWarningAt=0;private escapeWarned=false;
  constructor(net:Network,touch:TouchInput,hud?:()=>void){
@@ -174,6 +175,8 @@ export class BurningForestScene extends Phaser.Scene {
    .setScrollFactor(0).setDepth(191).setVisible(false);
   this.dangerText=this.label(this.scale.gameSize.width/2,112,'',15,'#ffe3ad')
    .setScrollFactor(0).setDepth(189).setVisible(false);
+  this.reviveText=this.label(this.scale.gameSize.width/2,148,'',14,'#fff4b0')
+   .setScrollFactor(0).setDepth(195).setVisible(false);
   this.sync(this.net.fire);
   this.off.push(this.net.on('fire',w=>this.sync(w)));
   this.off.push(this.net.on('snapshot',poses=>{
@@ -219,6 +222,7 @@ export class BurningForestScene extends Phaser.Scene {
    this.dark.setPosition(size.width/2,size.height/2).setSize(size.width+150,size.height+150);
    this.darkText.setPosition(size.width/2,size.height/2);
    this.dangerText.setPosition(size.width/2,Math.min(116,size.height*.22));
+   this.reviveText.setPosition(size.width/2,Math.min(155,size.height*.29));
   };
   this.scale.on(Phaser.Scale.Events.RESIZE,onResize);onResize(this.scale.gameSize);
   this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{
@@ -263,7 +267,7 @@ export class BurningForestScene extends Phaser.Scene {
   }
   this.world={...w,log:[...w.log],smoke:[...w.smoke],tree:[...w.tree],
    supporting:[...w.supporting],dashAt:[...w.dashAt],dashX:[...w.dashX],
-   smokeSeconds:[...w.smokeSeconds],health:[...w.health],stamina:[...w.stamina],
+   smokeSeconds:[...w.smokeSeconds],reviveAt:[...w.reviveAt],health:[...w.health],stamina:[...w.stamina],
    safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],
    batDownUntil:[...w.batDownUntil],
    batImpacts:w.batImpacts.map(hit=>hit?{...hit}:null) as FireWorld['batImpacts'],hound:{...w.hound}};
@@ -309,6 +313,12 @@ export class BurningForestScene extends Phaser.Scene {
  }
  update(time:number,dt:number):void{
   if(!this.body||!this.net.playing||this.net.localSeat===null)return;
+  // A dead solo avatar cannot remain the selected (camera-followed) character.
+  // Switch automatically to a living friend while its 10-second timer runs.
+  if(this.net.isSolo&&this.world.health[this.net.localSeat]===0){
+   const alive=([0,1,2] as Seat[]).find(id=>this.world.health[id]>0);
+   if(alive!==undefined)this.net.selectSoloSeat(alive);
+  }
   // Reconcile physical ownership every frame, including rapid mobile switches.
   // Only the selected actor gets movement/jump/dash input; no teleport occurs.
   if(this.solo){
@@ -316,6 +326,11 @@ export class BurningForestScene extends Phaser.Scene {
    this.local=active.actor;this.body=active.body;
   }
   const seat=this.net.localSeat,w=this.world,now=Date.now();
+  const pending=([0,1,2] as Seat[]).filter(id=>w.health[id]===0&&w.reviveAt[id]>0&&
+   (this.net.isSolo||id===seat));
+  this.reviveText.setVisible(pending.length>0)
+   .setText(pending.map(id=>['TÉO','LIA','NINO'][id]+
+    ' RENASCE EM '+Math.max(0,Math.ceil((w.reviveAt[id]-now)/1000))+'s').join('  ·  '));
   const pause=w.deadUntil>0||!this.net.everyoneConnected;
   this.bats?.update(now,w.cycleStart,w.batDownUntil,pause);
    this.ratEnemies?.update(now,w.cycleStart,w.ratDownUntil,pause);
@@ -343,6 +358,16 @@ export class BurningForestScene extends Phaser.Scene {
    'AGUARDANDO A EQUIPE...');
   if(!pause){
    this.solo?.beforeFrame(w.supporting);
+   // Dead physics bodies must not fall under the stage or accept movement.
+   // SoloBodies.beforeFrame can re-enable gravity: freeze AFTER that call.
+   for(const id of [0,1,2] as Seat[]){
+    if(w.health[id]>0)continue;
+    if(!this.net.isSolo&&id!==seat)continue;
+    const frozen=this.solo?.body(id)??this.body;
+    frozen.setAllowGravity(false).setVelocity(0,0).setAcceleration(0,0);
+   }
+  }
+  if(!pause&&w.health[seat]>0){
    if(this.solo)for(const other of [0,1,2] as Seat[])
     if(other!==seat&&now<this.knockUntil[other])
      this.solo.body(other).setVelocityX(this.knockVx[other]);
@@ -384,6 +409,7 @@ export class BurningForestScene extends Phaser.Scene {
     const p=poses[seatNo];actor.x=Phaser.Math.Linear(actor.x,p.x,.18);
     actor.y=Phaser.Math.Linear(actor.y,p.y,.18);
    }
+   this.names[seatNo].setVisible(w.health[seatNo]>0);
    this.names[seatNo].setPosition(actor.x,actor.y-56)
     .setColor(seatNo===seat?'#fff4d3':['#a9f5a8','#f5bc85','#94d7ff'][seatNo]);
   }

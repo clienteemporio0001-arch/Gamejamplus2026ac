@@ -9,6 +9,8 @@ import {initVitals,validVitals,spendVital,regenVitals,damageVitals,VITALS,
 /** A FLORESTA MENTE • final chapter, independent from classic level 4. */
 export const FIRE_WIDTH=5200,FIRE_HEIGHT=850,FIRE_FLOOR_Y=675,FIRE_DEATH_Y=803;
 export const FIRE_CLEARING_LEFT=4390,FIRE_CLEARING_RIGHT=5030;
+/** A fallen player's centre never legitimately reaches this far below floor level. */
+export const FIRE_ABYSS_RESET_Y=FIRE_FLOOR_Y+75;
 export const FIRE_BOSS_REVIVE_MS=10000;
 /** Safe, grounded, just before the boss pursuit sign (x=4430). */
 export const FIRE_BOSS_RESPAWNS:readonly Pose[]=([0,1,2] as Seat[]).map(seat=>({seat,x:4290+seat*48,y:653,vx:0,vy:0}));
@@ -319,7 +321,10 @@ export class FireAuthority {
   if(w.completed)return {changed:false,won:true};
   // Falling into the abyss is always fatal for the entire team, even in the arena.
   // Never inspect dead/frozen poses here, or a corpse can create a reset loop.
-  if(poses.some(p=>w.health[p.seat]>0&&p.y>=FIRE_DEATH_Y)){
+  if(poses.some(p=>w.health[p.seat]>0&&(p.y>=FIRE_ABYSS_RESET_Y||
+    // Detect the two unbridged chasms before the body disappears off screen.
+    (!w.logOpen&&p.x>=1250&&p.x<=1550&&p.y>FIRE_FLOOR_Y+30)||
+    (!w.treeOpen&&p.x>=3890&&p.x<=4220&&p.y>FIRE_FLOOR_Y+30)))){
    this.reset(now);
    this.world.safeUntil=[now+1600,now+1600,now+1600];
    return {changed:true,poses:FIRE_START.map(p=>({...p})),respawn:true};
@@ -373,6 +378,7 @@ export class FireAuthority {
    w.phaseStart=now;w.layout=((w.layout+1)%3) as 0|1|2;w.cycle++;
    const roots=FIRE_SHIFT_ROOTS[w.layout];
    const adjusted=poses.map(p=>{
+    if(w.health[p.seat]===0)return {...p};
     const overlap=roots.find(root=>Math.abs(p.x-root.x)<59&&p.y>578);
     if(!overlap)return {...p};
     const x=p.x<overlap.x?overlap.x-83:overlap.x+83;

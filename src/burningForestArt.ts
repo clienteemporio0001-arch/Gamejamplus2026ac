@@ -291,6 +291,11 @@ export class BurningForestArt {
    this.embers.fillEllipse(x,y,2.1,3.3);
   }
   for(const entry of this.figures){
+   const alive=w.health[entry.seat]>0;
+   entry.target.setVisible(alive);
+   entry.sprite?.setVisible(alive);
+   entry.ink.setVisible(alive&&!entry.sprite);
+   if(!alive)continue;
    const pose=poses[entry.seat];
    if(!entry.sprite)this.drawFigure(entry.ink,entry.seat,pose,ms);
    updateKenneyCharacter(entry.sprite,entry.target,ms,pose.vx,pose.vy);
