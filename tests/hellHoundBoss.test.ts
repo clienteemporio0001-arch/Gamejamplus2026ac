@@ -48,19 +48,15 @@ const fallPose=FIRE_START.map(q=>({...q}));fallPose[1].y=820;
 assert.equal(falling.tick(fallPose,at+300).respawn,true,'falls still reset the whole party');
 assert.equal(falling.world.hound.hp,HOUND_HP,'full reset restores the guardian');
 const visual=readFileSync('src/hellHoundVisual.ts','utf8');
-assert.ok(visual.includes('.setScale(2)'), 'exact 2x size requested');
-assert.ok(visual.includes('const show=!dead||vanish>0;'),
- 'live Hound MUST render before and after the tree puzzle');
-assert.ok(visual.includes('this.aura.fillStyle(0xff4d12'),
- 'bright background-independent silhouette is rendered if sprite is hard to see');
-assert.ok(visual.includes('this.dog.setVisible(show)'),
- 'Hound sprite visibility is not gated on treeOpen');
-assert.ok(visual.includes('this.title.setVisible(show&&!dead)'),
- 'Hound boss name remains visible and helps identify its location');
-
-assert.ok(visual.includes('{frameWidth:72,frameHeight:48}'),'atlas cells match PNG geometry');
-const png=readFileSync('public/assets/enemies/hellhound-final.png');
+assert.ok(visual.includes('scene.load.image(KEY'), 'boss image uses one static frame');
+assert.ok(visual.includes('hellhound-static-rgba.png?v=3'), 'cache busts old indexed PNG');
+assert.ok(visual.includes('.setScale(2)'), 'boss remains exactly double size');
+assert.ok(!visual.includes('load.spritesheet'), 'no animated indexed sheet can render a black rectangle');
+assert.ok(!visual.includes('.setFrame('), 'no invalid animation frame or cropping');
+assert.ok(visual.includes('textureReady'), 'graphics-only fallback if image fails to load');
+const png=readFileSync('public/assets/enemies/hellhound-static-rgba.png');
 assert.equal(png.subarray(0,8).toString('hex'),'89504e470d0a1a0a');
-assert.equal(png.readUInt32BE(16),432);
-assert.equal(png.readUInt32BE(20),144);
-console.log('Hell Hound: 2x art, 3 heroes, combat, retreat, fall reset and exit gate OK');
+assert.equal(png.readUInt32BE(16),72);
+assert.equal(png.readUInt32BE(20),48);
+assert.equal(png[25],6,'boss texture is 32-bit truecolor with alpha, never palette index');
+console.log('Final boss: RGBA static sprite, 2x size, no black background, combat and fall reset OK');
