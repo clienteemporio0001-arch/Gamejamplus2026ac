@@ -1,3 +1,4 @@
+import {composeGuardianBattle} from './guardianBattleMusic';
 /** Original, file-backed stage soundtracks.
  * Each piece is composed specifically for A FLORESTA MENTE by the repository's
  * scripts/compose_soundtrack.py and stored as REAL playable MP3 in public/audio.
@@ -5,6 +6,7 @@
  */
 export const SCORE_CATALOG={
  night:{file:'boca_da_noite.mp3',seconds:96,title:'A Boca da Noite'},
+ battle:{file:'original-generated',seconds:64,title:'Cerco do Guardião'},
  rain:{file:'floresta_temporal.mp3',seconds:87.273,title:'A Floresta Temporal'},
  treetop:{file:'caminho_das_arvores.mp3',seconds:69.818,title:'Caminho das Árvores'},
  fire:{file:'floresta_em_chamas.mp3',seconds:76.8,title:'Floresta em Chamas'},
@@ -30,7 +32,7 @@ export function scoreForEncounter(stage:string,level:number,experience:string,
  guardian:{exit:boolean;hp:number;aggroAt?:number},partyX:readonly number[]):ScoreCue{
  const regular=scoreForStage(stage,level,experience);
  if(regular==='rain'&&guardian.hp>0&&
-    partyX.some(x=>Number.isFinite(x)&&x>=3000&&x<=4200))return 'night';
+    partyX.some(x=>Number.isFinite(x)&&x>=3000&&x<=4200))return 'battle';
  return regular;
 }
 type Playing={key:keyof typeof SCORE_CATALOG;source:AudioBufferSourceNode;gain:GainNode};
@@ -89,6 +91,7 @@ export class OriginalSoundtrack{
   const pending=this.loading.get(file);
   if(pending)return pending;
   const task=(async()=>{
+   if(key==='battle')return composeGuardianBattle();
    const response=await fetch(this.filesBase+file,{cache:'force-cache'});
    if(!response.ok)throw new Error('Unable to load '+file+': '+response.status);
    const array=await response.arrayBuffer();

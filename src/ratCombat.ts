@@ -145,14 +145,30 @@ function activeMelee(stage:RatLevel,w:MonsterCombatWorld,pose:Pose,now:number,st
   // The second jump must end ON TOP of a monster, not beside it.
   const target=nearestTarget(stage,w,pos=>Math.abs(pose.x-pos.x)<32&&
     pose.y-pos.y>=-72&&pose.y-pos.y<=-34,now,start);
-  if(target){defeat(w,target.kind,target.id,now);return true;}
+  if(target){
+   defeat(w,target.kind,target.id,now);
+   w.safeUntil[0]=Math.max(w.safeUntil[0],now+700);
+   const impulse={at:now,vx:pose.x<target.range?-170:170,vy:-255};
+   w.ratImpacts[0]=impulse;
+   if(stage>=3&&w.batImpacts)w.batImpacts[0]=impulse;
+   w.ratStompUntil=0;
+   return true;
+  }
  }
  if(pose.seat===2&&w.ratDashUntil>=now&&
     pose.vx*w.ratDashFacing>80){
   const target=nearestTarget(stage,w,pos=>
     Math.abs(pose.x-pos.x)<=43&&Math.abs(pose.y-pos.y)<=42,
     now,start);
-  if(target){defeat(w,target.kind,target.id,now);return true;}
+  if(target){
+   defeat(w,target.kind,target.id,now);
+   w.safeUntil[2]=Math.max(w.safeUntil[2],now+700);
+   const impulse={at:now,vx:-w.ratDashFacing*205,vy:-135};
+   w.ratImpacts[2]=impulse;
+   if(stage>=3&&w.batImpacts)w.batImpacts[2]=impulse;
+   w.ratDashUntil=0;
+   return true;
+  }
  }
  return false;
 }

@@ -64,11 +64,11 @@ function tryMelee(w:BafometArena,p:Pose,now:number):boolean{
  const b=w.boss;
  if(p.seat===0&&b.stompUntil>=now&&p.vy>80&&
    Math.abs(p.x-b.x)<45&&p.y>=b.y-105&&p.y<=b.y-32){
-   if(hurtBafomet(w,now,2)){b.stompUntil=0;return true;}
+   if(hurtBafomet(w,now,2)){b.stompUntil=0;w.safeUntil[0]=Math.max(w.safeUntil[0],now+750);w.ratImpacts[0]={at:now,vx:p.x<b.x?-180:180,vy:-265};return true;}
  }
  if(p.seat===2&&b.dashUntil>=now&&p.vx*b.dashFacing>90&&
    Math.abs(p.x-b.x)<53&&Math.abs(p.y-b.y)<67){
-   if(hurtBafomet(w,now,2)){b.dashUntil=0;return true;}
+   if(hurtBafomet(w,now,2)){b.dashUntil=0;w.safeUntil[2]=Math.max(w.safeUntil[2],now+750);w.ratImpacts[2]={at:now,vx:-b.dashFacing*220,vy:-145};return true;}
  }
  return false;
 }
