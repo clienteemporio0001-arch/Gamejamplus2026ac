@@ -179,8 +179,11 @@ export function tickMonsters(stage:RatLevel,w:MonsterCombatWorld,
    impact=batContactImpact(stage as 3|4,w.batDownUntil,p,now,start);
   if(impact&&!kind)kind='bat';
   if(!impact||!damageVitals(w,p.seat,now))continue;
-  const impulses=stage>=3&&w.batImpacts?w.batImpacts:w.ratImpacts;
-  impulses[p.seat]=impact;
+  // Always record the rat-combat impulse; on the final two maps the
+  // existing bat channel additionally drives the shared visible recoil.
+  // This keeps reconnect snapshots and all four stage tests consistent.
+  w.ratImpacts[p.seat]=impact;
+  if(stage>=3&&w.batImpacts)w.batImpacts[p.seat]=impact;
   if(w.supporting[p.seat]!==null){
    w.supporting[p.seat]=null;
    if(p.seat===1)w.supporting[0]=null;
