@@ -276,6 +276,8 @@ console.log('ETAPA 19: host authority, fire, smoke, timed tree collapse, all 3 p
  // First player enters the boss area: this persists if everyone retreats later.
  arena[0].x=4480;
  bossFight.tick(arena,start+100);
+ // Isolate the timer test from unrelated fire/rat hits on surviving teammates.
+ bossFight.world.safeUntil=[start+FIRE_BOSS_REVIVE_MS+15000,start+FIRE_BOSS_REVIVE_MS+15000,start+FIRE_BOSS_REVIVE_MS+15000];
  assert.equal(bossFight.world.bossEncounterStarted,true,'boss encounter enables 10s individual revives');
  const formerReset=bossFight.world.resetId;
  const hp=bossFight.world.hound.hp;
