@@ -357,6 +357,7 @@ export class Network {
   selectSoloSeat(seat: Seat): void {
     if(!this.isSolo||!this.playing||this.localSeat===seat)return;
     if(this.experience==='loop'&&this.level===2&&this.temporal.health[seat]===0)return;
+    if(this.experience==='loop'&&this.level===4&&this.fire.health[seat]===0)return;
     this.localSeat=seat;
     this.lastInput=0;this.lastAction.clear();
     this.emit('solo-seat',seat);this.emit('change',undefined);
@@ -369,6 +370,7 @@ export class Network {
         this.experience==='loop'&&this.level===3?TREE_HEIGHT:700,input.y))};
       if(!validPose(p))continue;
       if(this.experience==='loop'&&this.level===2&&this.temporal.health[p.seat]===0)continue;
+      if(this.experience==='loop'&&this.level===4&&this.fire.health[p.seat]===0)continue;
       const supporting=this.experience==='loop'?(this.level===4?this.fire.supporting:this.level===3?this.treetop.supporting:this.level===2?this.temporal.supporting:this.loop.supporting):this.level===1?this.forest.supporting:
         this.level===2?this.journey.supporting:null;
       if(supporting?.[p.seat]!==null && supporting?.[p.seat]!==undefined)continue;
@@ -635,6 +637,7 @@ export class Network {
         if(msg.x<0||msg.x>bounds.width||msg.y<0||msg.y>bounds.height)return;
         if (this.experience!=='loop' && this.level === 1 && this.forest.restartAt > 0) return;
         if(this.experience==='loop'&&this.level===2&&this.temporal.health[seat]===0)return;
+        if(this.experience==='loop'&&this.level===4&&this.fire.health[seat]===0)return;
         if(this.experience==='loop'&&(this.level===4?this.fire.supporting[seat]:this.level===3?this.treetop.supporting[seat]:this.level===2?this.temporal.supporting[seat]:this.loop.supporting[seat])!==null)return;
         if (this.experience!=='loop' && this.level === 1 && this.forest.supporting[seat] !== null) return;
         if (this.experience!=='loop' && this.level === 2 && (this.journey.restartAt>0 || this.journey.supporting[seat]!==null)) return;
@@ -777,6 +780,7 @@ export class Network {
           smoke:[...msg.world.smoke] as FireWorld['smoke'],
           tree:[...msg.world.tree] as FireWorld['tree'],
           smokeSeconds:[...msg.world.smokeSeconds] as FireWorld['smokeSeconds'],
+          reviveAt:[...msg.world.reviveAt] as FireWorld['reviveAt'],
           supporting:[...msg.world.supporting] as FireWorld['supporting'],
           dashAt:[...msg.world.dashAt] as FireWorld['dashAt'],
           dashX:[...msg.world.dashX] as FireWorld['dashX'],
@@ -1039,6 +1043,7 @@ export class Network {
       x: Math.max(0,Math.min(bounds.width,x)),
       y: Math.max(0,Math.min(bounds.height,y)),vx,vy };
     if(this.experience==='loop'&&this.level===2&&this.temporal.health[this.localSeat]===0)return;
+    if(this.experience==='loop'&&this.level===4&&this.fire.health[this.localSeat]===0)return;
     if (!finite(x) || !finite(y) || !finite(vx) || !finite(vy)) return;
     if(this.experience==='loop'&&(this.level===4?this.fire.supporting[this.localSeat]:this.level===3?this.treetop.supporting[this.localSeat]:this.level===2?this.temporal.supporting[this.localSeat]:this.loop.supporting[this.localSeat])!==null)return;
     if (this.experience!=='loop' && this.level === 1 && (this.forest.restartAt > 0 || this.forest.supporting[this.localSeat] !== null)) return;
@@ -1059,7 +1064,7 @@ export class Network {
   /** Requests contain a kind, never client-authored life or stamina values. */
   requestVital(kind:VitalAction,facing:-1|1=1):number|null{
     if(this.experience!=='loop'||!this.playing||!this.everyoneConnected||
-      this.localSeat===null||(this.level===4?this.fire.deadUntil>0:
+      this.localSeat===null||(this.level===4?this.fire.deadUntil>0||this.fire.health[this.localSeat]===0:
       this.level===3?this.treetop.deadUntil>0||this.treetop.blackoutUntil>Date.now():
       this.level===2?this.temporal.deadUntil>0||this.temporal.blackoutUntil>Date.now():
         this.loop.deadUntil>0||blackoutActive(this.loop,Date.now())))return null;
@@ -1159,6 +1164,7 @@ export class Network {
     const w=this.fireAuthority.world;
     this.fire={...w,log:[...w.log],smoke:[...w.smoke],tree:[...w.tree],
       smokeSeconds:[...w.smokeSeconds],supporting:[...w.supporting],
+      reviveAt:[...w.reviveAt],
       dashAt:[...w.dashAt],dashX:[...w.dashX],health:[...w.health],
       stamina:[...w.stamina],safeUntil:[...w.safeUntil],lastSpent:[...w.lastSpent],
       batDownUntil:[...w.batDownUntil] as FireWorld['batDownUntil'],
@@ -1244,6 +1250,10 @@ export class Network {
         this.fireSafeUntil=now+1800;
         this.poses=result.poses.map(p=>({...p}));
         for(const pose of this.poses){this.broadcast({t:'respawn',pose});this.emit('respawn',pose);}
+      }
+      if(result.respawns)for(const pose of result.respawns){
+        this.poses[pose.seat]={...pose};
+        this.broadcast({t:'respawn',pose});this.emit('respawn',pose);
       }
       if(result.changed)this.shareFire();
       this.broadcast({t:'state',poses:this.poses});this.emit('snapshot',this.poses);

@@ -186,6 +186,7 @@ export class BurningForestScene extends Phaser.Scene {
   this.off.push(this.net.on('respawn',p=>{
    this.knockUntil[p.seat]=0;this.knockVx[p.seat]=0;
    this.solo?.reset(p);
+   this.solo?.body(p.seat).setAllowGravity(true);
    if(this.net.localSeat===p.seat){
     this.body.reset(p.x,p.y);
     this.body.setAllowGravity(true);this.body.setVelocity(0,0);

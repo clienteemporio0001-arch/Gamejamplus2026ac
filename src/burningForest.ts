@@ -1,6 +1,6 @@
 import {initRatCombat,validRatCombat,activateMonsterSkill,shootMonster,tickMonsters,type RatCombatWorld} from './ratCombat';
 import {exitPresence} from './sharedExit';
-import {HOUND_HP,HOUND_NAME,initHound,validHound,armHound,shootHound,tickHound,type HoundState} from './hellHoundBoss';
+import {HOUND_HP,HOUND_NAME,HOUND_LEFT,initHound,validHound,armHound,shootHound,tickHound,type HoundState} from './hellHoundBoss';
 import {initialBats,initialBatImpacts,validBatState,validBatImpacts,type BatDownState,type BatImpacts} from './flyingBats';
 import type {Pose,Seat} from './network';
 import {initVitals,validVitals,spendVital,regenVitals,damageVitals,VITALS,
@@ -9,6 +9,9 @@ import {initVitals,validVitals,spendVital,regenVitals,damageVitals,VITALS,
 /** A FLORESTA MENTE • final chapter, independent from classic level 4. */
 export const FIRE_WIDTH=5200,FIRE_HEIGHT=850,FIRE_FLOOR_Y=675,FIRE_DEATH_Y=803;
 export const FIRE_CLEARING_LEFT=4390,FIRE_CLEARING_RIGHT=5030;
+export const FIRE_BOSS_REVIVE_MS=10000;
+/** Safe, grounded, just before the boss pursuit sign (x=4430). */
+export const FIRE_BOSS_RESPAWNS:readonly Pose[]=([0,1,2] as Seat[]).map(seat=>({seat,x:4290+seat*48,y:653,vx:0,vy:0}));
 export const FIRE_START:Pose[]=([0,1,2] as Seat[]).map(seat=>
  ({seat,x:190+seat*64,y:653,vx:0,vy:0}));
 export type FirePlatform={x:number;y:number;width:number;height:number;
@@ -104,6 +107,7 @@ export type FireWorld=Vitals&RatCombatWorld&{
  treeWarningUntil:number;treeImpactUntil:number;
  collapseCycle:number;completed:boolean;damageCause:'fire'|'smoke'|'tree'|'fall'|'fireball'|'bat'|'rat'|'none';
  batDownUntil:BatDownState;batImpacts:BatImpacts;hound:HoundState;
+ bossEncounterStarted:boolean;reviveAt:[number,number,number];
 };
 export function initFire(now=Date.now()):FireWorld{return {
  cycleStart:now,phaseStart:now,resetId:0,deadUntil:0,escapeAt:0,
@@ -112,6 +116,7 @@ export function initFire(now=Date.now()):FireWorld{return {
  smoke:[false,false,false],smokeOpen:false,
  tree:[false,false,false],treeOpen:false,treeFallAt:0,
  smokeSeconds:[0,0,0],supporting:[null,null,null],
+ bossEncounterStarted:false,reviveAt:[0,0,0],
  dashAt:[0,0,0],dashX:[0,0,0],flare:0,windDirection:1,treeStatus:'calm',
  treeWarningUntil:0,treeImpactUntil:0,collapseCycle:-1,
  completed:false,damageCause:'none',batDownUntil:initialBats(),batImpacts:initialBatImpacts(),hound:initHound(now),...initRatCombat(),...initVitals()
@@ -126,13 +131,13 @@ export function validFire(value:unknown):value is FireWorld{
    'treeWarningUntil','treeImpactUntil'].every(k=>finite(w[k]))
   &&[0,1,2].includes(Number(w.layout))
   &&typeof w.collapseCycle==='number'&&Number.isInteger(w.collapseCycle)&&w.collapseCycle>=-1
-  &&['logOpen','smokeOpen','treeOpen','completed'].every(k=>bool(w[k]))
+  &&['logOpen','smokeOpen','treeOpen','completed','bossEncounterStarted'].every(k=>bool(w[k]))
   &&(w.windDirection===1||w.windDirection===-1)
   &&['calm','warning','impact'].includes(String(w.treeStatus))
   &&['none','fire','smoke','tree','fall','fireball','bat','rat'].includes(String(w.damageCause))
   &&['log','smoke','tree'].every(k=>Array.isArray(w[k])&&(w[k] as unknown[]).length===3
     &&(w[k] as unknown[]).every(bool))
-  &&['smokeSeconds','dashAt','dashX'].every(k=>
+  &&['smokeSeconds','dashAt','dashX','reviveAt'].every(k=>
     Array.isArray(w[k])&&(w[k] as unknown[]).length===3&&(w[k] as unknown[]).every(finite))
   &&Array.isArray(w.supporting)&&w.supporting.length===3
   &&w.supporting.every((seat:unknown,i:number)=>
@@ -251,7 +256,7 @@ export class FireAuthority {
  }
  interact(seat:Seat,kind:'lever'|'switch'|'shoot'|'dash'|'support'|'detach',
   poses:Pose[],now=Date.now(),facing:-1|1=1):boolean{
-  const w=this.world,p=poses[seat];if(!p||w.deadUntil||w.completed)return false;
+  const w=this.world,p=poses[seat];if(!p||w.deadUntil||w.completed||w.health[seat]===0)return false;
   if(kind==='dash'&&seat===2){w.dashAt[2]=now;w.dashX[2]=p.x;}
   // Nino can release his mechanism only by dashing into range.
   const nino=seat===2&&kind==='dash';
@@ -283,7 +288,9 @@ export class FireAuthority {
   if(this.world.deadUntil||this.world.completed)return false;
   let changed=regenVitals(this.world,poses,now,dt);
   for(const p of poses){
-   const seat=p.seat,inside=fireHeavySmoke(this.world,p,now);
+   const seat=p.seat;
+   if(this.world.health[seat]===0)continue;
+   const inside=fireHeavySmoke(this.world,p,now);
    if(!inside){if(this.world.smokeSeconds[seat]!==0){
      this.world.smokeSeconds[seat]=0;changed=true;}continue;}
    this.world.smokeSeconds[seat]=Math.min(30,this.world.smokeSeconds[seat]+dt/1000);
@@ -298,7 +305,7 @@ export class FireAuthority {
   return changed;
  }
  tick(poses:Pose[],now=Date.now(),safeUntil=0,isSolo=false):
- {changed:boolean;poses?:Pose[];won?:boolean;respawn?:boolean}{
+ {changed:boolean;poses?:Pose[];respawns?:Pose[];won?:boolean;respawn?:boolean}{
   const w=this.world;
   if(w.deadUntil){
    if(now<w.deadUntil)return {changed:false};
@@ -310,14 +317,43 @@ export class FireAuthority {
    return {changed:true,poses:FIRE_START.map(p=>({...p})),respawn:true};
   }
   if(w.completed)return {changed:false,won:true};
-  // Reset the whole team immediately if anyone falls out of the world or reaches 0 hearts.
-  // This must run even during transformation grace periods and damage invulnerability.
-  if(poses.some(p=>p.y>=FIRE_DEATH_Y)||w.health.some(h=>h<=0)){
+  // Falling into the abyss is always fatal for the entire team, even in the arena.
+  // Never inspect dead/frozen poses here, or a corpse can create a reset loop.
+  if(poses.some(p=>w.health[p.seat]>0&&p.y>=FIRE_DEATH_Y)){
+   this.reset(now);
+   this.world.safeUntil=[now+1600,now+1600,now+1600];
+   return {changed:true,poses:FIRE_START.map(p=>({...p})),respawn:true};
+  }
+  if(w.treeOpen&&!w.bossEncounterStarted&&poses.some(p=>
+     w.health[p.seat]>0&&p.x>=HOUND_LEFT-115)){
+   w.bossEncounterStarted=true;
+  }
+  if(w.health.every(h=>h===0)||w.health.some(h=>h===0)&&!w.bossEncounterStarted){
    this.reset(now);
    this.world.safeUntil=[now+1600,now+1600,now+1600];
    return {changed:true,poses:FIRE_START.map(p=>({...p})),respawn:true};
   }
   let changed=false;
+  const respawns:Pose[]=[];
+  for(const seat of [0,1,2] as Seat[]){
+   if(w.health[seat]>0)continue;
+   if(!w.reviveAt[seat]){
+    w.reviveAt[seat]=now+FIRE_BOSS_REVIVE_MS;
+    w.supporting[seat]=null;
+    if(seat===1)w.supporting[0]=null;
+    changed=true;
+   }else if(now>=w.reviveAt[seat]){
+    w.reviveAt[seat]=0;
+    w.health[seat]=VITALS.MAX_HEALTH;
+    w.stamina[seat]=VITALS.MAX_STAMINA;
+    w.safeUntil[seat]=now+1800;
+    w.lastSpent[seat]=now;
+    w.smokeSeconds[seat]=0;
+    respawns.push({...FIRE_BOSS_RESPAWNS[seat]});
+    changed=true;
+   }
+  }
+  if(respawns.length)return {changed:true,respawns};
   const direction=fireWind(now,w);
   if(direction!==w.windDirection){w.windDirection=direction;changed=true;}
   const flare=Math.floor(Math.max(0,now-w.cycleStart)/4400)%3;
@@ -378,12 +414,14 @@ export class FireAuthority {
   }
   if(now>=safeUntil&&w.blackoutUntil<=now){
    if(tickHound(w,poses,now))changed=true;
-   const monsters=tickMonsters(4,w,poses,now,w.cycleStart,safeUntil);
+   const living=poses.filter(p=>w.health[p.seat]>0);
+   const monsters=tickMonsters(4,w,living,now,w.cycleStart,safeUntil);
    if(monsters.changed){
     changed=true;
     if(monsters.hitType)w.damageCause=monsters.hitType;
    }
    for(const p of poses){
+    if(w.health[p.seat]===0)continue;
     let cause:FireWorld['damageCause']='none';
     if(p.y>=FIRE_DEATH_Y)cause='fall';
     else if(fireballHit(w,p,now))cause='fireball';
@@ -395,10 +433,18 @@ export class FireAuthority {
     }
    }
   }
-  if(w.health.some(h=>h<=0)){
-   this.reset(now);
-   this.world.safeUntil=[now+1600,now+1600,now+1600];
-   return {changed:true,poses:FIRE_START.map(p=>({...p})),respawn:true};
+  if(w.health.some(h=>h===0)){
+   if(w.health.every(h=>h===0)||!w.bossEncounterStarted){
+    this.reset(now);
+    this.world.safeUntil=[now+1600,now+1600,now+1600];
+    return {changed:true,poses:FIRE_START.map(p=>({...p})),respawn:true};
+   }
+   for(const seat of [0,1,2] as Seat[])if(w.health[seat]===0&&!w.reviveAt[seat]){
+    w.reviveAt[seat]=now+FIRE_BOSS_REVIVE_MS;
+    w.supporting[seat]=null;
+    if(seat===1)w.supporting[0]=null;
+    changed=true;
+   }
   }
   if(!w.deadUntil&&w.treeOpen&&w.smokeOpen&&w.logOpen&&w.hound.hp===0&&exitPresence(4,poses,w.health).ready){
    w.completed=true;return {changed:true,won:true};

@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import type {Pose,Seat} from '../src/network';
 import {
  FIRE_WIDTH,FIRE_HEIGHT,FIRE_FLOOR_Y,FIRE_DEATH_Y,FIRE_START,FIRE_PLATFORMS,FIRE_TARGETS,
+ FIRE_BOSS_REVIVE_MS,FIRE_BOSS_RESPAWNS,
  FIRE_SMOKE_ZONE,FIRE_WIND_PERIOD,FIRE_COLLAPSE_PERIOD,
  FireAuthority,initFire,validFire,firePlatforms,fireGrounded,fireObjective,
  fireWind,fireFlareActive,fireDamageZone,fireHeavySmoke,fireTreePhase,fireCheckpoint,
@@ -265,4 +266,56 @@ console.log('ETAPA 19: host authority, fire, smoke, timed tree collapse, all 3 p
  assert.ok(art.includes('intensity:w.treeOpen?0:1'),
   'tree bridge extinguishes persistent approach flames');
  assert.equal(finalArena.hound.hp,8,'Boss and combat state remain intact');
+}
+
+{
+ const bossFight=new FireAuthority();
+ bossFight.reset(start);
+ bossFight.world.logOpen=true;bossFight.world.smokeOpen=true;bossFight.world.treeOpen=true;
+ const arena=FIRE_BOSS_RESPAWNS.map(clone);
+ // First player enters the boss area: this persists if everyone retreats later.
+ arena[0].x=4480;
+ bossFight.tick(arena,start+100);
+ assert.equal(bossFight.world.bossEncounterStarted,true,'boss encounter enables 10s individual revives');
+ const formerReset=bossFight.world.resetId;
+ const hp=bossFight.world.hound.hp;
+ bossFight.world.health[0]=0;
+ const first=bossFight.tick(arena,start+200);
+ assert.equal(first.respawn,undefined,'one player death must not reset the entire phase');
+ assert.equal(bossFight.world.reviveAt[0],start+200+FIRE_BOSS_REVIVE_MS);
+ assert.equal(bossFight.world.health[0],0);
+ assert.equal(bossFight.world.health[1],3);
+ assert.equal(bossFight.world.resetId,formerReset);
+ assert.equal(bossFight.world.hound.hp,hp,'boss health persists while Teo is dead');
+ const before=bossFight.tick(arena,start+200+FIRE_BOSS_REVIVE_MS-1);
+ assert.equal(before.respawns,undefined,'revival cannot occur before ten seconds');
+ const restored=bossFight.tick(arena,start+200+FIRE_BOSS_REVIVE_MS+1);
+ assert.deepEqual(restored.respawns?.[0],FIRE_BOSS_RESPAWNS[0],
+  'hero respawns safely next to the Boss, not at the beginning');
+ assert.deepEqual(bossFight.world.health,[3,3,3]);
+ assert.equal(bossFight.world.stamina[0],100);
+ assert.ok(bossFight.world.safeUntil[0]>start+200+FIRE_BOSS_REVIVE_MS+1000);
+ assert.equal(bossFight.world.treeOpen,true,'puzzles remain completed after individual death');
+ assert.equal(bossFight.world.resetId,formerReset);
+ assert.ok(validFire(bossFight.world),'network snapshot remains valid with revive timers');
+ const teamWipe=new FireAuthority();
+ teamWipe.reset(start);
+ teamWipe.world.treeOpen=true;teamWipe.world.bossEncounterStarted=true;
+ teamWipe.world.health=[0,0,0];
+ assert.equal(teamWipe.tick(arena,start+350).respawn,true,
+  'last teammate death immediately restarts the entire phase');
+ assert.equal(teamWipe.world.treeOpen,false);
+ const pit=new FireAuthority();
+ pit.reset(start);
+ pit.world.treeOpen=true;pit.world.bossEncounterStarted=true;
+ const fallen=arena.map(clone);fallen[2].y=FIRE_DEATH_Y+10;
+ assert.equal(pit.tick(fallen,start+400).respawn,true,
+  'falling into abyss still resets all players even when Boss encounter started');
+ // Do not reset on a dead body's stale falling location.
+ const stopped=new FireAuthority();stopped.reset(start);
+ stopped.world.treeOpen=true;stopped.world.bossEncounterStarted=true;
+ stopped.world.health[2]=0;
+ const corpse=arena.map(clone);corpse[2].y=FIRE_DEATH_Y+12;
+ assert.equal(stopped.tick(corpse,start+500).respawn,undefined,
+  'a fallen corpse cannot cause repeated team resets');
 }
