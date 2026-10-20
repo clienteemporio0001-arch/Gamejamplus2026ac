@@ -137,7 +137,7 @@ export function validFire(value:unknown):value is FireWorld{
   &&w.supporting.every((seat:unknown,i:number)=>
     seat===null||(i===0&&seat===1)||(i===1&&seat===2))
   &&validBatState(w.batDownUntil)&&validBatImpacts(w.batImpacts)&&validRatCombat(w)
-  &&validVitals(w)&&validEclipseBoss(w.boss);
+  &&validVitals(w)&&validEclipseBoss((w as Record<string,unknown>).boss);
 }
 export function firePlatforms(w:FireWorld):FirePlatform[]{
  return FIRE_PLATFORMS.filter(p=>!p.requires||
