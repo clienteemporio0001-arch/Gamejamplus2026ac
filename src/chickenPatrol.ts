@@ -27,7 +27,8 @@ export function chickenPose(path:ChickenPath,elapsedMs:number):ChickenPose{
   const length=Math.max(1,path.to-path.from);
   const t=Math.max(0,elapsedMs+path.offsetMs);
   const traveled=(t*path.speed/1000)%(2*length);
-  const right=traveled<length;
+  // Floating-point rounding at the exact turn must not postpone flipping.
+  const right=traveled<length-1e-7;
   const x=path.from+(right?traveled:2*length-traveled);
   return {
     x,groundY:path.groundY,flipX:!right,
