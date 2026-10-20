@@ -85,14 +85,16 @@ assert.equal(firePlatforms(w).some(p=>p.requires==='tree'),true);
 assert.equal(pipoHint({phase:4,world:w}).objective,'corrida final');
 const late=fireCheckpoint(w);assert.equal(late.length,3);
 assert.ok(late.every(p=>fireGrounded(w,p)));
-assert.equal(fireFlareActive(w,start,4390),true,'first area ignites during first cycle');
-w.flare=1; // replay host snapshot after the first fire window
-assert.equal(fireFlareActive(w,start+4400,4390),false,'first fire safely subsides');
+const beforeFall=initFire(start);
+assert.equal(fireFlareActive(beforeFall,start,4390),true,'flames are dangerous before tree falls');
+assert.equal(fireFlareActive(w,start,4390),false,'fallen tree clears the final path');
+w.flare=1;
+assert.equal(fireFlareActive(w,start+4400,4390),false,'flames stay extinguished in state B');
 w.flare=0;
-assert.equal(fireDamageZone(w,{x:4390,y:652},start),true,'first active flare damages');
-assert.equal(fireDamageZone(w,{x:4390,y:560},start),false,'above fire safe');
-w.flare=2; // host-authoritative third active phase
-assert.equal(fireFlareActive(w,start+8800,4860),true,'third flare active in phase 2');
+assert.equal(fireDamageZone(w,{x:4390,y:652},start),false,'safe final path remains fire-free');
+assert.equal(fireDamageZone(w,{x:4390,y:560},start),false,'safe at higher elevations');
+w.flare=2;
+assert.equal(fireFlareActive(w,start+8800,4860),false,'final path stays clear in state C');
 // Victory demands all three living and near the safe river.
 const exit=FIRE_TARGETS.exit;
 const finishing:Pose[]=([0,1,2] as Seat[]).map(seat=>
