@@ -14,6 +14,8 @@ import {MissionDirector} from './missionDirector';
 import {BurningForestArt} from './burningForestArt';
 import {ForestTrees,preloadForestTrees} from './forestTrees';
 import {BurningForestAudio} from './burningForestAudio';
+import {FlyingBatVisuals,preloadBats} from './flyingBatVisuals';
+import {batAlive,batFlight} from './flyingBats';
 import {
  FIRE_WIDTH,FIRE_HEIGHT,FIRE_FLOOR_Y,FIRE_START,FIRE_PLATFORMS,FIRE_TARGETS,FIRE_SHIFT_ROOTS,
  firePlatforms,fireVisualTreePhase,fireHeavySmoke,fireDamageZone,fireFlareActive,
@@ -28,6 +30,7 @@ export class BurningForestScene extends Phaser.Scene {
  private art!:BurningForestArt;private forestTrees?:ForestTrees;private pipo!:PipoGuide;private missions!:MissionDirector;
  private exitArt?:CooperativeExitArt;
  private audio!:BurningForestAudio;
+ private bats?:FlyingBatVisuals;private batAlertAt=0;
  private platforms:Phaser.GameObjects.Rectangle[]=[];
  private skins:Phaser.GameObjects.Graphics[]=[];
  private shiftingRoots:Phaser.GameObjects.Rectangle[]=[];
@@ -60,7 +63,7 @@ export class BurningForestScene extends Phaser.Scene {
    .setOrigin(.5).setDepth(53);
  }
  preload():void{
-  preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestTrees(this);
+  preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestTrees(this);preloadBats(this,4);
   if(!this.textures.exists('jam-explosion'))
     this.load.spritesheet('jam-explosion',
       import.meta.env.BASE_URL+'assets/fx/explosion-4.png',
@@ -72,6 +75,7 @@ export class BurningForestScene extends Phaser.Scene {
   this.physics.world.setBoundsCollision(true,true,false,false);
   this.art=new BurningForestArt(this);
   this.forestTrees=new ForestTrees(this,4);
+  this.bats=new FlyingBatVisuals(this,4);
   // The same silhouettes appear at real cooperation points in the fire biome.
   officialLandmark(this,'hollow','fire',FIRE_TARGETS.log.teo.x,638,
     FIRE_TARGETS.log.teo.y,.55);
@@ -279,6 +283,16 @@ export class BurningForestScene extends Phaser.Scene {
   }
   const seat=this.net.localSeat,w=this.world,now=Date.now();
   const pause=w.deadUntil>0||!this.net.everyoneConnected;
+  this.bats?.update(now,w.cycleStart,w.batDownUntil,pause);
+  if(!pause&&now-this.batAlertAt>8000&&
+    ([0,1] as const).some(id=>{
+      if(!batAlive(w.batDownUntil,id,now))return false;
+      const bat=batFlight(4,id,now,w.cycleStart);
+      return Math.abs(this.local.x-bat.x)<215&&Math.abs(this.local.y-bat.y)<120;
+    })){
+    this.batAlertAt=now;
+    this.pipo.warnDanger('Morcegos vermelhos! Lia, use a baladeira!');
+  }
   if(pause!==this.paused){
    this.paused=pause;
    if(pause){this.physics.pause();this.pending.clear();gameKeys.clear();clearTouch(this.touch);}
@@ -289,6 +303,7 @@ export class BurningForestScene extends Phaser.Scene {
    (w.damageCause==='tree'?'A ÁRVORE DESABOU SOBRE A EQUIPE':
     w.damageCause==='smoke'?'A FUMAÇA VENCEU A RESISTÊNCIA':
     w.damageCause==='fall'?'UM AMIGO CAIU NO ABISMO':
+    w.damageCause==='bat'?'UM MORCEGO ATINGIU UM AMIGO':
     'O FOGO ATINGIU UM AMIGO')+'\nA EQUIPE RECOMEÇARÁ DO INÍCIO DA FASE 04':
    'AGUARDANDO A EQUIPE...');
   if(!pause){
