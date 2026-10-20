@@ -8,6 +8,7 @@ import {initVitals,validVitals,spendVital,regenVitals,damageVitals,VITALS,
 
 /** A FLORESTA MENTE • final chapter, independent from classic level 4. */
 export const FIRE_WIDTH=5200,FIRE_HEIGHT=850,FIRE_FLOOR_Y=675,FIRE_DEATH_Y=803;
+export const FIRE_CLEARING_LEFT=4390,FIRE_CLEARING_RIGHT=5030;
 export const FIRE_START:Pose[]=([0,1,2] as Seat[]).map(seat=>
  ({seat,x:190+seat*64,y:653,vx:0,vy:0}));
 export type FirePlatform={x:number;y:number;width:number;height:number;
@@ -54,6 +55,7 @@ export function fireballHazards(w:FireWorld,now:number):Fireball[]{
   const phaseMs=local%FIREBALL_INTERVAL;
   if(phaseMs>=FIREBALL_WARNING+FIREBALL_FALL+FIREBALL_IMPACT)continue;
   const impactX=225+lane*360+(fireballSeed(lane*31+cycle*17)-.5)*114;
+  if(w.treeOpen&&impactX>=FIRE_CLEARING_LEFT&&impactX<=FIRE_CLEARING_RIGHT)continue;
   const top=firePlatforms(w).filter(p=>Math.abs(impactX-p.x)<=p.width/2-8)
    .reduce((best,p)=>Math.min(best,p.y-p.height/2),675);
   const impactY=top-9;
@@ -158,12 +160,13 @@ export function fireWind(now:number,w:FireWorld):FireWind{
 export function fireFlareActive(w:FireWorld,now:number,x:number):boolean{
  // The host broadcasts the active phase; guests must not invent local flame cycles.
  void now;
- if(x<4210)return false;
+ if(x<4210||(w.treeOpen&&x>=FIRE_CLEARING_LEFT&&x<=FIRE_CLEARING_RIGHT))return false;
  const frame=w.flare;
  return x<4520?frame!==1:x<4770?frame!==2:x<4930?frame===2:false;
 }
 export function fireDamageZone(w:FireWorld,p:Pick<Pose,'x'|'y'>,now:number):boolean{
  if(p.y<582||fireSheltered(p))return false;
+ if(w.treeOpen&&p.x>=FIRE_CLEARING_LEFT&&p.x<=FIRE_CLEARING_RIGHT)return false;
  if(p.x>=1225&&p.x<=1560&&p.y>(w.logOpen?658:625))return true;
  if(p.x>=3875&&p.x<=4240&&p.y>(w.treeOpen?661:632))return true;
  return (p.x>4260&&p.x<4520||p.x>4570&&p.x<4770||
@@ -303,6 +306,13 @@ export class FireAuthority {
    return {changed:true,poses:FIRE_START.map(p=>({...p})),respawn:true};
   }
   if(w.completed)return {changed:false,won:true};
+  // Reset the whole team immediately if anyone falls out of the world or reaches 0 hearts.
+  // This must run even during transformation grace periods and damage invulnerability.
+  if(poses.some(p=>p.y>=FIRE_DEATH_Y)||w.health.some(h=>h<=0)){
+   this.reset(now);
+   this.world.safeUntil=[now+1600,now+1600,now+1600];
+   return {changed:true,poses:FIRE_START.map(p=>({...p})),respawn:true};
+  }
   let changed=false;
   const direction=fireWind(now,w);
   if(direction!==w.windDirection){w.windDirection=direction;changed=true;}
@@ -381,7 +391,9 @@ export class FireAuthority {
    }
   }
   if(w.health.some(h=>h<=0)){
-   w.deadUntil=now+1450;changed=true;
+   this.reset(now);
+   this.world.safeUntil=[now+1600,now+1600,now+1600];
+   return {changed:true,poses:FIRE_START.map(p=>({...p})),respawn:true};
   }
   if(!w.deadUntil&&w.treeOpen&&w.smokeOpen&&w.logOpen&&exitPresence(4,poses,w.health).ready){
    w.completed=true;return {changed:true,won:true};

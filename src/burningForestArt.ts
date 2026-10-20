@@ -258,9 +258,9 @@ export class BurningForestArt {
   const fireZones=[
    {x:1390,spread:160,y:680,intensity:!w.logOpen?1:.35},
    {x:4050,spread:174,y:678,intensity:!w.treeOpen?1:.35},
-   {x:4390,spread:114,y:670,intensity:fireFlareActive(w,now,4380)?1:.13},
-   {x:4680,spread:86,y:668,intensity:fireFlareActive(w,now,4650)?1:.13},
-   {x:4860,spread:67,y:670,intensity:fireFlareActive(w,now,4840)?1:.13}
+   {x:4390,spread:114,y:670,intensity:w.treeOpen?0:fireFlareActive(w,now,4380)?1:.13},
+   {x:4680,spread:86,y:668,intensity:w.treeOpen?0:fireFlareActive(w,now,4650)?1:.13},
+   {x:4860,spread:67,y:670,intensity:w.treeOpen?0:fireFlareActive(w,now,4840)?1:.13}
   ];
   // Batched fire triangles, capped. Flames visibly quiet down in safe phases.
   for(const [z,zone] of fireZones.entries()){

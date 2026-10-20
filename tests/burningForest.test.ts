@@ -137,13 +137,11 @@ fatal.world.stamina=[11,42,75];
 fatal.world.supporting=[null,2,null];
 const oldResetId=fatal.world.resetId;
 lost[2]={seat:2,x:4450,y:FIRE_DEATH_Y+2,vx:0,vy:700};
-fatal.tick(lost,start+1000);
-assert.equal(fatal.world.health[2],0,'fatal drop must kill Nino even after all puzzles');
-assert.ok(fatal.world.deadUntil>start+1000);
-assert.equal(fatal.tick(lost,start+1200).respawn,undefined,'no early respawn');
-const resumedAt=start+2800;
+const resumedAt=start+1000;
 const respawn=fatal.tick(lost,resumedAt);
-assert.equal(respawn.respawn,true,'collective restart after death delay');
+assert.equal(respawn.respawn,true,'fall must restart ALL players immediately');
+assert.deepEqual(fatal.world.health,[3,3,3],'all teammates must revive together');
+assert.equal(fatal.world.deadUntil,0,'no zero-life character can run beneath the map');
 assert.deepEqual(respawn.poses,FIRE_START,'all three must return to ORIGINAL entry');
 assert.notEqual(respawn.poses?.[0].x,fireCheckpoint({
  ...initFire(start),treeOpen:true
@@ -225,4 +223,22 @@ console.log('ETAPA 19: host authority, fire, smoke, timed tree collapse, all 3 p
  for(let t=0;t<FIREBALL_INTERVAL*2;t+=100)
   protect.tick(shelteredGroup,start+t);
  assert.equal(protect.world.health[0],3,'fire shelter protects in repeated volleys');
+}
+
+{
+ const clearing=initFire(start);
+ clearing.treeOpen=true;
+ for(const x of [4390,4500,4700,4850,5020]){
+  assert.equal(fireFlareActive(clearing,start+9900,x),false,'no active flames in cleared final passage');
+  assert.equal(fireDamageZone(clearing,{x,y:670},start+9900),false,'no fire damage after the tree falls');
+ }
+ assert.ok(fireballHazards(clearing,start+35000).every(b=>b.x<4390||b.x>5030),
+  'meteor impacts cannot land in the clearing after the tree falls');
+ const wiped=new FireAuthority();
+ wiped.reset(start);
+ wiped.world.health[1]=0;
+ const reset=wiped.tick(FIRE_START.map(clone),start+900);
+ assert.equal(reset.respawn,true,'zero hearts immediately restarts the phase for all three');
+ assert.deepEqual(reset.poses,FIRE_START);
+ assert.deepEqual(wiped.world.health,[3,3,3]);
 }
