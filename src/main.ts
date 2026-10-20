@@ -38,14 +38,15 @@ const ui = document.querySelector<HTMLDivElement>('#ui')!;
 const controls = document.querySelector<HTMLDivElement>('#mobile-controls')!;
 const touch: TouchInput = { left: false, right: false, jump: false, interact: false, ability: false };
 let game: Phaser.Game | null = null;
-let activeMode: 'none' | 'intro' | 'level1' | 'level2' | 'level3' | 'level4' | 'loop' | 'temporal' | 'treetop' | 'fire' = 'none';
+type GameMode='none'|'intro'|'level1'|'level2'|'level3'|'level4'|'loop'|'temporal'|'treetop'|'fire';
+let activeMode:GameMode='none';
 /** Keep ONE Phaser renderer/WebGL context through all four phases.
  * Creating a new Game immediately after destroy(true) can race Phaser's
  * asynchronous teardown and intermittently leave the next scene frozen.
  */
 let rendererReady=false;
 let activeSceneKey:string|null=null;
-let pendingScene:{mode:typeof activeMode;scene:Phaser.Scene}|null=null;
+let pendingScene:{mode:GameMode;scene:Phaser.Scene}|null=null;
 let info = '';
 let phaseMapOpen=false;
 let rankingsOpen=false;
@@ -344,7 +345,7 @@ function startSoloAdventure(level:1|2|3|4,avatars:AvatarChoices=loadSoloAvatars(
  }
  net.startSolo(level,false,'loop',avatars);net.setNickname(profile.nickname);
 }
-function activateGameScene(instance:Phaser.Game,mode:typeof activeMode,scene:Phaser.Scene):void{
+function activateGameScene(instance:Phaser.Game,mode:GameMode,scene:Phaser.Scene):void{
   if(game!==instance)return; // an old async renderer boot must not revive a left room
   const key=scene.sys.settings.key;
   if(activeSceneKey===key)return;
@@ -362,7 +363,7 @@ function enterGame():void{
   setActiveAvatarSelections(([0,1,2] as const).map(seat=>net.avatarForSeat(seat)));
   const mode=(net.stage==='intro'?'intro':
     net.experience==='loop'?(net.level===4?'fire':net.level===3?'treetop':net.level===2?'temporal':'loop'):
-    'level'+net.level) as typeof activeMode;
+    'level'+net.level) as GameMode;
   if(game&&activeMode===mode)return;
   const scene=mode==='intro'?new IntroScene():
     mode==='loop'?new ForestLoopScene(net,touch,refreshHud):
