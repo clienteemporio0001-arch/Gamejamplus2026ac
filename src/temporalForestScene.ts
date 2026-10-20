@@ -12,6 +12,7 @@ import {consumeTouch,clearTouch} from './mobileControls';
 import {cameraZoomFor,isCoarseDevice} from './mobileViewport';
 import {gameKeys} from './keyboard';
 import {NightArt} from './visuals';
+import {ForestTrees,preloadForestTrees} from './forestTrees';
 import {ForestChickens,preloadForestChickens} from './forestChickens';
 import type {VitalAction} from './loopVitals';
 import {temporalDrop,rainBudget,rippleAt} from './temporalRain';
@@ -27,6 +28,7 @@ export class TemporalForestScene extends Phaser.Scene {
  private net:Network;private touch:TouchInput;private hud?:()=>void;
  private w:TemporalWorld;
  private art!:NightArt;
+ private forestTrees?:ForestTrees;
  private chickens?:ForestChickens;
  private blocks:Phaser.GameObjects.Rectangle[]=[];
  private layoutBlocks:Phaser.GameObjects.Rectangle[]=[];
@@ -85,19 +87,11 @@ export class TemporalForestScene extends Phaser.Scene {
   this.art=new NightArt(this,TEMP_WIDTH,'river');
   this.stormShade=this.add.rectangle(TEMP_WIDTH/2,350,TEMP_WIDTH,700,0x1f4155,.16)
     .setDepth(-4);
-  const g=this.add.graphics().setDepth(-3);
-  // Swollen trunks and dark hanging roots create a distinct 5-region silhouette.
-  for(let i=0;i<23;i++){
-   const x=80+i*187,top=205+(i%3)*35;
-   g.fillStyle(i%2?0x1b3638:0x203b43,.85);
-   g.fillRoundedRect(x-22,top,45,470-top,18);
-   g.fillStyle(0x2c544e,.77);
-   g.fillEllipse(x,top+7,136+(i%3)*28,120);
-   g.fillStyle(0x2d5756,.33);g.fillEllipse(x-21,top-19,88,58);
-   g.lineStyle(5,0x5b7360,.30);
-   g.beginPath();g.moveTo(x+19,top+15);g.lineTo(x+31,top+115);
-   g.lineTo(x+23,top+199);g.strokePath();
-  }
+  // The former 23 hand-drawn canopy/trunk pairs ended at y=470 while
+  // the ground is y=638, creating obviously floating tree trunks.
+  // Removed ONLY those obsolete shapes. NightArt keeps the grounded
+  // forest silhouettes; the creator's supplied tree atlas is placed in
+  // this scene separately, behind all interactive platforms.
   // Giant waterlogged guardian at the broken bridge.
   const treeG=this.add.graphics();
   treeG.fillStyle(0x29473d,1);treeG.fillRoundedRect(0,-25,385,55,20);
@@ -155,11 +149,12 @@ export class TemporalForestScene extends Phaser.Scene {
   this.art.water(TEMP_CHANNEL.start,TEMP_CHANNEL.end,638);
   this.text(2800,511,'CORRENTEZA PROFUNDA',14,'#efc6b3').setAlpha(.9);
  }
- preload():void{preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestChickens(this);}
+ preload():void{preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestChickens(this);preloadForestTrees(this);}
  create():void{
   this.physics.world.setBounds(0,0,TEMP_WIDTH,900);
   this.physics.world.setBoundsCollision(true,true,false,false);
   this.woodedEnvironment();
+  this.forestTrees=new ForestTrees(this,2);
   this.chickens=new ForestChickens(this,2);
   this.platform(1305,678,2610,80);
   this.platform(3585,678,1230,80);
@@ -447,6 +442,7 @@ export class TemporalForestScene extends Phaser.Scene {
   this.tree.setRotation(-1.13*(1-progress*progress*(3-2*progress)));
   this.renderRain(time);
   this.art.update(time);
+  this.forestTrees?.update();
   this.chickens?.update(time);
   this.art.drawTide(w.cycleStart,now,w.bridge,pause);
   this.hud?.();
