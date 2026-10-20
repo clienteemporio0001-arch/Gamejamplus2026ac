@@ -1,7 +1,7 @@
 import {exitPresence} from './sharedExit';
 import type {Pose,Seat} from './network';
 import {initVitals,validVitals,spendVital,regenVitals,damageVitals,VITALS,type VitalAction,type Vitals} from './loopVitals';
-import {batTouchesHero,hitBatWithSlingshot,initialBats,validBatState,type BatDownState} from './flyingBats';
+import {batContactImpact,hitBatWithSlingshot,initialBats,initialBatImpacts,validBatState,validBatImpacts,type BatDownState,type BatImpacts} from './flyingBats';
 import {FRAGILE_BRANCH_INDICES} from './jamChallenges';
 
 /** Fase 03 da NOVA aventura. Independente da terceira fase clássica. */
@@ -87,14 +87,14 @@ export type TreeWorld=Vitals&{
  supporting:[Seat|null,Seat|null,Seat|null];dashAt:number;dashX:number;
  fragileAt:[number,number,number];
  windPhase:TreeWindPhase;windDirection:-1|1;windUntil:number;gustCount:number;deathByGust:boolean;
- batDownUntil:BatDownState;
+ batDownUntil:BatDownState;batImpacts:BatImpacts;
 };
 export function initTree(now=Date.now()):TreeWorld{return {
  layout:0,cycle:0,cycleStart:now,blackoutUntil:0,deadUntil:0,resetId:0,
  bridge:[false,false,false],bridgeOpen:false,tower:[false,false,false],ropeOpen:false,
  time:[false,false,false],finalOpen:false,completed:false,supporting:[null,null,null],
  dashAt:0,dashX:0,fragileAt:[0,0,0],windPhase:'calm',windDirection:1,windUntil:0,gustCount:0,deathByGust:false,
- batDownUntil:initialBats(),
+ batDownUntil:initialBats(),batImpacts:initialBatImpacts(),
  ...initVitals()
 };}
 /** Synchronize host poses of stacked friends with their base, rather than old ground positions. */
@@ -119,7 +119,7 @@ export function validTree(value:unknown):value is TreeWorld{
  &&Array.isArray(w.fragileAt)&&w.fragileAt.length===3&&w.fragileAt.every(v=>typeof v==='number'&&Number.isFinite(v)&&v>=0)
  &&Array.isArray(w.supporting)&&w.supporting.length===3
  &&w.supporting.every((v,i)=>v===null||(i===0&&v===1)||(i===1&&v===2))
- &&validBatState(w.batDownUntil)
+ &&validBatState(w.batDownUntil)&&validBatImpacts(w.batImpacts)
  &&validVitals(w);
 }
 export function treePlatforms(w:TreeWorld):TreePlatform[]{
@@ -299,9 +299,17 @@ export class TreeAuthority{
   // immunity, never applies during transformations or initial safe spawn.
   let batDamage=false;
   if(now>=protectedUntil&&w.blackoutUntil<=now){
-   for(const p of poses)
-    if(batTouchesHero(3,w.batDownUntil,p,now,w.cycleStart)&&
-      damageVitals(w,p.seat,now))batDamage=true;
+   for(const p of poses){
+    const impact=batContactImpact(3,w.batDownUntil,p,now,w.cycleStart);
+    if(!impact||!damageVitals(w,p.seat,now))continue;
+    w.batImpacts[p.seat]=impact;
+    // A hit breaks the human stack, so the knocked teammate can move.
+    if(w.supporting[p.seat]!==null){
+     w.supporting[p.seat]=null;
+     if(p.seat===1)w.supporting[0]=null;
+    }
+    batDamage=true;
+   }
   }
   if(w.health.some(h=>h<=0)){
     w.deathByGust=false;w.deadUntil=now+1500;return {changed:true};
