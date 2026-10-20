@@ -44,6 +44,17 @@ assert.ok(main.includes('instance.events.once(Phaser.Core.Events.READY')&&
 assert.ok(main.includes('instance.destroy(true)')&&
  main.includes("game=null;rendererReady=false;activeMode='none'"),
  'menu teardown releases the single renderer and aborts pending stage');
+assert.ok(main.includes('if(!game&&retiringGame)return;')&&
+ main.includes('instance.events.once(Phaser.Core.Events.DESTROY')&&
+ main.includes('retiringGame=null;'),
+ 'a rapid retry waits for deferred Phaser WebGL destruction before recreating a game');
+assert.ok(main.includes('if(instance.isRunning)onRendererReady()')&&
+ main.includes('Phaser.Core.Events.READY,onRendererReady'),
+ 'warm cached renderers cannot lose the READY event race');
+const sprite=readFileSync('src/kenneyCharacterSprites.ts','utf8');
+assert.ok(sprite.includes('for(const id of activeAvatars)')&&
+ !sprite.includes('for(const avatar of AVATAR_CATALOG)'),
+ 'phase 01 uploads only three chosen atlases instead of six');
 assert.ok(main.includes('cinematicWatchTimer=setInterval(')&&
  main.includes('clearInterval(cinematicWatchTimer)')&&
  main.includes('complete(allowSkip?onSkip:onComplete)'),
