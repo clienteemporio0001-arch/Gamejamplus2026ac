@@ -1,4 +1,5 @@
 import {readFileSync,existsSync} from 'node:fs';
+import {gameGuideMarkup} from '../src/gameGuide';
 import {cleanName,formatTime,elapsedMs,addRecord,loadRecords,saveRecord} from '../src/speedrun';
 import {initLoop,LOOP_START,LOOP_CYCLE_MS,LOOP_GEOMETRY,LOOP_MARKS,markPosition} from '../src/forestLoop';
 import {loopObjective,loopContext,loopWind,regionTitle} from '../src/forestLoopUI';
@@ -304,7 +305,9 @@ ok(main.includes('<b>OBJETIVO:</b> escapem da floresta no menor tempo possível!
  'lobby mostra a missão atual de fuga cronometrada, cooperação e dicas do Pipo');
 ok(!main.includes('encontrem o Guia Indígena, apoiem-se uns nos outros, coletem 3 cipós'),
  'lobby não exibe o objetivo antigo de busca de cipós');
-ok(main.includes('Três amigos, quatro fases e uma missão:')&&
- main.includes('Superem os perigos juntos e cheguem à saída o mais rápido possível.'),
- 'tela COMO JOGAR descreve a mesma meta atualizada');
+ok(main.includes("kind==='how'?gameGuideMarkup()")&&
+ gameGuideMarkup().includes('Três amigos. Quatro fases. Uma saída.')&&
+ gameGuideMarkup().includes('Ninguém fica para trás.')&&
+ gameGuideMarkup().includes('O TEMPO MUDA TUDO'),
+ 'tela COMO JOGAR mostra missão, cooperação e estados da floresta');
 console.log('APROVADO: '+count+' verificações da Etapa 10 (HUD, menu, sessões e contexto).');
