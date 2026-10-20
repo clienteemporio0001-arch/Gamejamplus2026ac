@@ -141,12 +141,15 @@ const oldResetId=fatal.world.resetId;
 lost[2]={seat:2,x:4450,y:FIRE_DEATH_Y+2,vx:0,vy:700};
 fatal.tick(lost,start+1000);
 assert.equal(fatal.world.health[2],0,'fatal drop must kill Nino even after all puzzles');
-assert.ok(fatal.world.deadUntil>start+1000);
-assert.equal(fatal.tick(lost,start+1200).respawn,undefined,'no early respawn');
+assert.equal(fatal.world.deadUntil,0,'one death does not reset the team');
+assert.equal(fatal.world.reviveAt[2],start+11000,'Nino returns after 10 seconds');
+assert.equal(fatal.tick(lost,start+1200).respawn,undefined,'single death preserves all puzzle progress');
+assert.equal(fatal.world.logOpen,true,'single loss cannot erase progress');
+fatal.world.health=[0,0,0];
 const resumedAt=start+2800;
 const respawn=fatal.tick(lost,resumedAt);
-assert.equal(respawn.respawn,true,'collective restart after death delay');
-assert.deepEqual(respawn.poses,FIRE_START,'all three must return to ORIGINAL entry');
+assert.equal(respawn.respawn,true,'the third death immediately resets whole phase');
+assert.deepEqual(respawn.poses,FIRE_START,'all three return to ORIGINAL entry');
 assert.notEqual(respawn.poses?.[0].x,fireCheckpoint({
  ...initFire(start),treeOpen:true
 })[0].x,'never use late checkpoint');

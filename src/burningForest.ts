@@ -314,7 +314,8 @@ export class FireAuthority {
   }
   if(w.completed)return {changed:false,won:true};
   if(w.health.every(h=>h===0)){
-   this.reset(now);return{changed:true,poses:FIRE_START.map(p=>({...p})),respawn:true};
+   this.reset(now);this.world.safeUntil=[now+1800,now+1800,now+1800];
+   return{changed:true,poses:FIRE_START.map(p=>({...p})),respawn:true};
   }
   const respawns:Pose[]=[];
   for(const seat of [0,1,2] as Seat[]){
