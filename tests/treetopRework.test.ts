@@ -82,7 +82,7 @@ assert.equal(authority.authorizeEnergy(1,'shoot',party,base+1200,1).ok,true);
 assert.equal(w.bridge[1],true);
 assert.equal(authority.interact(2,'dash',party,base+1300),false,
  'Nino must Dash near the bridge target');
-assert.equal(w.dashAt,0,'no dash has been activated for the bridge');
+assert.equal(w.dashAt,base+1300,'first dash was too far from the bridge marker');
 party[2]={seat:2,x:TREE_TARGETS.bridge.nino.x,y:TREE_TARGETS.bridge.nino.y,vx:0,vy:0};
 assert.equal(authority.interact(2,'dash',party,base+1850),true,
  'Nino uses Dash to finish the first bridge');
