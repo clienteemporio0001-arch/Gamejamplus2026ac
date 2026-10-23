@@ -13,6 +13,7 @@ import { ForestAuthority, FOREST_WIDTH, FOREST_SPAWNS, FOREST_CHECKPOINTS, fores
 import { LoopAuthority, LOOP_START, LOOP_WIDTH, SUSPENSION, validLoop, initLoop, blackoutActive, suspensionLeverStatus, type SuspensionLeverReason, type LoopWorld } from './forestLoop';
 import { type VitalAction } from './loopVitals';
 import {FallTracker,loopFallSurfaces,temporalFallSurfaces} from './fallDamage';
+import {firstCommonEnemyDamage,contactSnapshot,type CombatContactFrame,type CombatContactSnapshot} from './combatTutorial';
 import {SUMMIT_BRANCH} from './forestLoop';
 import {TemporalAuthority,TEMP_WIDTH,TEMP_START,initTemporal,validTemporal,type TemporalWorld} from './temporalForest';
 import {TreeAuthority,TREE_START,TREE_WIDTH,TREE_HEIGHT,initTree,validTree,type TreeWorld} from './treetopForest';
@@ -195,6 +196,8 @@ export class Network {
   fire:FireWorld=initFire();
   private fireAuthority=new FireAuthority();
   private fireSafeUntil=0;
+  private combatTutorialBlocking=false;
+  private firstCommonEnemyHitProtected=false;
   private treetopSafeUntil=0;
   localSeat: Seat | null = null;
   players: Slot[] = slots();
@@ -1231,6 +1234,30 @@ export class Network {
     this.emit('chapter', this.chapter);
     this.emit('change', undefined);
   }
+  /** Pause SOLO authority ticks while the contextual combat card is open.
+   * Multiplayer never pauses or waits for another person's overlay. */
+  setCombatTutorialVisible(visible:boolean):void{
+    if(!this.isSolo||!this.playing||this.experience!=='loop')return;
+    this.combatTutorialBlocking=visible;
+    if(!visible){
+      const world=this.level===4?this.fireAuthority.world:
+       this.level===3?this.treetopAuthority.world:
+       this.level===2?this.temporalAuthority.world:this.loopAuthority.world;
+      const until=Date.now()+1600;
+      for(const seat of [0,1,2] as Seat[])
+        world.safeUntil[seat]=Math.max(world.safeUntil[seat],until);
+    }
+  }
+  /** One short team grace window after the first confirmed contact hit.
+   * Uses existing invulnerability; never changes damage, skills or enemy HP. */
+  private protectFirstCommonEnemyHit(world:CombatContactFrame & {safeUntil:[number,number,number]},
+    previous:CombatContactSnapshot,now:number):void{
+    if(this.firstCommonEnemyHitProtected||
+       !firstCommonEnemyDamage(previous,world,now))return;
+    this.firstCommonEnemyHitProtected=true;
+    for(const seat of [0,1,2] as Seat[])
+      world.safeUntil[seat]=Math.max(world.safeUntil[seat],now+20000);
+  }
   private hostTick(): void {
     if (!this.isHost || !this.everyoneConnected) return;
     if (this.stage === 'intro') {
@@ -1242,10 +1269,13 @@ export class Network {
       return;
     }
     if (!this.playing || this.completed) return;
+    if(this.isSolo&&this.combatTutorialBlocking)return;
     if(this.experience==='loop'&&this.level===4){
       const now=Date.now();
       if(this.fireAuthority.tickResources(this.poses,now))this.shareFire();
+      const combatBefore=contactSnapshot(this.fireAuthority.world);
       const result=this.fireAuthority.tick(this.poses,now,this.fireSafeUntil,this.isSolo);
+      this.protectFirstCommonEnemyHit(this.fireAuthority.world,combatBefore,now);
       if(result.poses){
         this.fireSafeUntil=now+1800;
         this.poses=result.poses.map(p=>({...p}));
@@ -1264,7 +1294,9 @@ export class Network {
       const now=Date.now();
       if(this.treetopAuthority.tickResources(this.poses,now))this.shareTreetop();
       // Fatal drops and gusts are resolved by the same host authority.
+      const combatBefore=contactSnapshot(this.treetopAuthority.world);
       const result=this.treetopAuthority.tick(this.poses,now,this.treetopSafeUntil);
+      this.protectFirstCommonEnemyHit(this.treetopAuthority.world,combatBefore,now);
       if(result.poses){
         this.treetopSafeUntil=now+1700;
         this.poses=result.poses.map(p=>({...p}));
@@ -1303,7 +1335,9 @@ export class Network {
         }
       }
       if(this.temporalAuthority.tickResources(this.poses,now))this.shareTemporal();
+      const combatBefore=contactSnapshot(this.temporalAuthority.world);
       const state=this.temporalAuthority.tick(this.poses,now);
+      this.protectFirstCommonEnemyHit(this.temporalAuthority.world,combatBefore,now);
       if(state.poses){
         this.fallTracker.reset(now+900);
         this.poses=state.poses.map(p=>({...p}));
@@ -1350,7 +1384,9 @@ export class Network {
         }
       }
       if(this.loopAuthority.tickResources(this.poses,now))this.shareLoop();
+      const combatBefore=contactSnapshot(this.loopAuthority.world);
       const state=this.loopAuthority.tick(this.poses,now);
+      this.protectFirstCommonEnemyHit(this.loopAuthority.world,combatBefore,now);
       if(state.poses){
         this.fallTracker.reset(now+900);
         this.poses=state.poses.map(p=>({...p}));
@@ -1491,6 +1527,8 @@ export class Network {
   shutdown(): void {
     this.sessionEpoch++;
     this.shuttingDown = true;
+    this.combatTutorialBlocking=false;
+    this.firstCommonEnemyHitProtected=false;
     if (this.isHost) this.broadcast({ t: 'closed' });
     this.stopReconnect();
     if (this.heartbeat) clearInterval(this.heartbeat);
