@@ -403,7 +403,11 @@ export class LoopAuthority{
   damage(seat:Seat,now=Date.now(),fatal=false):boolean{
     if(this.world.deadUntil>0||blackoutActive(this.world,now)||this.world.completed)return false;
     if(!damageVitals(this.world,seat,now,fatal))return false;
-    if(this.world.health[seat]===0)this.world.deadUntil=now+2200;
+    // Início mais acolhedor: 2,4s entre impactos comuns enquanto os três
+    // primeiros marcos ainda estão sendo descobertos. Quedas fatais não mudam.
+    if(!fatal&&!this.world.marks.every(Boolean))
+      this.world.safeUntil[seat]=Math.max(this.world.safeUntil[seat],now+2400);
+    if(this.world.health[seat]===0)this.world.deadUntil=now+1900;
     return true;
   }
   /** Puzzle progress is never discarded by landscape shifts. */
@@ -539,7 +543,25 @@ export class LoopAuthority{
     }
     if(w.deadUntil>0){
       if(now<w.deadUntil)return{changed:false};
-      this.reset(now);return{changed:true,reset:true,poses:LOOP_START.map(p=>({...p}))};
+      // Checkpoints reais: a derrota não apaga os marcos já conquistados.
+      // Recupera a equipe perto do último trecho liberado, com proteção.
+      const checkpointX=w.bridge?10030:
+        w.suspendedOpen?8930:w.lastRoute==='right'?
+        LOOP_GEOMETRY.portalLanding:LOOP_START[0].x;
+      w.deadUntil=0;w.health=[3,3,3];w.stamina=[100,100,100];
+      w.safeUntil=[now+2900,now+2900,now+2900];
+      w.lastSpent=[now,now,now];
+      w.supporting=[null,null,null];
+      w.suspensionStacked=false;w.suspensionClimbReady=false;
+      w.climbReady=false;w.boulderAt=0;
+      w.blackoutUntil=0;w.cycleStart=now;w.resetId++;
+      this.lastShot=[0,0,0];this.lastDash=[0,0,0];
+      this.dashOrigin=[0,0,0];this.lastSwitch=[0,0,0];
+      this.lastResourceTick=now;this.lastJumpAt=[0,0,0];
+      this.firstJumpY=[0,0,0];this.doubleJumpUsed=[false,false,false];
+      this.lastSkillUse=[0,0,0];
+      const respawn=LOOP_START.map(p=>({...p,x:checkpointX+p.seat*42,vx:0,vy:0}));
+      return{changed:true,reset:true,poses:respawn};
     }
     if(w.completed)return{changed:false,won:true};
     if(w.blackoutUntil>0){

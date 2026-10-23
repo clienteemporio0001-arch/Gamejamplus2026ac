@@ -32,7 +32,7 @@ import {AVATAR_CATALOG,DEFAULT_AVATARS,avatarInfo,isAvatarId,uniqueAvatars,
 import {avatarGrid,roleLabel,ROLE_SKILLS} from './avatarSelectionUI';
 import {setActiveAvatarSelections} from './kenneyCharacterSprites';
 import {CinematicProgressWatch} from './cinematicHealth';
-import {gameGuideMarkup,beforeFirstPlay} from './gameGuide';
+import {gameGuideMarkup,beforeFirstPlay,showContextStep,clearContextStep} from './gameGuide';
 
 const net = new Network();
 const ui = document.querySelector<HTMLDivElement>('#ui')!;
@@ -67,6 +67,7 @@ function showSoloSelection(level:1|2|3|4):void{
 let devSession=false;
 const audio=new GameAudio();
 let lastStepAt=0;
+let lastMissionGroup='';
 let mobilePad:MobilePadMount|null=null;
 function unmountMobileControls():void{
   mobilePad?.destroy();mobilePad=null;
@@ -456,8 +457,30 @@ function refreshHud(): void {
     update('run-clock',net.runStartedAt?'⏱ '+formatTime(elapsedMs(net.runStartedAt,net.runFinishedAt)):'⏱ TREINO');
     update('loop-timer',net.level===4?(net.fire.blackoutUntil>Date.now()?'FLORESTA SE TRANSFORMANDO · ':'FLORESTA MUDA EM ')+remaining+'s':
       (world.blackoutUntil>Date.now()?'FLORESTA SE TRANSFORMANDO · ':'FLORESTA MUDA EM ')+remaining+'s');
-    update('loop-objective',currentMission().objective);
-    update('loop-progress',objective.progress);
+    const mission=currentMission();
+    const objectiveGroup=net.level===1&&!net.loop.observed?'OBSERVAR A FLORESTA':
+     net.level===1&&net.loop.marks.every(Boolean)&&net.loop.lastRoute!=='right'?
+      'ENCONTRAR A ROTA CERTA':
+     mission.next?.group??'CHEGAR À SAÍDA';
+    const objectiveStep=mission.objective;
+    update('loop-objective',objectiveGroup);
+    update('loop-step',objectiveStep);
+    update('loop-progress','PROGRESSO · '+objective.progress);
+    // Contexto novo só quando a missão muda: uma instrução curta + OK.
+    // Não força a leitura e não toca na lógica autoritativa do puzzle.
+    const key=net.level+':'+objectiveGroup;
+    if(key!==lastMissionGroup){
+      lastMissionGroup=key;
+      const command=objectiveGroup==='OBSERVAR A FLORESTA'?
+        'Explore os marcos. O brilho indica onde olhar.':
+        objectiveGroup==='ENCONTRAR A ROTA CERTA'?
+        'Siga o vento e aproxime os três amigos da passagem.':
+        mission.next?
+        'Procure o brilho de '+CHARACTERS[mission.next.seat].name+
+        ' · Comando: '+mission.next.action+'.':
+        'Reúna a equipe na saída.';
+      showContextStep(net.level,objectiveGroup,command);
+    }
     update('loop-wind',net.level===4?
       (fireHeavySmoke(net.fire,net.poses[net.localSeat],Date.now())?'⚠ FUMAÇA · ':'')+
        (net.fire.windDirection>0?'FOGO E VENTO ▶':'◀ FOGO E VENTO'):
@@ -537,7 +560,7 @@ function render(): void {
   gameKeys.setEnabled(net.playing);
   const showing = net.stage !== 'lobby' && net.role !== 'idle';
   document.body.classList.toggle('playing', net.playing);
-  if(!net.playing)unmountMobileControls();
+  if(!net.playing){unmountMobileControls();clearContextStep();lastMissionGroup='';}
   audio.setBiome(net.playing&&net.experience==='loop'?(['none','night','rain','treetop','fire'] as const)[net.level]:
     net.stage==='intro'?'night':'none');
   audio.setScore(introVideo?'none':scoreForStage(net.stage,net.level,net.experience));
@@ -643,8 +666,10 @@ function render(): void {
       ui.innerHTML='<div class="loop-top-left" aria-label="Estado da floresta">'+
         '<span class="loop-state">'+(net.level===4?'FASE 04 · FLORESTA EM CHAMAS':net.level===3?'FASE 03 · CAMINHO DAS ÁRVORES':net.level===2?'FASE 02 · FLORESTA TEMPORAL':'FASE 01 · A BOCA DA NOITE')+' · <strong id="loop-state">'+(['A','B','C'][net.level===4?net.fire.layout:net.level===3?net.treetop.layout:net.level===2?net.temporal.layout:net.loop.layout])+'</strong></span>'+
         '<span id="loop-timer">FLORESTA MUDA EM —</span><span id="run-clock" class="run-clock">⏱ 00:00</span></div>'+
-        '<div class="loop-top-right" aria-live="polite"><strong id="loop-objective">'+safeText(currentMission().objective)+'</strong>'+
-        '<small id="loop-progress">'+safeText(object.progress)+'</small></div>'+
+        '<div class="loop-top-right" aria-live="polite">'+
+        '<div class="mission-hud-title"><small>OBJETIVO</small><strong id="loop-objective">'+safeText(currentMission().next?.group??'AVANÇAR')+'</strong></div>'+
+        '<div class="mission-hud-step"><small>PASSO</small><span id="loop-step">'+safeText(currentMission().objective)+'</span></div>'+
+        '<small id="loop-progress">PROGRESSO · '+safeText(object.progress)+'</small></div>'+
         '<div class="loop-wind" id="loop-wind" aria-label="Direção do vento"></div>'+
         '<div class="loop-bottom-left">'+
         '<div class="loop-vitals" aria-label="Vida e estamina da equipe">'+

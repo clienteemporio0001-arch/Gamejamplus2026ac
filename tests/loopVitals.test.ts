@@ -97,19 +97,21 @@ ok(!damageVitals(fatal,2,10200)&&fatal.health[2]===0,'personagem morto não rece
 
 const group=new LoopAuthority(),team=clone();
 group.reset(1000);
+group.world.marks[0]=true;
 ok(group.damage(1,2000)&&group.world.health[1]===2,'dano não fatal na autoridade');
 ok(!group.damage(1,2100),'colisões contínuas não removem múltiplos corações');
-ok(group.damage(1,3300)&&group.damage(1,4600),'morte ao chegar a zero');
-ok(group.world.deadUntil===6800&&group.world.health[1]===0,'gatilho da morte coletiva e relógio');
-ok(!group.tickResources(team,4800),'regeneração suspensa com amigo caído');
-ok(!group.tick(team,6700).reset,'transição mantém contagem antes de reiniciar');
-const restart=group.tick(team,6801);
-ok(restart.reset&&restart.poses?.every((a,i)=>a.x===LOOP_START[i].x),
-  'reinício coletivo devolve três à clareira central');
+ok(!group.damage(1,3300)&&group.world.health[1]===2,'proteção ampliada nos primeiros marcos');
+ok(group.damage(1,4501)&&group.damage(1,7002),'morte só após a proteção inicial');
+ok(group.world.deadUntil===8902&&group.world.health[1]===0,'gatilho da morte coletiva e relógio curto');
+ok(!group.tickResources(team,7100),'regeneração suspensa com amigo caído');
+ok(!group.tick(team,8800).reset,'transição mantém contagem antes do checkpoint');
+const restart=group.tick(team,8903);
+ok(restart.reset&&restart.poses?.every((a,i)=>a.x===LOOP_START[0].x+i*42),
+  'checkpoint inicial reúne os três na clareira central');
 ok(group.world.health.every(h=>h===3)&&group.world.stamina.every(s=>s===100),
-  'reinício restaura três corações e toda estamina');
-ok(group.world.layout===0&&group.world.cycle===0&&group.world.marks.every(x=>!x)
-  &&group.world.tree.every(x=>!x)&&!group.world.bridge,'reinício restaura estado A e puzzles');
+  'checkpoint devolve três corações e estamina');
+ok(group.world.marks[0]&&group.world.layout===0&&group.world.cycle===0,
+  'checkpoint conserva os marcos conquistados e o ciclo da floresta');
 
 const paused=new LoopAuthority();paused.reset(0);paused.world.stamina[0]=30;paused.world.lastSpent[0]=1000;
 paused.world.blackoutUntil=5000;

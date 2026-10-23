@@ -306,8 +306,8 @@ ok(main.includes('<b>OBJETIVO:</b> escapem da floresta no menor tempo possível!
 ok(!main.includes('encontrem o Guia Indígena, apoiem-se uns nos outros, coletem 3 cipós'),
  'lobby não exibe o objetivo antigo de busca de cipós');
 ok(main.includes("kind==='how'?gameGuideMarkup()")&&
- gameGuideMarkup().includes('Três amigos. Quatro fases. Uma saída.')&&
- gameGuideMarkup().includes('Ninguém fica para trás.')&&
- gameGuideMarkup().includes('O TEMPO MUDA TUDO'),
- 'tela COMO JOGAR mostra missão, cooperação e estados da floresta');
+ gameGuideMarkup().includes('Siga os sinais brilhantes')&&
+ gameGuideMarkup().includes('COOPERAÇÃO')&&
+ gameGuideMarkup().includes('estado A, B ou C'),
+ 'tela COMO JOGAR oferece consulta rápida, cooperação e estados da floresta');
 console.log('APROVADO: '+count+' verificações da Etapa 10 (HUD, menu, sessões e contexto).');

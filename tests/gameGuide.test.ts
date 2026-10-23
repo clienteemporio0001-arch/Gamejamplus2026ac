@@ -3,30 +3,39 @@ import {readFileSync} from 'node:fs';
 import {FIRST_PLAY_GUIDE_KEY,gameGuideMarkup} from '../src/gameGuide';
 
 const html=gameGuideMarkup();
-assert.equal(FIRST_PLAY_GUIDE_KEY,'afm_tutorial_seen_v3');
-for(const expected of ['TÉO','LIA','NINO','VERDE','LARANJA','AZUL','Shift',
- 'salto duplo','baladeira','Dash','círculos','listras','A, B ou C',
- 'tempo','escada humana','PIPO','celular','os três na saída']){
- assert.ok(html.toLowerCase().includes(expected.toLowerCase()),'missing guide tip: '+expected);
+assert.equal(FIRST_PLAY_GUIDE_KEY,'afm_tutorial_seen_v4');
+for(const word of ['TÉO','LIA','NINO','VERDE','LARANJA','AZUL',
+ 'Shift','J','E','baladeira','escada humana','Pipo','celular']){
+ assert.ok(html.toLowerCase().includes(word.toLowerCase()),'missing concise guide: '+word);
 }
-assert.ok(html.includes('Não é necessário apertar E junto com Shift'),
- 'Nino uses Dash alone for his signals');
+assert.ok(html.length<1600,'consultation guide must remain brief');
 const main=readFileSync('src/main.ts','utf8');
 const css=readFileSync('src/style.css','utf8');
 const gate=readFileSync('src/gameGuide.ts','utf8');
-assert.ok(!main.includes('GAME JAM PLUS • BETTER TOGETHER / SOMETHING’S OFF'),
- 'old promotional line removed');
-assert.ok(main.includes('forest-logo')&&main.includes('O VENTO REVELA O CAMINHO'),
- 'modern menu headline is present');
-assert.ok(main.includes("kind==='how'?gameGuideMarkup()"),
- 'how-to-play modal and first-play popup share the same rules');
+const director=readFileSync('src/missionDirector.ts','utf8');
+const bird=readFileSync('src/pipoGuide.ts','utf8');
+const forest=readFileSync('src/forestLoop.ts','utf8');
 assert.equal((main.match(/beforeFirstPlay\(/g)||[]).length,3,
- 'solo, multiplayer READY and host START use mandatory tutorial gate');
-assert.ok(gate.includes("proceed.disabled=!sawEnd||!check.checked"),
- 'must scroll to the bottom AND affirm before entering');
+ 'solo, multiplayer ready and host start use short first-play tutorial');
+assert.ok(main.includes("kind==='how'?gameGuideMarkup()"),
+ 'how-to-play stays accessible as concise consultation');
+assert.ok(gate.includes('INTRO_STEPS')&&gate.includes("CONTINUAR")&&
+ gate.includes("OK · COMEÇAR"),'step-by-step onboarding with explicit continue');
+assert.ok(!gate.includes('proceed.disabled=!sawEnd||!check.checked'),
+ 'do not force the player to scroll a long manual');
 assert.ok(gate.includes("FIRST_PLAY_GUIDE_KEY,'yes'"),
- 'confirmation is remembered on device');
-assert.ok(gate.includes("ev.key==='Escape'"),'escape cannot bypass mandatory guide');
-assert.ok(css.includes('.first-play-scroll')&&css.includes('.forest-logo'),
- 'layout includes mobile friendly guide and forest logo');
-console.log('Menu impact, full instructions and forced first-play tutorial: OK');
+ 'completed onboarding remembered on device');
+assert.ok(gate.includes("ev.key==='Escape'"),
+ 'cannot bypass first-play steps accidentally');
+assert.ok(main.includes('loop-step')&&main.includes('OBJETIVO')&&
+ main.includes('PROGRESSO'), 'HUD contains objective step and progress');
+assert.ok(director.includes('actionPrompt')&&director.includes('pending')&&
+ director.includes('PRESSIONE E PARA INTERAGIR'),
+ 'current interactables have colored markers and accessible action prompts');
+assert.ok(bird.includes('lastMovedAt')&&bird.includes('lastProgress')&&
+ bird.includes('needsHelp'),'Pipo offers proactive contextual hints');
+assert.ok(forest.includes('checkpointX')&&forest.includes('w.safeUntil=[now+2900'),
+ 'first phase has forgiving checkpoints without discarding puzzle flags');
+assert.ok(css.includes('.mission-context-step')&&css.includes('.first-play-step-icon'),
+ 'compact tutorial and contextual prompts are styled');
+console.log('Playtest: onboarding, HUD, interactables, hints and checkpoint safety OK');
