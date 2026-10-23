@@ -12,8 +12,8 @@ for(const x of poses){
  const all=loopFallSurfaces(0,false,undefined,false,x);
  const deck=all.find(s=>s.x===x&&s.width===SUSPENSION.width);
  assert.ok(deck&&deck.active!==false,'colisão/queda da passarela ativa em x='+x);
- const walker={seat:0 as const,x:Math.max(SUSPENSION.gapStart+60,
-   Math.min(x+50,SUSPENSION.gapEnd-60)),y:SUSPENSION_RIDER_Y,vx:0,vy:0};
+ const walker={seat:0 as const,x:Math.max(SUSPENSION.gapStart+5,
+   Math.min(x+50,x+SUSPENSION.width/2-25,SUSPENSION.gapEnd-5)),y:SUSPENSION_RIDER_Y,vx:0,vy:0};
  assert.ok(hasPhysicalFooting(walker,all),
   'anfitrião reconhece personagem apoiado durante movimento/paradas em '+x);
 }
