@@ -87,6 +87,13 @@ export class CombatTutorial{
   window.addEventListener('keydown',this.onKeyDown,true);
   dialog.querySelector<HTMLButtonElement>('#combat-understood')?.focus();
  }
+ abort():void{
+  if(!this.opened)return;
+  this.opened=false;
+  this.dialog?.remove();this.dialog=null;
+  window.removeEventListener('keydown',this.onKeyDown,true);
+  this.onClose();
+ }
  acknowledge():void{
   if(!this.opened)return;
   this.opened=false;this.combatTutorialSeen=true;
