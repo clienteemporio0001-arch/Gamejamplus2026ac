@@ -1,4 +1,5 @@
 import {initRatCombat,validRatCombat,activateMonsterSkill,shootMonster,tickMonsters,type RatCombatWorld} from './ratCombat';
+import {puzzleShotInRange,dashTravelled} from './puzzleInteraction';
 import {exitPresence} from './sharedExit';
 import {BAFOMET_MAX_HP,HERO_REVIVE_MS,initBafomet,validBafomet,shootBafomet,empowerBafometAttack,tickBafomet,type BafometState} from './bafometBoss';
 import type {Pose,Seat} from './network';
@@ -132,7 +133,7 @@ export class TemporalAuthority{
     w.roots[0]=true;this.maybeExit();return true;
    }
   }
-  if(a.kind==='switch'&&seat===2&&w.dashAt>0&&now-w.dashAt<1700&&actor.x-w.dashX>=65){
+  if(a.kind==='switch'&&seat===2&&w.dashAt>0&&now-w.dashAt<1700&&dashTravelled(w.dashX,actor.x,65)){
    if(!w.echo[2]&&tempNear(actor,TEMP_ECHO[2].x,TEMP_ECHO[2].y,75,85)){w.echo[2]=true;return true;}
    if(w.echo.every(Boolean)&&!w.tree[2]&&tempNear(actor,TEMP_TREE[2].x,TEMP_TREE[2].y,73,85)){
     w.tree[2]=true;this.maybeFall(now);return true;
@@ -174,12 +175,12 @@ export class TemporalAuthority{
   if(kind==='shoot'||kind==='dash'){
    w.skillAt[seat]=now;
    if(kind==='dash'){w.dashAt=now;w.dashX=p.x;}
-   else if(facing===1){
-    const canShoot=(target:{x:number;y:number})=>target.x>p.x&&target.x-p.x<=360&&
-      Math.abs(p.y-18-target.y)<=75;
+   else {
+    const canShoot=(target:{x:number;y:number})=>
+      puzzleShotInRange(p,target,facing,360,75,95);
     if(!w.echo[1]&&canShoot(TEMP_ECHO[1]))w.echo[1]=true;
     else if(w.echo.every(Boolean)&&!w.tree[1]&&canShoot(TEMP_TREE[1])){w.tree[1]=true;this.maybeFall(now);}
-    else if(w.bridge&&!w.roots[1]&&p.x<=TEMP_ROOTS[1].x+20&&canShoot(TEMP_ROOTS[1])){
+    else if(w.bridge&&!w.roots[1]&&canShoot(TEMP_ROOTS[1])){
       w.roots[1]=true;this.maybeExit();
     }
    }
@@ -255,7 +256,7 @@ export class TemporalAuthority{
   // Host checks Nino's traveled dash against the existing targets; no E needed.
   const nino=poses[2];
   const dashSolved=nino&&w.health[2]>0&&w.dashAt>0&&now-w.dashAt<=1700&&
-   nino.x-w.dashX>=65&&this.act(2,{kind:'switch'},poses,now);
+   dashTravelled(w.dashX,nino.x,65)&&this.act(2,{kind:'switch'},poses,now);
   const alive=poses.filter(p=>w.health[p.seat]>0);
   const rats=tickMonsters(2,w,alive,now,w.cycleStart);
   const bossChanged=tickBafomet(w,alive,now);
