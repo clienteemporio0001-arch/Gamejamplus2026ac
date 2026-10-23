@@ -111,7 +111,8 @@ export class MissionDirector {
     const tint=shades[beat.seat];
     const wave=.50+.23*Math.sin(time*.005+beat.seat);
     const radius=20+3*Math.sin(time*.004);
-    this.ring.lineStyle(3,tint,wave).strokeCircle(beat.target.x,beat.target.y,radius);
+    this.ring.lineStyle(3,tint,wave);
+    this.ring.strokeCircle(beat.target.x,beat.target.y,radius);
     this.ring.lineStyle(1.5,0xfff5b2,.55).strokeEllipse(beat.target.x,beat.target.y+23,44,13);
     this.ring.lineStyle(1.5,tint,.44).lineBetween(beat.target.x,beat.target.y+17,
      beat.target.x,beat.target.y+36);
