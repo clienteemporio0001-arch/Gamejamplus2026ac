@@ -10,7 +10,7 @@ import {RiverAuthority,RIVER,RIVER_SPAWNS} from '../src/river';
 import {ChapterAuthority,EYES,LATE_SPAWNS} from '../src/chapters';
 
 const start=100_000;
-const actors=():Pose[]=([0,1,2] as Seat[]).map(seat=>({seat,x:120+seat*42,y:606,vx:0,vy:0}));
+const actors=():Pose[]=>([0,1,2] as Seat[]).map(seat=>({seat,x:120+seat*42,y:606,vx:0,vy:0}));
 const move=(poses:Pose[],seat:Seat,point:{x:number;y:number},offset=0):void=>{
  poses[seat]={seat,x:point.x+offset,y:point.y+18,vx:0,vy:0};
 };
