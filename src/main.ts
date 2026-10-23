@@ -15,6 +15,8 @@ import { JourneyScene } from './journeyScene';
 import { LateScene } from './lateScene';
 import './style.css';
 import './mobileMenuFit.css';
+import './combatTutorial.css';
+import {CombatTutorial} from './combatTutorial';
 import {installMobileMenuFit} from './mobileMenuFit';
 import { gameKeys } from './keyboard';
 import {mountMobilePad,clearTouch,type MobilePadMount} from './mobileControls';
@@ -37,6 +39,9 @@ import {CinematicProgressWatch} from './cinematicHealth';
 import {gameGuideMarkup,beforeFirstPlay,showContextStep,clearContextStep} from './gameGuide';
 
 const net = new Network();
+const combatTutorial=new CombatTutorial(
+ ()=>net.setCombatTutorialVisible(true),
+ ()=>net.setCombatTutorialVisible(false));
 const ui = document.querySelector<HTMLDivElement>('#ui')!;
 installMobileMenuFit(ui);
 const controls = document.querySelector<HTMLDivElement>('#mobile-controls')!;
@@ -1000,18 +1005,18 @@ function observeSound(phase:1|2|3|4,
  }
  soundProgress.set(phase,{health:key,count,dead,blackout});
 }
-net.on('loop',w=>observeSound(1,w.health,
+net.on('loop',w=>{combatTutorial.observe(1,w,net.playing&&net.experience==='loop');observeSound(1,w.health,
  w.marks.filter(Boolean).length+w.tree.filter(Boolean).length+
- w.final.filter(Boolean).length+(w.exit?1:0),w.deadUntil,w.blackoutUntil));
-net.on('temporal',w=>observeSound(2,w.health,
+ w.final.filter(Boolean).length+(w.exit?1:0),w.deadUntil,w.blackoutUntil);});
+net.on('temporal',w=>{combatTutorial.observe(2,w,net.playing&&net.experience==='loop');observeSound(2,w.health,
  w.echo.filter(Boolean).length+w.tree.filter(Boolean).length+
- w.roots.filter(Boolean).length,w.deadUntil,w.blackoutUntil));
-net.on('treetop',w=>observeSound(3,w.health,
+ w.roots.filter(Boolean).length,w.deadUntil,w.blackoutUntil);});
+net.on('treetop',w=>{combatTutorial.observe(3,w,net.playing&&net.experience==='loop');observeSound(3,w.health,
  w.bridge.filter(Boolean).length+w.tower.filter(Boolean).length+
- w.time.filter(Boolean).length,w.deadUntil,w.blackoutUntil));
-net.on('fire',w=>observeSound(4,w.health,
+ w.time.filter(Boolean).length,w.deadUntil,w.blackoutUntil);});
+net.on('fire',w=>{combatTutorial.observe(4,w,net.playing&&net.experience==='loop');observeSound(4,w.health,
  w.log.filter(Boolean).length+w.smoke.filter(Boolean).length+
- w.tree.filter(Boolean).length,w.deadUntil,w.blackoutUntil));
+ w.tree.filter(Boolean).length,w.deadUntil,w.blackoutUntil);});
 net.on('vital-reply',reply=>{
  if(!reply.ok)return;
  audio.play(reply.kind==='doubleJump'?'doubleJump':
@@ -1024,8 +1029,17 @@ net.on('change',()=>{
  if(net.role==='idle')stopIntroVideo();
  render();
 });
-net.on('start', () => { info = ''; render(); });
+net.on('start', () => {
+ combatTutorial.seed(1,net.loop);combatTutorial.seed(2,net.temporal);
+ combatTutorial.seed(3,net.treetop);combatTutorial.seed(4,net.fire);
+ info = ''; render();
+});
 net.on('phase', data => {
+ if(data.stage==='playing'&&net.experience==='loop'){
+  const w=data.level===4?net.fire:data.level===3?net.treetop:
+   data.level===2?net.temporal:net.loop;
+  combatTutorial.seed(data.level,w);
+ }
  info='';closeOverlay();
  if(data.stage==='final'&&data.level===4)recordVictory(net);
  if(data.stage==='transition')audio.play('transition');
