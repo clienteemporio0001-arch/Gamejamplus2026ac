@@ -2,6 +2,8 @@
  * Uses camera.worldView (already accounts for camera zoom and origin), not raw
  * scrollX, so a zoomed/mobile camera never pulls the text away from Pipo.
  */
+/** Distância vertical entre o jogador e o Pipo para não cobrir instruções próximas. */
+export const PIPO_FOLLOW_HEIGHT=165;
 export type PipoViewport={width:number;height:number};
 export type PipoCameraView={x:number;y:number;zoom:number;worldX:number;worldY:number};
 export type PipoSpeechLayout={
@@ -49,7 +51,7 @@ export function pipoSpeechLayout(view:PipoViewport,camera:PipoCameraView,
   const x=clamp(c.x,minX,maxX),y=clamp(c.y,top,bottom);
   const overlapX=Math.max(0,width/2+38-Math.abs(x-birdX));
   const overlapY=Math.max(0,height/2+35-Math.abs(y-birdY));
-  const avatarX=birdX-80*camera.zoom,avatarY=birdY+110*camera.zoom;
+  const avatarX=birdX-80*camera.zoom,avatarY=birdY+PIPO_FOLLOW_HEIGHT*camera.zoom;
   const actorOverlapX=Math.max(0,width/2+28-Math.abs(x-avatarX));
   const actorOverlapY=Math.max(0,height/2+48-Math.abs(y-avatarY));
   return {x,y,score:overlapX*overlapY*8+actorOverlapX*actorOverlapY*5+
