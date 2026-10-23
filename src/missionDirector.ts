@@ -126,7 +126,7 @@ export class MissionDirector {
     if(own&&Math.abs(own.target.x-pose.x)<195&&Math.abs(own.target.y-pose.y)<155){
      const command=own.action==='E'?'PRESSIONE E PARA INTERAGIR':
        own.action==='J'?'PRESSIONE J PARA ATIRAR':
-       own.action.includes('SHIFT')?'USE SHIFT E E NA MARCA':'USE '+own.action;
+       own.action.includes('SHIFT')?'USE SHIFT NO CÍRCULO':'USE '+own.action;
      this.actionPrompt.setText('✦ '+command)
       .setPosition(pose.x,pose.y-58)
       .setVisible(true);
