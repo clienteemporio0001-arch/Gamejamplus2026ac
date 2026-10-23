@@ -8,6 +8,7 @@ export class MissionDirector {
  private ring:Phaser.GameObjects.Graphics;
  private balloon:Phaser.GameObjects.Text;
  private portrait:Phaser.GameObjects.Graphics;
+ private actionPrompt:Phaser.GameObjects.Text;
  private off:()=>void;
  private lastId='';
  private lastAt=0;
@@ -26,11 +27,15 @@ export class MissionDirector {
    .setOrigin(.5,1).setDepth(65).setVisible(false);
   const label=({1:'loop',2:'temporal',3:'treetop',4:'fire'} as const)[phase];
   const update=(w:unknown)=>this.accept(w);
+  this.actionPrompt=scene.add.text(0,0,'',{fontFamily:'Arial',fontSize:'14px',
+   fontStyle:'bold',color:'#ffffff',backgroundColor:'#0c3028ee',
+   padding:{left:11,right:11,top:7,bottom:7},stroke:'#03231c',strokeThickness:2})
+   .setOrigin(.5,1).setDepth(77).setVisible(false);
   this.off=net.on(label,update as never);
   this.accept(({1:net.loop,2:net.temporal,3:net.treetop,4:net.fire} as const)[phase]);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{
    this.enabled=false;this.off();this.cancels.forEach(t=>t.remove(false));
-   this.queued=[];this.balloon.destroy();this.ring.destroy();this.portrait.destroy();
+   this.queued=[];this.balloon.destroy();this.ring.destroy();this.portrait.destroy();this.actionPrompt.destroy();
   });
  }
  private accept(w:unknown):void{
@@ -88,12 +93,53 @@ export class MissionDirector {
   if(!this.enabled)return;
   const snapshot=this.current;
   this.ring.clear();this.portrait.setVisible(time-this.lastAt<1500);
-  if(!paused&&snapshot?.next&&time-this.lastAt>600){
-   const beat=snapshot.next,glow=.30+.24*Math.sin(time*.004);
-   this.ring.lineStyle(2.5,[0x90e7a9,0xf4c17f,0x8ccdf6][beat.seat],glow);
-   this.ring.strokeCircle(beat.target.x,beat.target.y,15+Math.sin(time*.003)*2);
-   this.ring.fillStyle(0xf4f4b1,.08);
-   this.ring.fillCircle(beat.target.x,beat.target.y,10);
+  this.actionPrompt.setVisible(false);
+  // Somente pontos de objetivos realmente desbloqueados. Na Fase 1, não
+  // destacar a plataforma antes de descobrir a rota correta.
+  const firstReady=this.phase!==1||
+   (this.net.loop.observed&&(!this.net.loop.marks.every(Boolean)||
+    this.net.loop.lastRoute==='right'));
+  if(!paused&&firstReady&&snapshot?.next&&time-this.lastAt>600){
+   const next=snapshot.next;
+   const pending=snapshot.beats.filter(b=>!b.done&&b.group===next.group);
+   const localSeat=this.net.localSeat;
+   const pose=localSeat===null?null:this.net.poses[localSeat];
+   const shades=[0x90e7a9,0xf4c17f,0x8ccdf6] as const;
+   // Marcação de chão, anéis pulsantes e silhueta de posicionamento:
+   // TODOS os mecanismos pendentes do puzzle atual, sem alterar colisores.
+   for(const beat of pending){
+    const tint=shades[beat.seat];
+    const wave=.50+.23*Math.sin(time*.005+beat.seat);
+    const radius=20+3*Math.sin(time*.004);
+    this.ring.lineStyle(3,tint,wave).strokeCircle(beat.target.x,beat.target.y,radius);
+    this.ring.lineStyle(1.5,0xfff5b2,.55).strokeEllipse(beat.target.x,beat.target.y+23,44,13);
+    this.ring.lineStyle(1.5,tint,.44).lineBetween(beat.target.x,beat.target.y+17,
+     beat.target.x,beat.target.y+36);
+    this.ring.fillStyle(tint,.12).fillCircle(beat.target.x,beat.target.y,radius-6);
+    // O círculo pequeno e o losango são a posição fantasma para cada herói.
+    this.ring.fillStyle(tint,.76).fillCircle(beat.target.x,beat.target.y-32,6);
+    this.ring.lineStyle(2,tint,.62).strokeRoundedRect(beat.target.x-9,beat.target.y-25,18,16,6);
+   }
+   if(pose){
+    const own=pending.find(b=>b.seat===localSeat);
+    if(own&&Math.abs(own.target.x-pose.x)<195&&Math.abs(own.target.y-pose.y)<155){
+     const command=own.action==='E'?'PRESSIONE E PARA INTERAGIR':
+       own.action==='J'?'PRESSIONE J PARA ATIRAR':
+       own.action.includes('SHIFT')?'USE SHIFT E E NA MARCA':'USE '+own.action;
+     this.actionPrompt.setText('✦ '+command)
+      .setPosition(pose.x,pose.y-58)
+      .setVisible(true);
+     this.ring.lineStyle(4,0xffefb8,.86)
+      .strokeCircle(own.target.x,own.target.y,25+3*Math.sin(time*.012));
+    }else{
+     const direction=next.target.x-pose.x;
+     if(Math.abs(direction)>260&&localSeat===next.seat){
+      this.actionPrompt.setText((direction>0?'▶':'◀')+
+       ' SIGA O BRILHO · '+['TÉO','LIA','NINO'][next.seat])
+       .setPosition(pose.x,pose.y-65).setVisible(true);
+     }
+    }
+   }
   }
   if(this.balloon.visible&&this.active){
    // Attach the balloon to the completing character even if players switch.
