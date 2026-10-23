@@ -14,7 +14,7 @@ export function gameGuideMarkup():string{
  '<div class="guide-grid">'+
  '<section class="guide-item guide-teo"><h3>TÉO · VERDE</h3><p>A/D ou ←/→: andar · Espaço: pular duas vezes · E: interagir.</p></section>'+
  '<section class="guide-item guide-lia"><h3>LIA · LARANJA</h3><p>J: baladeira. Acerte os alvos laranjas à distância.</p></section>'+
- '<section class="guide-item guide-nino"><h3>NINO · AZUL</h3><p>Shift: Dash. Alguns mecanismos pedem Shift + E; siga a indicação local.</p></section>'+
+ '<section class="guide-item guide-nino"><h3>NINO · AZUL</h3><p>Shift: Dash. Ative os círculos azuis atravessando-os, sem precisar de E.</p></section>'+
  '</div><section class="guide-tip"><h3>COOPERAÇÃO</h3><p>Solo: 1/2/3 alternam personagens. A escada humana usa E e os três devem chegar à saída.</p></section>'+
  '<section class="guide-tip"><h3>MARCAÇÕES E TEMPO</h3><p>Círculos e listras indicam interações. Observe o estado A, B ou C e o tempo: caminhos mudam com o ciclo.</p></section>'+
  '<section class="guide-tip"><h3>AJUDA E CELULAR</h3><p>H ou 🦜 DICA para chamar Pipo. No celular, jogue na horizontal usando joystick e botões.</p></section>';
@@ -77,10 +77,12 @@ export function beforeFirstPlay(begin:()=>void):void{
 const shownGroups=new Set<string>();
 export function clearContextStep():void{
  document.getElementById('mission-context-step')?.remove();
+ shownGroups.clear();
 }
 export function showContextStep(phase:number,group:string,command:string):void{
  const key=phase+':'+group;
- if(shownGroups.has(key)||document.getElementById('mission-context-step'))return;
+ if(shownGroups.has(key))return;
+ document.getElementById('mission-context-step')?.remove();
  shownGroups.add(key);
  const card=document.createElement('aside');
  card.id='mission-context-step';
@@ -95,4 +97,6 @@ export function showContextStep(phase:number,group:string,command:string):void{
  ok.addEventListener('click',()=>card.remove());
  card.append(heading,description,ok);
  document.body.appendChild(card);
+ // Aviso leve no alto: some sozinho, sem bloquear a movimentação.
+ window.setTimeout(()=>{if(card.isConnected)card.remove();},8500);
 }
