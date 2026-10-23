@@ -1,0 +1,66 @@
+/* Contextual combat onboarding — short, readable and touch-friendly. */
+.combat-tutorial-overlay{
+ position:fixed;inset:0;z-index:410;display:grid;place-items:center;
+ padding:max(8px,env(safe-area-inset-top)) max(9px,env(safe-area-inset-right))
+ max(8px,env(safe-area-inset-bottom)) max(9px,env(safe-area-inset-left));
+ touch-action:manipulation;overscroll-behavior:contain;
+}
+.combat-tutorial-scrim{position:absolute;inset:0;background:#03140ff0;backdrop-filter:blur(5px)}
+.combat-tutorial-sheet{
+ position:relative;isolation:isolate;width:min(650px,100%);max-height:100%;
+ overflow:hidden;display:flex;flex-direction:column;align-items:stretch;
+ gap:clamp(5px,1.2vh,12px);padding:clamp(12px,2.3vw,22px);
+ background:linear-gradient(148deg,#123e30,#081f1bf9);border:1.5px solid #8bdb9b;
+ border-radius:16px;color:#f4ffe8;text-align:center;
+ box-shadow:0 15px 65px #000c,0 0 28px #77d79b2a;
+ animation:combat-modal-in .22s ease-out;
+}
+.combat-tutorial-kicker{font-size:clamp(9px,1.7vh,11px);letter-spacing:.14em;
+ font-weight:900;color:#addbb3}
+.combat-tutorial-sheet h2{font-size:clamp(16px,3.4vh,25px);line-height:1.14;
+ margin:0;color:#e9ffca;letter-spacing:.025em}
+.combat-tutorial-sheet p{font-size:clamp(11px,2vh,14px);margin:0;line-height:1.22;color:#cce5d2}
+.combat-tutorial-roles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.combat-role{min-width:0;min-height:115px;padding:10px 8px;display:flex;
+ flex-direction:column;align-items:center;justify-content:center;gap:4px;
+ background:#091f1d;border:1px solid #93c8a358;border-top:3px solid #9feb89;
+ border-radius:11px}
+.combat-role.combat-nino{border-top-color:#85cbff}
+.combat-role.combat-lia{border-top-color:#ffb276}
+.combat-role-icon{font-size:clamp(15px,3.5vh,23px);font-weight:900;
+ color:#daffb4;white-space:nowrap}
+.combat-role-copy{display:flex;flex-direction:column;gap:2px;align-items:center}
+.combat-role-copy strong{font-size:13px;line-height:1.1;color:#e8ffd4}
+.combat-role-copy b{font-size:11px;line-height:1.1;color:#c2f0cf}
+.combat-role-copy span{font-size:11px;line-height:1.22;color:#e4f0e5}
+#combat-understood{touch-action:manipulation;align-self:center;
+ width:min(275px,100%);min-height:45px;border:1px solid #c9ffc2;
+ border-radius:11px;padding:9px 20px;font-weight:900;font-size:14px;
+ color:#092e20;background:linear-gradient(120deg,#c8f392,#67dfaf);
+ box-shadow:0 2px 20px #87efb12d}
+#combat-understood:focus-visible{outline:3px solid white;outline-offset:2px}
+@keyframes combat-modal-in{from{opacity:0;transform:translateY(10px) scale(.98)}
+ to{opacity:1;transform:translateY(0) scale(1)}}
+@media(pointer:coarse) and (orientation:landscape){
+ .combat-tutorial-sheet{width:min(760px,100%);
+  padding:clamp(6px,1.4vh,12px);gap:clamp(2px,.75vh,6px)}
+ .combat-tutorial-sheet h2{font-size:clamp(15px,3.9vh,20px)}
+ .combat-tutorial-roles{gap:6px}
+ .combat-role{min-height:0;padding:clamp(3px,.85vh,8px) 6px;gap:2px}
+ .combat-role-icon{font-size:clamp(15px,4.5vh,20px)}
+ .combat-role-copy strong{font-size:clamp(10px,2.5vh,12px)}
+ .combat-role-copy b{font-size:clamp(9px,2.2vh,11px)}
+ .combat-role-copy span{font-size:clamp(9px,2.15vh,11px);line-height:1.1}
+ #combat-understood{min-height:35px;padding:6px 15px;font-size:12px}
+}
+@media(pointer:coarse) and (orientation:portrait){
+ .combat-tutorial-sheet{width:min(410px,100%);padding:13px;gap:7px}
+ .combat-tutorial-roles{grid-template-columns:1fr;gap:6px}
+ .combat-role{min-height:0;flex-direction:row;justify-content:flex-start;
+  text-align:left;gap:11px;padding:9px 11px}
+ .combat-role-icon{width:75px;flex:0 0 75px;text-align:center}
+ .combat-role-copy{align-items:flex-start}
+ .combat-role-copy span{font-size:11px}
+ #combat-understood{min-height:47px}
+}
+@media(prefers-reduced-motion:reduce){.combat-tutorial-sheet{animation:none}}
