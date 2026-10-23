@@ -10,16 +10,20 @@ export const LANDMARK_SPRITES={
  hollow:'loop-hollow-tree',stone:'loop-stone',arch:'loop-arch'
 } as const;
 export const LANDMARK_SIZES={
- hollow:{width:235,height:320},stone:{width:155,height:104},arch:{width:244,height:182}
+ hollow:{width:255,height:320},stone:{width:155,height:104},arch:{width:244,height:182}
 } as const;
 export const LANDMARK_KEYS=['hollow','stone','arch'] as const;
 export const LANDMARK_ACCENTS={hollow:0xc7f5a5,stone:0xf3dfa8,arch:0x9bd3f3} as const;
 export function preloadOfficialLandmarks(scene:Phaser.Scene):void{
  for(const [kind,path] of [
-  ['hollow','hollow-tree.svg'],['stone','loop-stone.svg'],['arch','loop-arch.svg']
+  ['hollow','hollow-tree-custom.webp'],['stone','loop-stone.svg'],['arch','loop-arch.svg']
  ] as const){
   const key=LANDMARK_SPRITES[kind];
-  if(!scene.textures.exists(key))scene.load.svg(key,import.meta.env.BASE_URL+'assets/'+path);
+  if(scene.textures.exists(key))continue;
+  // Same render-only landmark, no changes to Physics bodies or interaction spots.
+  const url=import.meta.env.BASE_URL+'assets/'+path;
+  if(kind==='hollow')scene.load.image(key,url);
+  else scene.load.svg(key,url);
  }
 }
 /** Coordinates are ground-foot anchors. targetY is the real host-authority interaction point. */
