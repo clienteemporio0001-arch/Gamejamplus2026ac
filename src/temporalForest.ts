@@ -1,5 +1,5 @@
 import {initRatCombat,validRatCombat,activateMonsterSkill,shootMonster,tickMonsters,type RatCombatWorld} from './ratCombat';
-import {puzzleShotInRange,dashTravelled} from './puzzleInteraction';
+import {puzzleShotInRange,dashCanActivate} from './puzzleInteraction';
 import {exitPresence} from './sharedExit';
 import {BAFOMET_MAX_HP,HERO_REVIVE_MS,initBafomet,validBafomet,shootBafomet,empowerBafometAttack,tickBafomet,type BafometState} from './bafometBoss';
 import type {Pose,Seat} from './network';
@@ -133,12 +133,13 @@ export class TemporalAuthority{
     w.roots[0]=true;this.maybeExit();return true;
    }
   }
-  if(a.kind==='switch'&&seat===2&&w.dashAt>0&&now-w.dashAt<1700&&dashTravelled(w.dashX,actor.x,65)){
-   if(!w.echo[2]&&tempNear(actor,TEMP_ECHO[2].x,TEMP_ECHO[2].y,75,85)){w.echo[2]=true;return true;}
-   if(w.echo.every(Boolean)&&!w.tree[2]&&tempNear(actor,TEMP_TREE[2].x,TEMP_TREE[2].y,73,85)){
+  if(a.kind==='switch'&&seat===2&&w.dashAt>0&&now-w.dashAt<1700){
+   const dashed=(target:{x:number})=>dashCanActivate(w.dashX,actor.x,target.x,65);
+   if(!w.echo[2]&&tempNear(actor,TEMP_ECHO[2].x,TEMP_ECHO[2].y,75,85)&&dashed(TEMP_ECHO[2])){w.echo[2]=true;return true;}
+   if(w.echo.every(Boolean)&&!w.tree[2]&&tempNear(actor,TEMP_TREE[2].x,TEMP_TREE[2].y,73,85)&&dashed(TEMP_TREE[2])){
     w.tree[2]=true;this.maybeFall(now);return true;
    }
-   if(w.bridge&&!w.roots[2]&&tempNear(actor,TEMP_ROOTS[2].x,TEMP_ROOTS[2].y,125,100)){
+   if(w.bridge&&!w.roots[2]&&tempNear(actor,TEMP_ROOTS[2].x,TEMP_ROOTS[2].y,125,100)&&dashed(TEMP_ROOTS[2])){
     w.roots[2]=true;this.maybeExit();return true;
    }
   }
@@ -256,7 +257,7 @@ export class TemporalAuthority{
   // Host checks Nino's traveled dash against the existing targets; no E needed.
   const nino=poses[2];
   const dashSolved=nino&&w.health[2]>0&&w.dashAt>0&&now-w.dashAt<=1700&&
-   dashTravelled(w.dashX,nino.x,65)&&this.act(2,{kind:'switch'},poses,now);
+   this.act(2,{kind:'switch'},poses,now);
   const alive=poses.filter(p=>w.health[p.seat]>0);
   const rats=tickMonsters(2,w,alive,now,w.cycleStart);
   const bossChanged=tickBafomet(w,alive,now);
