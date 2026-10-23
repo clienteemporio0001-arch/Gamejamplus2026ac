@@ -258,7 +258,7 @@ export function stackFooting(w:LoopWorld,p:Pose):boolean{
    ||top(SUSPENSION.branch.x,SUSPENSION.branch.width,SUSPENSION.branch.y-SUSPENSION.branch.height/2)
    ||top(UPPER_BRANCH.x,UPPER_BRANCH.width,UPPER_BRANCH.centerY-UPPER_BRANCH.height/2)
    ||top(SUMMIT_BRANCH.x,SUMMIT_BRANCH.width,SUMMIT_BRANCH.centerY-SUMMIT_BRANCH.height/2)
-   ||(w.suspendedOpen&&top(SUSPENSION.finalX,SUSPENSION.width,656-SUSPENSION.height/2))
+   ||top(w.suspendedX,SUSPENSION.width,656-SUSPENSION.height/2)
    ||(w.bridge&&top(LOOP_GEOMETRY.bridge.x,LOOP_GEOMETRY.bridge.width,
       LOOP_GEOMETRY.bridge.y-LOOP_GEOMETRY.bridge.height/2));
 }
@@ -276,7 +276,7 @@ export function stackBlockers(w:LoopWorld):ReadonlyArray<{x:number;y:number;widt
     width:SUSPENSION.branch.width,height:SUSPENSION.branch.height},
    {x:UPPER_BRANCH.x,y:UPPER_BRANCH.centerY,width:UPPER_BRANCH.width,height:UPPER_BRANCH.height},
    {x:SUMMIT_BRANCH.x,y:SUMMIT_BRANCH.centerY,width:SUMMIT_BRANCH.width,height:SUMMIT_BRANCH.height},
-   ...(w.suspendedOpen?[{x:SUSPENSION.finalX,y:656,width:SUSPENSION.width,height:SUSPENSION.height}]:[]),
+   {x:w.suspendedX,y:656,width:SUSPENSION.width,height:SUSPENSION.height},
    ...(w.bridge?[{x:LOOP_GEOMETRY.bridge.x,y:LOOP_GEOMETRY.bridge.y,
      width:LOOP_GEOMETRY.bridge.width,height:LOOP_GEOMETRY.bridge.height}]:[])
  ];

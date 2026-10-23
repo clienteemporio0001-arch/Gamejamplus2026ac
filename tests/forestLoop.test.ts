@@ -160,7 +160,7 @@ assert.equal(death.world.suspended.every(Boolean),false);
 const scene=readFileSync('src/forestLoopScene.ts','utf8');
 const main=readFileSync('src/main.ts','utf8');
 const net=readFileSync('src/network.ts','utf8');
-assert.ok(scene.includes('if(collider.visible!==settled)collider.setVisible(settled)'));
+assert.ok(scene.includes('if(!body.enable)body.enable=true'), 'Passarela sempre colidível, inclusive durante movimento');
 assert.ok(scene.includes('this.suspension.setX(position)'));
 assert.ok(scene.includes('this.active(this.bridge,w.bridge)'));
 assert.ok(scene.includes('this.cameras.main.centerOn(LOOP_START[1].x,420)'));

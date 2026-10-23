@@ -132,7 +132,7 @@ assert.ok(art.includes('this.lowPower?38:25'));
 assert.ok(art.includes('skin.target'));
 assert.ok(art.includes('this.visibleRange()'));
 assert.ok(scene.includes('if(body.enable===active&&rect.visible===active)return;'));
-assert.ok(scene.includes('if(settled&&(moved||enableChanged))body.updateFromGameObject();'));
+assert.ok(scene.includes('if(moved)body.updateFromGameObject();'), 'corpo estático da passarela acompanha cada mudança real de posição');
 assert.ok(scene.includes('if(this.lastSuspensionCableX!==position)'));
 assert.ok(scene.includes('this.frameProfiler.record('));
 assert.ok(scene.includes('this.performanceLabel.setText('));

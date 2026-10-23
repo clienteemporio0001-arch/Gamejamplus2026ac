@@ -106,7 +106,7 @@ assert.ok(host.world.suspendedX>SUSPENSION.liaX&&host.world.suspendedX<SUSPENSIO
 host.tick(team,12550);
 assert.equal(host.world.suspendedOpen,true);
 assert.equal(host.world.suspendedX,SUSPENSION.finalX);
-assert.ok(loopFallSurfaces(0,false,undefined,host.world.suspendedOpen)
+assert.ok(loopFallSurfaces(0,false,undefined,host.world.suspendedOpen,host.world.suspendedX)
  .some(s=>s.active===true&&s.width===SUSPENSION.width&&s.x===SUSPENSION.finalX),
  'collision and authoritative visible final position coincide');
 assert.equal(validLoop(host.world),true);
@@ -130,12 +130,12 @@ const network=readFileSync('src/network.ts','utf8');
 const ui=readFileSync('src/main.ts','utf8');
 const css=readFileSync('src/style.css','utf8');
 const pipo=readFileSync('src/pipoHints.ts','utf8');
-assert.ok(scene.includes('if(collider.visible!==settled)collider.setVisible(settled)'));
-assert.ok(scene.includes('if(enableChanged)body.enable=settled'));
+assert.ok(scene.includes('if(!collider.visible)collider.setVisible(true)'), 'tábua visível durante todo deslocamento');
+assert.ok(scene.includes('if(!body.enable)body.enable=true'), 'colisão ativa durante todo deslocamento');
 assert.ok(scene.includes('this.suspension.setX(position)'));
 assert.ok(scene.includes('LOOP_LAYOUT_BRANCHES[i].layout===w.layout'));
 assert.ok(network.includes('LOOP_WIDTH)'), 'network must accept entire expanded map');
-assert.ok(network.includes('SUMMIT_BRANCH,l.suspendedOpen)'), 'fall tracker sees completed deck');
+assert.ok(network.includes('SUMMIT_BRANCH,l.suspendedOpen,l.suspendedX)'), 'fall tracker tracks moving deck');
 assert.ok(network.includes('x>9500&&p.x<9630'),'tree hazard moved with original puzzle');
 assert.ok(ui.includes('class="game-tool-strip"'));
 assert.ok(css.includes('.game-tool-strip #pipo-help'));
