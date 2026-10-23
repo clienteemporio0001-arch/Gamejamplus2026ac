@@ -13,7 +13,7 @@ import { ForestAuthority, FOREST_WIDTH, FOREST_SPAWNS, FOREST_CHECKPOINTS, fores
 import { LoopAuthority, LOOP_START, LOOP_WIDTH, SUSPENSION, validLoop, initLoop, blackoutActive, suspensionLeverStatus, type SuspensionLeverReason, type LoopWorld } from './forestLoop';
 import { type VitalAction } from './loopVitals';
 import {FallTracker,loopFallSurfaces,temporalFallSurfaces} from './fallDamage';
-import {firstCommonEnemyDamage,contactSnapshot,type CombatContactFrame,type CombatContactSnapshot} from './combatTutorial';
+import {COMBAT_TUTORIAL_KEY,firstCommonEnemyDamage,contactSnapshot,type CombatContactFrame,type CombatContactSnapshot} from './combatTutorial';
 import {SUMMIT_BRANCH} from './forestLoop';
 import {TemporalAuthority,TEMP_WIDTH,TEMP_START,initTemporal,validTemporal,type TemporalWorld} from './temporalForest';
 import {TreeAuthority,TREE_START,TREE_WIDTH,TREE_HEIGHT,initTree,validTree,type TreeWorld} from './treetopForest';
@@ -1255,6 +1255,11 @@ export class Network {
     if(this.firstCommonEnemyHitProtected||
        !firstCommonEnemyDamage(previous,world,now))return;
     this.firstCommonEnemyHitProtected=true;
+    // Solo players who already learned combat receive the original timings.
+    if(this.isSolo){
+      try{if(window.localStorage.getItem(COMBAT_TUTORIAL_KEY)==='yes')return;}
+      catch{/* Storage disabled: grant the safe onboarding interval. */}
+    }
     for(const seat of [0,1,2] as Seat[])
       world.safeUntil[seat]=Math.max(world.safeUntil[seat],now+20000);
   }
