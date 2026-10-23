@@ -25,6 +25,7 @@ export class PipoGuide {
   if(!e.detail||e.detail.phase!==this.net.level||!this.net.playing)return;
   const line=e.detail.line.trim();
   if(!line||this.narrativeQueue.includes(line))return;
+  this.lastProgress=Date.now();this.depth=0;this.hasRequested=false;
   this.narrativeQueue.push(line);
   if(this.narrativeQueue.length>4)this.narrativeQueue.shift();
  };
@@ -35,6 +36,9 @@ export class PipoGuide {
  private hasRequested=false;
  private lastAlert='';private lastAlertAt=0;
  private lastProgress=0;
+ private lastMovedAt=0;
+ private lastHelpAt=0;
+ private movementAnchor:{x:number;y:number}|null=null;
  private talkingUntil=0;
  private fadingUntil=0;
  private targetX=0;private targetY=0;
@@ -146,8 +150,19 @@ export class PipoGuide {
  update(time:number,focusX:number,focusY:number,paused=false):void{
   if(!this.net.playing)return;
   const now=Date.now(),hint=pipoHint(this.source());
+  if(!this.lastHelpAt)this.lastHelpAt=now;
+  const local=this.net.poses[this.net.localSeat??0];
+  if(local){
+   if(!this.movementAnchor){
+    this.movementAnchor={x:local.x,y:local.y};this.lastMovedAt=now;
+   }else if(Math.hypot(local.x-this.movementAnchor.x,local.y-this.movementAnchor.y)>52){
+    this.lastMovedAt=now;
+    this.movementAnchor={x:local.x,y:local.y};
+   }
+  }
   if(hint.objective!==this.objective){
-   this.objective=hint.objective;this.depth=0;this.hasRequested=false;this.lastProgress=now;
+   this.objective=hint.objective;this.depth=0;this.hasRequested=false;
+   this.lastProgress=now;this.lastHelpAt=now;
   }
   const source=this.source(),cycle=source.world.cycle;
   const blackout=source.world.blackoutUntil>now||source.world.deadUntil>now;
@@ -162,9 +177,13 @@ export class PipoGuide {
    this.lastAsk=now;
    if(!paused&&!blackout&&now>=this.talkingUntil)this.speak(now);
   }
-  if(!paused&&!blackout&&!this.narrativeQueue.length&&now-this.lastProgress>90000&&now>this.fadingUntil){
+  // Dica automática: 19s parado OU 38s sem concluir objetivo.
+  // Intervalo de 25s evita repetição durante exploração lenta.
+  const needsHelp=(now-this.lastMovedAt>19000||now-this.lastProgress>38000);
+  if(!paused&&!blackout&&!this.narrativeQueue.length&&needsHelp&&
+    now-this.lastHelpAt>25000&&now>this.fadingUntil){
    this.depth=Math.min(2,this.depth+1) as 0|1|2;
-   this.lastProgress=now;this.speak(now);
+   this.lastHelpAt=now;this.speak(now);
   }
   if(!paused&&!blackout&&this.key&&Phaser.Input.Keyboard.JustDown(this.key))this.ask();
   const poses=this.net.poses;
