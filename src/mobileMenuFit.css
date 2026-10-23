@@ -1,0 +1,371 @@
+/*
+ * Mobile viewport fit (itch.io and GitHub Pages).
+ * No panel depends on swiping the whole page to reach primary actions.
+ * CSS is scoped to touch devices; desktop layout remains untouched.
+ */
+@media (pointer:coarse) and (orientation:landscape) and (max-height:620px) {
+  #ui:not(.in-game){
+    height:100dvh;min-height:0;max-height:100dvh;
+    overflow:hidden;touch-action:manipulation;
+    padding:max(5px,env(safe-area-inset-top)) max(5px,env(safe-area-inset-right))
+      max(5px,env(safe-area-inset-bottom)) max(5px,env(safe-area-inset-left));
+  }
+  #ui:not(.in-game) > .panel{
+    width:min(100%,1050px);height:auto;max-height:100%;min-height:0;
+    overflow:hidden;touch-action:manipulation;
+    padding:clamp(6px,1.6vh,13px) clamp(9px,1.8vw,18px);
+    border-radius:15px;
+  }
+  #ui:not(.in-game) > .panel .kicker{
+    font-size:clamp(9px,1.7vh,11px);letter-spacing:clamp(.8px,.3vw,2px);
+  }
+  #ui:not(.in-game) > .panel h2{
+    font-size:clamp(17px,4.3vh,25px);line-height:1.06;margin:2px 0 5px;
+  }
+  #ui:not(.in-game) > .panel > p{
+    margin:2px auto 5px;font-size:clamp(10px,2vh,12px);line-height:1.15;
+  }
+  #ui:not(.in-game) > .panel .actions{margin:4px 0 0;gap:6px}
+  #ui:not(.in-game) > .panel .actions .btn,
+  #ui:not(.in-game) > .panel > .btn{
+    padding:7px 13px;min-height:32px;font-size:clamp(10px,1.9vh,12px);
+    border-radius:9px;
+  }
+
+  /* Intro: original structure retained, but the five navigation actions fit. */
+  #ui:not(.in-game) > .menu-panel{
+    min-height:0;display:flex;flex-direction:column;
+    justify-content:center;align-items:center;gap:clamp(1px,.45vh,4px);
+  }
+  .menu-panel .brand-mark{
+    width:clamp(28px,7vh,44px);height:clamp(26px,6vh,39px);margin:0 auto;
+  }
+  .menu-panel .brand-mark b{font-size:clamp(14px,3.8vh,21px)}
+  .menu-panel .menu-eyebrow{margin:0;font-size:9px;letter-spacing:1px}
+  .menu-panel h1.forest-logo{
+    margin:0;font-size:clamp(23px,7.2vh,37px);line-height:.88;
+  }
+  .menu-panel .subtitle{margin:1px auto 0;font-size:10px;letter-spacing:1px}
+  .menu-panel .menu-story{margin:1px auto;line-height:1.15;font-size:10px}
+  .menu-panel .menu-story strong{margin:2px 0 0;font-size:9px}
+  .menu-panel .jam-field{
+    margin:2px auto;width:min(100%,320px);gap:2px;font-size:9px;
+  }
+  .menu-panel .jam-field input{
+    min-height:30px;height:30px;padding:5px 9px;font-size:13px;
+  }
+  .menu-panel .primary-play{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+    width:min(100%,470px);max-width:470px;
+    margin:2px auto 0;gap:6px;
+  }
+  .menu-panel .primary-play .btn{
+    min-height:32px;padding:5px 7px;font-size:11px;
+  }
+  .menu-panel .menu-join{
+    width:min(100%,470px);margin:1px auto 0;
+  }
+  .menu-panel .menu-join .btn{
+    min-height:30px;padding:5px 8px;font-size:11px;
+  }
+  .menu-panel .menu-secondary{gap:5px;margin:1px auto}
+  .menu-panel .menu-secondary button{
+    padding:5px 9px;font-size:10px;min-height:29px;
+  }
+  .menu-panel #select-phase,.menu-panel #show-ranking{
+    width:min(100%,470px);margin:1px auto;min-height:29px;
+    padding:5px 9px;font-size:11px;
+  }
+  .menu-panel .menu-footnote{display:none}
+
+  /* Four stages in ONE horizontal row, with the Back button on screen. */
+  #ui:not(.in-game) > .phase-map{
+    display:flex;flex-direction:column;align-items:stretch;
+    justify-content:center;gap:clamp(3px,1vh,8px);
+  }
+  .phase-map .phase-trail{
+    width:100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+    margin:1px 0;gap:clamp(5px,1vw,12px);
+  }
+  .phase-map .phase-stop{
+    min-width:0;min-height:0;height:clamp(78px,24vh,132px);
+    padding:5px 4px;gap:3px;border-radius:12px;
+  }
+  .phase-map .phase-icon{font-size:clamp(23px,6vh,32px);line-height:1}
+  .phase-map .phase-stop strong{font-size:clamp(9px,1.9vh,12px);line-height:1.1}
+  .phase-map .phase-stop small{font-size:9px;line-height:1.1}
+  .phase-map #phase-back{align-self:center;width:min(280px,80%);margin:2px auto 0}
+  .phase-map .phase-stop:hover,.phase-map .phase-stop:focus-visible{
+    transform:none;outline:2px solid #b8efa0;outline-offset:1px;
+  }
+
+  /* Solo skin picker: six cards in one row, action buttons stay visible. */
+  #ui:not(.in-game) > .skin-select-panel{
+    width:min(1050px,100%);max-width:none;
+    display:flex;flex-direction:column;align-items:stretch;
+    justify-content:center;gap:clamp(2px,.7vh,7px);
+  }
+  .skin-select-panel .role-picker{
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+    width:100%;max-width:900px;
+    margin:2px auto;gap:6px;
+  }
+  .skin-select-panel .role-chip{
+    padding:4px 3px;gap:0;min-height:0;border-radius:9px;
+  }
+  .skin-select-panel .role-chip strong{font-size:clamp(10px,2vh,13px)}
+  .skin-select-panel .role-chip small,
+  .skin-select-panel .role-chip em{font-size:clamp(8px,1.55vh,10px);line-height:1.15}
+  .skin-select-panel .skin-selector-caption{margin:0!important}
+  .skin-select-panel .avatar-grid{
+    display:grid;grid-template-columns:repeat(6,minmax(0,1fr));
+    width:100%;max-width:930px;gap:6px;margin:1px auto 0;
+  }
+  .skin-select-panel .skin-card{
+    height:clamp(75px,21vh,112px);min-height:0;
+    padding:3px 2px;gap:1px;border-radius:9px;
+    border-width:1.5px;
+  }
+  .skin-select-panel .skin-img-box{
+    height:clamp(38px,11vh,63px);width:100%;max-width:58px;min-height:0;
+  }
+  .skin-select-panel .skin-img-box img{
+    height:100%;max-height:60px;width:auto;max-width:100%;
+  }
+  .skin-select-panel .skin-card strong{
+    font-size:clamp(9px,1.8vh,11px);margin:1px 0 0;line-height:1.08;
+  }
+  .skin-select-panel .skin-card small{
+    font-size:clamp(8px,1.5vh,9px);margin:0;min-height:0;line-height:1.05;
+  }
+  .skin-select-panel .actions{margin:3px auto 0!important}
+  .skin-select-panel .skin-explainer{display:none}
+
+  /* Rankings: solo and multiplayer alongside each other on small-height phones. */
+  #ui:not(.in-game) > .rank-panel{
+    width:min(960px,100%);display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-template-rows:auto auto auto minmax(0,1fr) auto;
+    align-items:stretch;column-gap:8px;row-gap:3px;
+  }
+  .rank-panel>.kicker,.rank-panel>h2,.rank-panel>p,
+  .rank-panel>#ranking-back{grid-column:1/-1}
+  .rank-panel>.rank-mode{grid-row:4;min-width:0}
+  .rank-panel .rank-mode{
+    padding:clamp(6px,1.4vh,10px);margin:2px 0;
+    min-height:0;overflow:hidden;border-radius:10px;
+  }
+  .rank-panel .rank-mode h3{font-size:11px;margin:0 0 3px}
+  .rank-panel .rank-mode p{font-size:10px;line-height:1.18;margin:4px 0}
+  .rank-panel .rank-mode li{font-size:10px;padding:3px 0;line-height:1.1}
+  .rank-panel .rank-mode li:nth-child(n+4){display:none}
+  .rank-panel #ranking-back{justify-self:center;width:min(260px,80%);margin:2px auto}
+
+  /* Como Jogar and first-play modal: all actions fit above the bottom edge. */
+  .fm-overlay{padding:max(5px,env(safe-area-inset-top))
+    max(5px,env(safe-area-inset-right))
+    max(5px,env(safe-area-inset-bottom))
+    max(5px,env(safe-area-inset-left));overflow:hidden}
+  .fm-overlay .overlay-sheet{
+    max-height:100%;min-height:0;overflow:hidden;
+    padding:clamp(6px,1.6vh,12px);border-radius:12px;
+  }
+  .fm-overlay .overlay-sheet:has(.guide-grid){
+    width:min(960px,100%);
+    display:flex;flex-direction:column;
+    justify-content:center;gap:2px;
+  }
+  .overlay-sheet:has(.guide-grid) header{flex:0 0 auto}
+  .overlay-sheet:has(.guide-grid) h2{
+    font-size:clamp(16px,4vh,23px);margin:1px 0;
+  }
+  .overlay-sheet:has(.guide-grid) .guide-intro{
+    font-size:clamp(10px,1.8vh,12px);line-height:1.1;margin:0;
+  }
+  .overlay-sheet:has(.guide-grid) .guide-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    width:100%;gap:6px;margin:3px 0;
+  }
+  .overlay-sheet:has(.guide-grid) .guide-item,
+  .overlay-sheet:has(.guide-grid) .guide-tip{
+    padding:5px 8px;margin:2px 0;border-radius:8px;
+  }
+  .overlay-sheet:has(.guide-grid) .guide-item h3,
+  .overlay-sheet:has(.guide-grid) .guide-tip h3{
+    font-size:10px;line-height:1.1;margin:0 0 2px;
+  }
+  .overlay-sheet:has(.guide-grid) .guide-item p,
+  .overlay-sheet:has(.guide-grid) .guide-tip p{
+    font-size:10px;line-height:1.18;margin:0;
+  }
+  .overlay-sheet:has(.guide-grid) #fm-back{
+    align-self:center;width:min(210px,60%);padding:6px 10px;
+    min-height:30px;margin:2px auto 0;
+  }
+  .fm-overlay .overlay-sheet:not(:has(.guide-grid)):not(.first-play-sheet){
+    max-height:100%;overflow:auto;
+  }
+  .fm-overlay .overlay-sheet .settings-control{margin:4px 0 6px}
+  .fm-overlay .overlay-sheet .settings-control label{
+    font-size:11px;margin-bottom:2px;
+  }
+  .fm-overlay .overlay-sheet .settings-control input[type=range]{height:23px}
+  .fm-overlay .overlay-sheet .settings-mute{padding:5px 8px;font-size:11px}
+  .fm-overlay .overlay-sheet #fm-back{
+    min-height:30px;padding:6px 10px;margin:5px auto 0;
+  }
+
+  .first-play-guide .first-play-sheet{
+    max-height:100%;width:min(450px,100%);
+    padding:clamp(7px,1.5vh,12px);gap:clamp(2px,.5vh,5px);
+    overflow:hidden;
+  }
+  .first-play-guide .first-play-step-icon{
+    width:clamp(32px,8vh,48px);height:clamp(32px,8vh,48px);
+    font-size:clamp(18px,4vh,25px);
+  }
+  .first-play-guide .first-play-sheet h2{font-size:clamp(15px,3.4vh,20px);margin:0}
+  .first-play-guide .first-play-step-copy{
+    font-size:clamp(11px,2vh,14px);line-height:1.15;margin:0;
+  }
+  .first-play-guide .first-play-step-tip{
+    padding:4px;font-size:10px;line-height:1.2;
+  }
+  .first-play-guide #first-play-continue{min-height:32px;padding:5px}
+  .first-play-guide .first-play-dots{font-size:12px;line-height:1.1}
+
+  /* In-game mission: don't cover the right objective HUD or touch controls. */
+  .mission-context-step{
+    top:calc(73px + env(safe-area-inset-top));bottom:auto;
+    width:min(295px,38vw);padding:5px 7px;gap:2px 6px;
+  }
+  .mission-context-step strong,.mission-context-step span{
+    font-size:clamp(9px,1.75vh,11px);line-height:1.16;
+  }
+  .mission-context-step button{padding:6px 8px;font-size:11px}
+  #ui.in-game .loop-top-right{max-height:35vh;overflow:hidden}
+  #ui.in-game #loop-objective,#ui.in-game #loop-step{
+    font-size:clamp(9px,1.65vh,11px);line-height:1.12;
+  }
+}
+/* Portrait phone menus also fit without dragging the document. */
+@media (pointer:coarse) and (orientation:portrait) and (max-width:800px) {
+  #ui:not(.in-game){
+    height:100dvh;max-height:100dvh;min-height:0;overflow:hidden;
+    padding:max(6px,env(safe-area-inset-top)) max(6px,env(safe-area-inset-right))
+      max(6px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));
+  }
+  #ui:not(.in-game) > .panel{
+    max-height:100%;min-height:0;overflow:hidden;
+    padding:clamp(8px,1.4vh,14px);width:100%;border-radius:14px;
+  }
+  #ui:not(.in-game) > .menu-panel{
+    display:flex;flex-direction:column;justify-content:center;align-items:center;gap:3px;
+  }
+  .menu-panel .brand-mark{width:45px;height:42px;margin:0}
+  .menu-panel h1.forest-logo{
+    font-size:clamp(29px,7vw,46px);margin:0;line-height:.95;
+  }
+  .menu-panel .menu-eyebrow,.menu-panel .subtitle{margin:0;font-size:10px}
+  .menu-panel .menu-story{margin:4px auto;font-size:11px;line-height:1.25}
+  .menu-panel .menu-story strong{margin-top:2px;font-size:10px}
+  .menu-panel .jam-field{margin:3px auto;gap:2px}
+  .menu-panel .jam-field input{min-height:36px;padding:7px 9px}
+  .menu-panel .primary-play{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    width:100%;margin:5px auto 0;gap:6px;
+  }
+  .menu-panel .primary-play .btn{min-height:37px;padding:6px 3px;font-size:11px}
+  .menu-panel .menu-join{margin:3px auto}
+  .menu-panel .menu-join .btn{min-height:35px;padding:6px}
+  .menu-panel .menu-secondary{margin:4px auto;gap:4px}
+  .menu-panel .menu-secondary button{padding:6px 5px;font-size:9px}
+  .menu-panel #select-phase,.menu-panel #show-ranking{
+    width:100%;min-height:35px;padding:7px;margin:2px auto;
+  }
+  .menu-panel .menu-footnote{display:none}
+
+  .phase-map{display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:4px}
+  .phase-map h2{font-size:clamp(20px,5vw,27px);margin:2px 0}
+  .phase-map>p{font-size:11px;margin:1px auto}
+  .phase-map .phase-trail{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    margin:4px 0;gap:7px;
+  }
+  .phase-map .phase-stop{
+    height:clamp(83px,14dvh,112px);min-height:0;padding:4px;gap:3px;
+    border-radius:12px;
+  }
+  .phase-map .phase-icon{font-size:clamp(23px,4vh,30px)}
+  .phase-map .phase-stop strong{font-size:10px}
+  .phase-map .phase-stop small{font-size:9px}
+  .phase-map #phase-back{width:100%;padding:8px;margin:3px 0 0;min-height:36px}
+
+  #ui:not(.in-game) > .skin-select-panel{
+    display:flex;flex-direction:column;align-items:stretch;
+    justify-content:center;gap:3px;
+  }
+  .skin-select-panel h2{font-size:clamp(18px,5vw,25px);margin:2px 0}
+  .skin-select-panel>p{margin:2px 0;font-size:10px;line-height:1.2}
+  .skin-select-panel .role-picker{margin:3px 0;gap:5px}
+  .skin-select-panel .role-chip{padding:4px 2px;gap:1px;border-radius:9px}
+  .skin-select-panel .role-chip strong{font-size:11px}
+  .skin-select-panel .role-chip small,.skin-select-panel .role-chip em{font-size:9px}
+  .skin-select-panel .avatar-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:3px auto;
+  }
+  .skin-select-panel .skin-card{
+    min-height:0;height:clamp(89px,15dvh,122px);
+    padding:3px 2px;border-radius:9px;
+  }
+  .skin-select-panel .skin-img-box{height:clamp(48px,8dvh,69px);width:100%}
+  .skin-select-panel .skin-img-box img{height:100%;max-height:67px}
+  .skin-select-panel .skin-card strong{font-size:10px;line-height:1.1;margin-top:2px}
+  .skin-select-panel .skin-card small{font-size:8px;margin-top:2px;min-height:0}
+  .skin-select-panel .actions{margin:4px 0 0}
+  .skin-select-panel .actions .btn{min-height:36px;padding:6px 9px;font-size:11px}
+  .skin-select-panel .skin-explainer{display:none}
+
+  #ui:not(.in-game) > .rank-panel{
+    display:flex;flex-direction:column;justify-content:center;gap:4px;
+  }
+  .rank-panel h2{margin:1px 0;font-size:clamp(20px,5vw,27px)}
+  .rank-panel>p{margin:2px 0;font-size:11px;line-height:1.18}
+  .rank-panel .rank-mode{padding:8px;margin:2px 0;border-radius:10px}
+  .rank-panel .rank-mode h3{font-size:12px;margin:0 0 4px}
+  .rank-panel .rank-mode p{font-size:11px;margin:2px}
+  .rank-panel .rank-mode li{padding:3px 0;font-size:10px}
+  .rank-panel .rank-mode li:nth-child(n+5){display:none}
+  .rank-panel #ranking-back{min-height:36px;padding:7px 10px;margin:4px 0 0}
+
+  .fm-overlay{padding:max(6px,env(safe-area-inset-top)) 6px max(6px,env(safe-area-inset-bottom))}
+  .fm-overlay .overlay-sheet{max-height:100%;padding:10px;overflow:hidden}
+  .overlay-sheet:has(.guide-grid){display:flex;flex-direction:column;gap:3px}
+  .overlay-sheet:has(.guide-grid) h2{font-size:21px;margin:2px 0}
+  .overlay-sheet:has(.guide-grid) .guide-intro{font-size:11px;line-height:1.18;margin:2px 0}
+  .overlay-sheet:has(.guide-grid) .guide-grid{
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin:4px 0;
+  }
+  .overlay-sheet:has(.guide-grid) .guide-item,.overlay-sheet:has(.guide-grid) .guide-tip{
+    padding:5px;margin:2px 0;
+  }
+  .overlay-sheet:has(.guide-grid) .guide-item h3,
+  .overlay-sheet:has(.guide-grid) .guide-tip h3{font-size:10px;margin:0 0 2px}
+  .overlay-sheet:has(.guide-grid) .guide-item p,
+  .overlay-sheet:has(.guide-grid) .guide-tip p{font-size:9px;line-height:1.2}
+  .overlay-sheet:has(.guide-grid) #fm-back{margin:3px auto 0;min-height:35px;padding:6px}
+}
+/* Ultra-short devices: keep the action area accessible rather than cropping. */
+@media(pointer:coarse) and (orientation:landscape) and (max-height:355px){
+ #ui:not(.in-game) > .panel{padding:4px 7px}
+ .menu-panel .brand-mark{display:none}
+ .menu-panel .menu-eyebrow{display:none}
+ .menu-panel .menu-story strong{display:none}
+ .menu-panel .menu-secondary button{min-height:25px;padding:3px 7px}
+ .skin-select-panel .role-chip em{display:none}
+ .skin-select-panel .skin-card{height:70px}
+ .skin-select-panel .skin-img-box{height:37px}
+ .phase-map .phase-stop{height:70px}
+ .overlay-sheet:has(.guide-grid) .guide-item,
+ .overlay-sheet:has(.guide-grid) .guide-tip{padding:3px 5px}
+}
