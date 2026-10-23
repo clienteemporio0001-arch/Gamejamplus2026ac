@@ -14,6 +14,7 @@ import { RiverScene } from './riverScene';
 import { JourneyScene } from './journeyScene';
 import { LateScene } from './lateScene';
 import './style.css';
+import './mobileMenuFit.css';
 import { gameKeys } from './keyboard';
 import {mountMobilePad,clearTouch,type MobilePadMount} from './mobileControls';
 import {viewportSize,isCoarseDevice,isMobilePortrait} from './mobileViewport';
