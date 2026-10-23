@@ -1,9 +1,10 @@
 import {strict as assert} from 'node:assert';
-import {readFileSync} from 'node:fs';
+import {existsSync,readFileSync} from 'node:fs';
 const src=(p:string)=>readFileSync('src/'+p+'.ts','utf8');
 const official=src('officialLandmarks');
-for(const key of ['hollow-tree.svg','loop-stone.svg','loop-arch.svg'])
- assert.ok(official.includes(key),'official Phase 1 SVG '+key);
+for(const key of ['hollow-tree-custom.webp','loop-stone.svg','loop-arch.svg'])
+ assert.ok(official.includes(key),'official landmark asset '+key);
+assert.ok(existsSync('public/assets/hollow-tree-custom.webp'),'árvore oca nova precisa estar embutida no jogo');
 for(const kind of ['hollow','stone','arch'])assert.ok(official.includes(kind+':'),'landmark '+kind);
 assert.ok(official.includes('scene.add.image('));
 assert.ok(official.includes('targetY-footY'));
