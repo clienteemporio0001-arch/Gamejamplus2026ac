@@ -6,6 +6,7 @@ import {preloadOfficialLandmarks,officialLandmark,LANDMARK_KEYS} from './officia
 import {PipoGuide} from './pipoGuide';
 import {CooperativeExitArt} from './cooperativeExitArt';
 import {SUSPENSION,SUSPENSION_LANDING_Y,LOOP_TERRAIN,LOOP_NATURAL_LEDGES,LOOP_LAYOUT_BRANCHES} from './forestLoop';
+import {suspendedRideDelta} from './suspensionPlatform';
 import {MissionDirector} from './missionDirector';
 import {FrameProfiler,SCENARIOS} from './performanceDiagnostics';
 import {animateForestProps} from './forestTransformFX';
@@ -324,10 +325,14 @@ export class ForestLoopScene extends Phaser.Scene {
     }
     this.suspension=this.add.container(SUSPENSION.initialX,656,[timber]).setDepth(20);
     this.suspensionCables=this.add.graphics().setDepth(19);
-    // Collider stays disabled during motion; scenery and physics agree when stable.
+    // Uma única superfície sólida em todos os estágios do puzzle, inclusive
+    // DURANTE o deslocamento. Antes ela ficava desativada e todos caíam no vão.
     this.suspensionCollider=this.add.rectangle(SUSPENSION.initialX,656,
       SUSPENSION.width,SUSPENSION.height,0xffffff,.001).setDepth(19);
     this.physics.add.existing(this.suspensionCollider,true);
+    const deck=this.suspensionCollider.body as Phaser.Physics.Arcade.StaticBody;
+    deck.checkCollision.up=true;deck.checkCollision.down=false;
+    deck.checkCollision.left=false;deck.checkCollision.right=false;
     this.blocks.push(this.suspensionCollider);
     this.bridge=this.ground(LOOP_GEOMETRY.bridge.x,LOOP_GEOMETRY.bridge.y,
       LOOP_GEOMETRY.bridge.width,LOOP_GEOMETRY.bridge.height,'wood');
@@ -577,16 +582,34 @@ export class ForestLoopScene extends Phaser.Scene {
       this.pipo?.warnDanger('Ei! As raízes e os marcos estão mudando! Sigam o vento!');
     }
     if(this.suspensionCollider){
-      const settled=w.suspendedX===w.suspendedTo&&w.suspendedOpen;
       const position=w.suspendedX;
       const collider=this.suspensionCollider;
       const body=collider.body as Phaser.Physics.Arcade.StaticBody;
-      const moved=collider.x!==position,enableChanged=body.enable!==settled;
+      const oldX=collider.x;
+      const moved=oldX!==position;
+      // A madeira leva quem já está em cima: os corpos Arcade acompanham
+      // o mesmo delta do snapshot autoritativo (sem arrastar quem está no chão).
+      if(moved)for(const seat of [0,1,2] as Seat[]){
+        if(!this.net.isSolo&&seat!==this.net.localSeat)continue;
+        const actor=this.avatars[seat];
+        const hero=actor?.body as Phaser.Physics.Arcade.Body|undefined;
+        if(!hero)continue;
+        const dx=suspendedRideDelta(oldX,position,{
+          x:actor.x,y:actor.y,vy:hero.velocity.y,
+          grounded:hero.blocked.down||hero.touching.down
+        });
+        if(!dx)continue;
+        const vx=hero.velocity.x;
+        hero.reset(actor.x+dx,actor.y);
+        hero.setVelocity(vx,0);
+      }
       if(this.suspension.x!==position)this.suspension.setX(position);
       if(moved)collider.setX(position);
-      if(collider.visible!==settled)collider.setVisible(settled);
-      if(enableChanged)body.enable=settled;
-      if(settled&&(moved||enableChanged))body.updateFromGameObject();
+      // Não desabilitar nos trechos intermediários! Um único collider para
+      // posição inicial, movimento, paradas e estado final.
+      if(!collider.visible)collider.setVisible(true);
+      if(!body.enable)body.enable=true;
+      if(moved)body.updateFromGameObject();
       if(this.lastSuspensionCableX!==position){
         this.lastSuspensionCableX=position;
         this.suspensionCables.clear();
