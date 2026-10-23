@@ -17,3 +17,12 @@ export function puzzleShotInRange(
 export function dashTravelled(startX:number,endX:number,minDistance:number):boolean{
  return Math.abs(endX-startX)>=minDistance;
 }
+/** Dash iniciado dentro da própria marca OU deslocamento comprovado
+ * ao atravessar o alvo de qualquer lado. A proximidade no instante da
+ * ativação continua sendo verificada pela autoridade de cada fase. */
+export function dashCanActivate(
+ startX:number,endX:number,targetX:number,minDistance:number,startRadius=85
+):boolean{
+ return Math.abs(startX-targetX)<=startRadius||
+  dashTravelled(startX,endX,minDistance);
+}
