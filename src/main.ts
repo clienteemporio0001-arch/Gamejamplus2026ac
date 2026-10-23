@@ -1025,7 +1025,8 @@ net.on('vital-reply',reply=>{
 gameKeys.bind();
 net.on('solo-seat',seat=>updateMobileCharacter(seat));
 net.on('change',()=>{
- if(net.role==='idle'){info='';devSession=false;closeOverlay();combatTutorial.abort();}
+ if(net.role==='idle'){info='';devSession=false;closeOverlay();}
+ if(net.role==='idle')combatTutorial.abort();
  if(net.role==='idle')stopIntroVideo();
  render();
 });
