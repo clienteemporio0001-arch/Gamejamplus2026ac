@@ -15,6 +15,7 @@ import { JourneyScene } from './journeyScene';
 import { LateScene } from './lateScene';
 import './style.css';
 import './mobileMenuFit.css';
+import {installMobileMenuFit} from './mobileMenuFit';
 import { gameKeys } from './keyboard';
 import {mountMobilePad,clearTouch,type MobilePadMount} from './mobileControls';
 import {viewportSize,isCoarseDevice,isMobilePortrait} from './mobileViewport';
@@ -37,6 +38,7 @@ import {gameGuideMarkup,beforeFirstPlay,showContextStep,clearContextStep} from '
 
 const net = new Network();
 const ui = document.querySelector<HTMLDivElement>('#ui')!;
+installMobileMenuFit(ui);
 const controls = document.querySelector<HTMLDivElement>('#mobile-controls')!;
 const touch: TouchInput = { left: false, right: false, jump: false, interact: false, ability: false };
 let game: Phaser.Game | null = null;
