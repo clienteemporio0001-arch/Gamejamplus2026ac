@@ -1025,7 +1025,7 @@ net.on('vital-reply',reply=>{
 gameKeys.bind();
 net.on('solo-seat',seat=>updateMobileCharacter(seat));
 net.on('change',()=>{
- if(net.role==='idle'){info='';devSession=false;closeOverlay();}
+ if(net.role==='idle'){combatTutorial.abort();info='';devSession=false;closeOverlay();}
  if(net.role==='idle')stopIntroVideo();
  render();
 });
@@ -1035,6 +1035,7 @@ net.on('start', () => {
  info = ''; render();
 });
 net.on('phase', data => {
+ if(data.stage!=='playing')combatTutorial.abort();
  if(data.stage==='playing'&&net.experience==='loop'){
   const w=data.level===4?net.fire:data.level===3?net.treetop:
    data.level===2?net.temporal:net.loop;
