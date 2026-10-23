@@ -1,6 +1,7 @@
 import type { Pose, Seat } from './network';
 import { SOLO_TIMING } from './soloRules';
 import type { PuzzleAction } from './puzzles';
+import {puzzleShotInRange,dashCanActivate} from './puzzleInteraction';
 export type LateLevel = 3 | 4;
 export type Jaguar = { platformX: number; x: number; y: number; mode: 'patrol' | 'chase' | 'distracted'; facing: -1 | 1; target: Seat | null };
 export type EyesWorld = {
@@ -98,9 +99,9 @@ export class ChapterAuthority {
     if(a.kind==='dash'){
       if(seat!==2 || now-this.lastDash<1900)return false;
       this.lastDash=now;
-      if(w.level===3 && w.roots && p.x>=645 && p.x<=780){this.dashAt=now;this.dashX=p.x;}
-      if(w.level===4 && w.totems===2 && p.x>=670 && p.x<=765){this.dashAt=now;this.dashX=p.x;}
-      if((w.level===3 || w.level===4) && p.x>=880 && p.x<=1040){
+      if(w.level===3 && w.roots && Math.abs(p.x-EYES.switch.x)<=320){this.dashAt=now;this.dashX=p.x;}
+      if(w.level===4 && w.totems===2 && Math.abs(p.x-TRAIL.star.x)<=230){this.dashAt=now;this.dashX=p.x;}
+      if((w.level===3 || w.level===4) && Math.abs(p.x-(w.level===3?EYES.finalSwitch.x:TRAIL.finalSwitch.x))<=235){
         this.lateDashAt=now;this.lateDashX=p.x;
       }
       return false;
@@ -109,9 +110,9 @@ export class ChapterAuthority {
       if(a.kind==='lever' && seat===0 && !w.roots && near(p,EYES.lever.x,EYES.lever.y,62,63)){
         w.roots=true;return true;
       }
-      if(a.kind==='shoot' && seat===1 && a.facing===1 && now-this.lastShot>=470){
+      if(a.kind==='shoot' && seat===1 && now-this.lastShot>=470){
         this.lastShot=now;
-        const hit=(x:number,y:number)=> x>p.x && x-p.x<=345 && Math.abs(p.y-18-y)<=57;
+        const hit=(x:number,y:number)=>puzzleShotInRange(p,{x,y},a.facing??1,345,57,85);
         if(w.roots && hit(EYES.distraction.x,EYES.distraction.y)){
           w.distractedUntil=now+(this.solo?SOLO_TIMING.chapterDistraction:6700);return true;
         }
@@ -126,13 +127,13 @@ export class ChapterAuthority {
       if(a.kind==='switch' && seat===2){
         if(!w.passage && w.timerUntil>now && near(p,EYES.switch.x,EYES.switch.y,52,74)
           && this.dashAt>=w.timerUntil-(this.solo?SOLO_TIMING.chapterTemporary:3900) && this.dashAt<=now
-          && this.dashX<780 && p.x-this.dashX>=160){
+          && dashCanActivate(this.dashX,p.x,EYES.switch.x,160)){
           w.passage=true;w.timerUntil=0;return true;
         }
         if(w.passage && w.pressure && w.shotUntil>now && !w.finalGate
           && near(p,EYES.finalSwitch.x,EYES.finalSwitch.y,50,74)
           && this.lateDashAt>0 && now-this.lateDashAt<=(this.solo?SOLO_TIMING.chapterDashContact:2000)
-          && p.x-this.lateDashX>=55){
+          && dashCanActivate(this.lateDashX,p.x,EYES.finalSwitch.x,55)){
           w.finalGate=true;w.shotUntil=0;return true;
         }
       }
@@ -144,7 +145,7 @@ export class ChapterAuthority {
     }
     if(a.kind==='shoot' && seat===1 && a.facing===1 && now-this.lastShot>=470) {
       this.lastShot=now;
-      const hit=(x:number,y:number)=>x>p.x && x-p.x<=340 && Math.abs(p.y-18-y)<=55;
+      const hit=(x:number,y:number)=>puzzleShotInRange(p,{x,y},a.facing??1,340,55,85);
       if(!w.finalGate && w.totems<3 && hit(TRAIL.leaf.x,TRAIL.leaf.y)){
         if(w.totems===1)w.totems=2;else this.wrongTotem();
         return true;
@@ -156,7 +157,7 @@ export class ChapterAuthority {
     }
     if(a.kind==='switch' && seat===2 && !w.finalGate){
       if(w.totems<3 && near(p,TRAIL.star.x,TRAIL.star.y,50,77)){
-        if(w.totems===2 && this.dashAt>0 && now-this.dashAt<2100 && p.x-this.dashX>=75){
+        if(w.totems===2 && this.dashAt>0 && now-this.dashAt<2100 && dashCanActivate(this.dashX,p.x,TRAIL.star.x,75)){
           w.totems=3;w.transformed=true;w.signsChanged=true;w.nextFlipAt=now+2000;
         }else this.wrongTotem();
         return true;
@@ -164,7 +165,7 @@ export class ChapterAuthority {
       if(w.transformed && w.pressure && w.shotUntil>now
         && near(p,TRAIL.finalSwitch.x,TRAIL.finalSwitch.y,47,77)
         && this.lateDashAt>0 && now-this.lateDashAt<=(this.solo?SOLO_TIMING.chapterDashContact:2000)
-        && p.x-this.lateDashX>=65){
+        && dashCanActivate(this.lateDashX,p.x,TRAIL.finalSwitch.x,65)){
         w.finalGate=true;w.platformsOn=true;w.shotUntil=0;return true;
       }
     }

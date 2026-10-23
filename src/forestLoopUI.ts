@@ -39,8 +39,8 @@ export function loopContext(w:LoopWorld,seat:Seat,x:number,y:number,now=Date.now
   if(w.observed&&!w.marks[seat]&&w.marks.slice(0,seat).every(Boolean)){
     const point=markPosition(w,seat);
     if(seat===0&&near(point.x,point.y,90,90))return 'E · Investigar árvore oca';
-    if(seat===1&&near(point.x-150,604,125,85))return 'J · Acertar pedra rachada';
-    if(seat===2&&near(point.x-155,604,115,85))return 'SHIFT → E · Tronco em arco';
+    if(seat===1&&near(point.x,604,240,85))return 'J · Acertar pedra rachada';
+    if(seat===2&&near(point.x,604,205,85))return 'SHIFT · Tronco em arco (ambos os lados)';
   }
   if(allDone(w.marks)&&w.lastRoute!=='right'){
     for(const route of ['oca','pedra'] as const){
@@ -61,9 +61,9 @@ export function loopContext(w:LoopWorld,seat:Seat,x:number,y:number,now=Date.now
         SUSPENSION_LEVER_FEEDBACK[status];
     }
     if(seat===1&&w.suspended[0]&&!w.suspended[1]&&
-      near(SUSPENSION.lia.x-165,606,125,90))return 'J · Soltar trava suspensa';
+      near(SUSPENSION.lia.x,606,240,90))return 'J · Soltar trava suspensa';
     if(seat===2&&w.suspended[0]&&w.suspended[1]&&!w.suspended[2]&&
-      near(SUSPENSION.nino.x-137,606,110,85))return 'SHIFT → E · Fixar plataforma';
+      near(SUSPENSION.nino.x,606,195,85))return 'SHIFT · Fixar plataforma';
     if(!w.suspensionStacked&&near(SUSPENSION.lever.x-50,606,155,85))
       return 'E · Lia sobe em Nino, depois Téo em Lia';
     if(w.suspended.every(Boolean)&&!w.suspendedOpen)
@@ -75,14 +75,18 @@ export function loopContext(w:LoopWorld,seat:Seat,x:number,y:number,now=Date.now
     if(seat===0&&!w.tree[0]&&w.teoUpperReached&&!w.teoSummitReached&&near(UPPER_BRANCH.x,upperLandingY,100,20))return 'SALTO DUPLO NOVAMENTE · Galho superior';
     if(seat===0&&!w.tree[0]&&w.stackMilestone&&!w.teoUpperReached
       &&near(UPPER_BRANCH.x,520,115,66))return 'ESPAÇO → ESPAÇO · Salto duplo até o galho';
-    if(seat===1&&!w.tree[1]&&near(LOOP_GEOMETRY.chasm.start-55,606,115,85))return 'J · Acertar amarra';
-    if(seat===2&&!w.tree[2]&&near(LOOP_TREE[2].x-143,606,105,85))return 'SHIFT → E · Soltar raiz';
+    if(seat===1&&!w.tree[1]&&
+      (near(LOOP_GEOMETRY.chasm.start-55,606,120,85)||
+       near(LOOP_GEOMETRY.chasm.end+55,606,120,85))&&
+      (x<LOOP_GEOMETRY.chasm.start||x>LOOP_GEOMETRY.chasm.end)&&
+      Math.abs(x-LOOP_TREE[1].x)<=360)return 'J · Acertar amarra';
+    if(seat===2&&!w.tree[2]&&near(LOOP_TREE[2].x,606,205,85))return 'SHIFT · Soltar raiz';
     if(!w.stackMilestone&&near(9290,605,150,110))return 'E · Lia sobe em Nino, depois Téo em Lia';
   }
   if(w.bridge&&!w.final[seat]){
     if(seat===0&&near(LOOP_FINAL[0].x,LOOP_FINAL[0].y,90,95))return 'E · Primeira trava';
-    if(seat===1&&near(LOOP_FINAL[1].x-155,606,115,85))return 'J · Segunda trava';
-    if(seat===2&&near(LOOP_FINAL[2].x-145,606,105,85))return 'SHIFT → E · Trava final';
+    if(seat===1&&near(LOOP_FINAL[1].x,606,240,85))return 'J · Segunda trava';
+    if(seat===2&&near(LOOP_FINAL[2].x,606,205,85))return 'SHIFT · Trava final';
   }
   if(w.exit&&x>11000)return 'Saída aberta · Reúnam os três';
   if((seat===0||seat===1)&&w.supporting[seat]!==null)return 'E · Soltar do apoio humano';

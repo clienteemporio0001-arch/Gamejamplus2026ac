@@ -1,4 +1,5 @@
 import {initRatCombat,validRatCombat,activateMonsterSkill,shootMonster,tickMonsters,type RatCombatWorld} from './ratCombat';
+import {puzzleShotInRange} from './puzzleInteraction';
 import {exitPresence} from './sharedExit';
 import {HOUND_HP,HOUND_NAME,HOUND_LEFT,initHound,validHound,armHound,shootHound,tickHound,type HoundState} from './hellHoundBoss';
 import {initialBats,initialBatImpacts,validBatState,validBatImpacts,type BatDownState,type BatImpacts} from './flyingBats';
@@ -264,8 +265,7 @@ export class FireAuthority {
   const nino=seat===2&&kind==='dash';
   const teo=seat===0&&kind==='lever'&&Math.abs(p.vy)<175;
   const lia=seat===1&&kind==='shoot';
-  const shot=(t:{x:number;y:number})=>lia&&facing===1&&t.x>=p.x&&t.x-p.x<=360
-   &&Math.abs(p.y-18-t.y)<=65;
+  const shot=(t:{x:number;y:number})=>lia&&puzzleShotInRange(p,t,facing,360,65,95);
   const t=FIRE_TARGETS;
   if(!w.logOpen){
    if(teo&&close(p,t.log.teo,54,34))w.log[0]=true;

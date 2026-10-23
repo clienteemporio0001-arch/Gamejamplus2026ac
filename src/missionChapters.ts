@@ -38,9 +38,9 @@ export function missionSnapshot(phase:MissionPhase,world:MissionWorld):MissionSn
     'Boa, Téo! Lia, investigue aquela pedra rachada!','LIA: INVESTIGUE A PEDRA RACHADA.'),
    part('mark-stone','DESCOBERTA',1,w.marks[1],markPosition(w,1),'J',
     'Consegui! Tem outra marca aqui!',
-    'Estamos perto! Nino, encontre o arco e use dash com E!',
+    'Estamos perto! Nino, encontre o arco e use Shift!',
     'NINO: ATIVE O ARCO DE MADEIRA.'),
-   part('mark-arch','DESCOBERTA',2,w.marks[2],markPosition(w,2),'SHIFT + E',
+   part('mark-arch','DESCOBERTA',2,w.marks[2],markPosition(w,2),'SHIFT',
     'Funcionou! A passagem está aberta!',
     'TRILHAS LIBERADAS! Boa, equipe! Agora encontrem a trilha indicada pelo vento e reúnam os três na entrada!',
     'REÚNAM OS TRÊS NA PASSAGEM CERTA.')];
@@ -53,16 +53,16 @@ export function missionSnapshot(phase:MissionPhase,world:MissionWorld):MissionSn
     'A trava ficou solta! A plataforma vai deslizar!',
     'Mais uma parte solta! Nino, procure o mecanismo de fixação!',
     'LIA: ATIRE COM J NA TRAVA DOS CIPÓS.'),
-   part('suspended-nino','PLATAFORMA SUSPENSA',2,w.suspended[2],SUSPENSION.nino,'SHIFT + E',
+   part('suspended-nino','PLATAFORMA SUSPENSA',2,w.suspended[2],SUSPENSION.nino,'SHIFT',
     'Fixei a plataforma na posição!',
     'Aí sim! A plataforma está firme! Vamos atravessar!',
-    'NINO: USE DASH E E NA FIXAÇÃO DA MARGEM INICIAL.')
+    'NINO: USE SHIFT NA FIXAÇÃO DA MARGEM INICIAL.')
   ];
   const tree:PartialBeat[]=([0,1,2] as const).map(i=>
    part('bridge-'+i,'ÁRVORE-PONTE',i,w.tree[i],
     // Correct coordinates are assigned from the authority's second challenge.
     LOOP_TREE[i],
-    ['E','J','SHIFT + E'][i],
+    ['E','J','SHIFT'][i],
     ['A amarra está solta!','Acertei a amarra!','A raiz cedeu!'][i],
     ['Boa, Téo! Lia, mire na próxima amarra!','Ótimo, Lia! Nino, solte a raiz!',
       'A árvore vai cair! Afastem-se!'][i],
@@ -70,7 +70,7 @@ export function missionSnapshot(phase:MissionPhase,world:MissionWorld):MissionSn
   const final:PartialBeat[]=([0,1,2] as const).map(i=>
    part('final-'+i,'TRAVAS',i,w.final[i],
     LOOP_FINAL[i],
-    ['E','J','SHIFT + E'][i],
+    ['E','J','SHIFT'][i],
     names[i]+': mecanismo liberado!',
     'Boa! Falta garantir que todos atravessem em segurança!',
     'LIBEREM AS TRAVAS FINAIS.'));
@@ -82,7 +82,7 @@ export function missionSnapshot(phase:MissionPhase,world:MissionWorld):MissionSn
     !w.suspendedOpen?
       (!w.suspended[0]?'TÉO: COM A ESCADA HUMANA, ALCANCE A ALAVANCA ELEVADA.':
         !w.suspended[1]?'LIA: ACERTE A TRAVA DA PLATAFORMA SUSPENSA.':
-        !w.suspended[2]?'NINO: DASH + E NA FIXAÇÃO DA PLATAFORMA.':
+        !w.suspended[2]?'NINO: USE SHIFT NA FIXAÇÃO DA PLATAFORMA.':
         'AGUARDEM A PLATAFORMA PARAR DE DESLIZAR.'):
     !w.bridge?'LIBEREM A ÁRVORE-PONTE COM OS TRÊS AMIGOS.':
     !w.exit?'ABRAM AS TRÊS TRAVAS PARA LIBERAR O TRONCO.':
@@ -98,19 +98,19 @@ export function missionSnapshot(phase:MissionPhase,world:MissionWorld):MissionSn
  if(phase===2){
   const w=world as TemporalWorld;
   const echo=([0,1,2] as const).map(i=>part('echo-'+i,'MARCOS NA CHUVA',i,w.echo[i],TEMP_ECHO[i],
-   ['E','J','SHIFT + E'][i],
+   ['E','J','SHIFT'][i],
    ['Encontrei a marca!','Acerteii!','Abri o terceiro marco!'][i],
    ['Boa, Téo! Lia, prepare a baladeira!','Funcionou! Nino, use seu dash!',
     'Marcos liberados! Sigam até a grande árvore!'][i],
    'ENCONTREM OS TRÊS MARCOS.'));
   const tree=([0,1,2] as const).map(i=>part('rain-tree-'+i,'ÁRVORE SOBRE A ÁGUA',i,w.tree[i],TEMP_TREE[i],
-   ['E','J','SHIFT + E'][i],
+   ['E','J','SHIFT'][i],
    ['Soltei a amarra!','Acertei o cipó!','A raiz se soltou!'][i],
    ['Boa! Lia, prepare a baladeira!','Funcionou! Nino, libere a última raiz!',
     'A árvore está livre! Afastem-se, ela vai cair!'][i],
    'FAÇAM A ÁRVORE CAIR SOBRE A CORRENTEZA.'));
   const roots=([0,1,2] as const).map(i=>part('rain-roots-'+i,'RAÍZES DA TEMPESTADE',i,w.roots[i],
-   TEMP_ROOTS[i],['E','J','SHIFT + E'][i],
+   TEMP_ROOTS[i],['E','J','SHIFT'][i],
    ['Uma raiz a menos!','Acertei!','Passagem desbloqueada!'][i],
    ['Bom trabalho! Falta uma raiz!','Nino, solte a raiz restante!',
     'Passagem liberada! Reúnam os três e atravessem!'][i],
@@ -143,7 +143,7 @@ export function missionSnapshot(phase:MissionPhase,world:MissionWorld):MissionSn
   const arrays=groups.map(g=>([0,1,2] as const).map(i=>{
    const target=g.id==='copas-tower'?(i===2?TREE_TARGETS.tower.top:TREE_TARGETS.tower.base):
     (g.id==='copas-bridge'?TREE_TARGETS.bridge:TREE_TARGETS.time)[(['teo','lia','nino'] as const)[i]];
-   return part(g.id+'-'+i,g.name,i,g.flags[i],target,['E','J','SHIFT + E'][i],
+   return part(g.id+'-'+i,g.name,i,g.flags[i],target,['E','J','SHIFT'][i],
     g.heroes[i],g.pipo[i],g.name+': '+g.flags.filter(Boolean).length+'/3');
   }));
   const group=!w.bridgeOpen?'PONTE DOS TRÊS':
@@ -172,7 +172,7 @@ export function missionSnapshot(phase:MissionPhase,world:MissionWorld):MissionSn
  ];
  const arrays=groups.map(g=>([0,1,2] as const).map(i=>part(
    g.id+'-'+i,g.name,i,g.flags[i],g.targets[(['teo','lia','nino'] as const)[i]],
-   ['E','J','SHIFT + E'][i],g.hero[i],g.bird[i],g.name+': '+g.flags.filter(Boolean).length+'/3')));
+   ['E','J','SHIFT'][i],g.hero[i],g.bird[i],g.name+': '+g.flags.filter(Boolean).length+'/3')));
  const group=!w.logOpen?'TRONCO EM CHAMAS':
   !w.smokeOpen?'CORREDOR DE FUMAÇA':'ÁRVORES CAINDO';
  const result=beats(phase,arrays,!w.logOpen?'LIBEREM O TRONCO EM CHAMAS.':

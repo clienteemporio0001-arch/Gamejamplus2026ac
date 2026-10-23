@@ -1109,9 +1109,9 @@ body.playing{overflow:hidden;touch-action:none;overscroll-behavior:none}
 .first-play-dots{letter-spacing:7px;color:#a7eb96;font-size:16px;font-weight:900}
 .first-play-guide #first-play-continue{min-height:43px;margin:0}
 .mission-context-step{
- position:fixed;z-index:78;left:50%;
- bottom:clamp(82px,15vh,135px);transform:translateX(-50%);
- width:min(400px,calc(100vw - 24px));
+ position:fixed;z-index:78;left:50%;top:calc(12px + env(safe-area-inset-top));
+ bottom:auto;transform:translateX(-50%);
+ width:min(385px,40vw);
  background:linear-gradient(135deg,#133e30f6,#08251df7);
  border:1px solid #b5efa0b5;border-radius:13px;
  box-shadow:0 9px 34px #000b,0 0 24px #5be99a22;
@@ -1127,7 +1127,7 @@ body.playing{overflow:hidden;touch-action:none;overscroll-behavior:none}
  padding:8px 13px;border-radius:9px;background:#baf499;
 }
 @keyframes mission-card-enter{
- from{opacity:0;transform:translate(-50%,12px)}
+ from{opacity:0;transform:translate(-50%,-12px)}
  to{opacity:1;transform:translate(-50%,0)}
 }
 #ui.in-game .loop-top-right{
@@ -1151,8 +1151,8 @@ body.playing{overflow:hidden;touch-action:none;overscroll-behavior:none}
  #ui.in-game #loop-step{font-size:9px;line-height:1.14}
  #ui.in-game .loop-top-right .mission-hud-title small,
  #ui.in-game .loop-top-right .mission-hud-step small{font-size:8px!important}
- .mission-context-step{bottom:calc(73px + env(safe-area-inset-bottom));
-   width:min(330px,65vw);padding:7px 9px}
+ .mission-context-step{top:calc(env(safe-area-inset-top) + 78px);
+   bottom:auto;width:min(330px,66vw);padding:7px 9px}
  .mission-context-step strong,.mission-context-step span{font-size:10px}
  .mission-context-step button{padding:6px 9px}
  .first-play-guide .first-play-sheet{gap:6px;max-height:calc(100dvh - 8px)}

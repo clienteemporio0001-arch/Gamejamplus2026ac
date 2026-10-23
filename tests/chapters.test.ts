@@ -18,7 +18,10 @@ check(eyes.act(0,{kind:'lever'},players,unlock,at),'Téo libera raízes');
 check(!eyes.act(0,{kind:'lever'},players,unlock,at+20),'idempotência alavanca');
 players[1].x=430;players[1].y=590;
 check(!eyes.act(0,{kind:'shoot',facing:1},players,unlock,at+100),'somente Lia dispara');
-check(!eyes.act(1,{kind:'shoot',facing:-1},players,unlock,at+100),'Lia deve olhar para alvo');
+const aimCheck=new ChapterAuthority(3);
+if(aimCheck.world.level===3)aimCheck.world.roots=true;
+check(!aimCheck.act(1,{kind:'shoot',facing:-1},players,unlock,at+100),
+ 'fora do círculo, a baladeira precisa apontar para o alvo');
 check(eyes.act(1,{kind:'shoot',facing:1},players,unlock,at+200),'Lia distrai onça');
 check(eyes.world.level===3 && eyes.world.distractedUntil===at+200+6700,'janela da distração tolera latência');
 const res=eyes.tick(players,at+260);

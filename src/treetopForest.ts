@@ -1,4 +1,5 @@
 import {initRatCombat,validRatCombat,activateMonsterSkill,shootMonster,tickMonsters,type RatCombatWorld} from './ratCombat';
+import {puzzleShotInRange} from './puzzleInteraction';
 import {exitPresence} from './sharedExit';
 import type {Pose,Seat} from './network';
 import {initVitals,validVitals,spendVital,regenVitals,damageVitals,VITALS,type VitalAction,type Vitals} from './loopVitals';
@@ -351,8 +352,7 @@ export class TreeAuthority{
   }
   let changed=false;
   const shot=(target:{x:number;y:number})=>seat===1&&kind==='shoot'
-   &&!windy&&(target.x-p.x)*facing>=0&&(target.x-p.x)*facing<=360
-   &&Math.abs(p.y-18-target.y)<56;
+   &&!windy&&puzzleShotInRange(p,target,facing,360,56,90);
   if(!w.bridgeOpen){
    // Only the authorized Dash can activate Nino's marker.
    if(seat===2&&kind==='dash'&&!w.bridge[2]

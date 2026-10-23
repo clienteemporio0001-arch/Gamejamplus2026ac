@@ -1,5 +1,6 @@
 import {initRatCombat,validRatCombat,activateMonsterSkill,shootMonster,tickMonsters,type RatCombatWorld} from './ratCombat';
 import {exitPresence} from './sharedExit';
+import {puzzleShotInRange,dashCanActivate} from './puzzleInteraction';
 import type { Pose, Seat } from './network';
 import type { PuzzleAction } from './puzzles';
 import {VITALS,initVitals,validVitals,spendVital,regenVitals,damageVitals,type VitalAction,type Vitals} from './loopVitals';
@@ -440,9 +441,9 @@ export class LoopAuthority{
       this.lastDash[2]=now;this.dashOrigin[2]=p.x;return false;
     }
     if(action.kind==='shoot'&&seat===1){
-      if(now-this.lastShot[1]<490||action.facing!==1)return false;
+      if(now-this.lastShot[1]<490)return false;
       this.lastShot[1]=now;
-      const shoot=(target:{x:number;y:number})=>target.x>p.x&&target.x-p.x<=365&&Math.abs(p.y-18-target.y)<=65;
+      const shoot=(target:{x:number;y:number})=>puzzleShotInRange(p,target,action.facing??1,365,65,92);
       if(w.lastRoute==='right'&&w.suspended[0]&&!w.suspended[1]&&
         w.suspendedTo===w.suspendedX&&shoot(SUSPENSION.lia)){
         w.suspended[1]=true;this.slideSuspension(SUSPENSION.liaX,now);return true;
@@ -471,19 +472,20 @@ export class LoopAuthority{
       }
     }
     if(action.kind==='switch'&&seat===2 && this.lastDash[2]>0
-      &&now-this.lastDash[2] <= 3000 &&p.x-this.dashOrigin[2]>=105){
+      &&now-this.lastDash[2] <= 3000){
+      const dashed=(target:{x:number})=>dashCanActivate(this.dashOrigin[2],p.x,target.x,105);
       if(w.lastRoute==='right'&&w.suspended[0]&&w.suspended[1]&&!w.suspended[2]&&
-        w.suspendedTo===w.suspendedX&&near(p,SUSPENSION.nino.x,SUSPENSION.nino.y,55,73)){
+        w.suspendedTo===w.suspendedX&&near(p,SUSPENSION.nino.x,SUSPENSION.nino.y,55,73)&&dashed(SUSPENSION.nino)){
         w.suspended[2]=true;this.slideSuspension(SUSPENSION.finalX,now);
         this.lastSwitch[2]=now;return true;
       }
-      if(w.observed&&w.marks[0]&&w.marks[1]&&!w.marks[2]&&near(p,markPosition(w,2).x,markPosition(w,2).y,67,85)){
+      if(w.observed&&w.marks[0]&&w.marks[1]&&!w.marks[2]&&near(p,markPosition(w,2).x,markPosition(w,2).y,67,85)&&dashed(markPosition(w,2))){
         w.marks[2]=true;this.lastSwitch[2]=now;return true;
       }
-      if(w.suspendedOpen&&allDone(w.marks)&&!w.tree[2]&&near(p,LOOP_TREE[2].x,LOOP_TREE[2].y,65,85)){
+      if(w.suspendedOpen&&allDone(w.marks)&&!w.tree[2]&&near(p,LOOP_TREE[2].x,LOOP_TREE[2].y,65,85)&&dashed(LOOP_TREE[2])){
         w.tree[2]=true;this.checkTree(now);this.lastSwitch[2]=now;return true;
       }
-      if(w.bridge&&!w.final[2]&&near(p,LOOP_FINAL[2].x,LOOP_FINAL[2].y,67,85)){
+      if(w.bridge&&!w.final[2]&&near(p,LOOP_FINAL[2].x,LOOP_FINAL[2].y,67,85)&&dashed(LOOP_FINAL[2])){
         w.final[2]=true;this.checkExit();this.lastSwitch[2]=now;return true;
       }
     }
