@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type {Network,Seat} from './network';
 import {pipoHint,type HintSource} from './pipoHints';
-import {pipoSpeechLayout,pipoHudCoords} from './pipoBubbleLayout';
+import {pipoSpeechLayout,pipoHudCoords,PIPO_FOLLOW_HEIGHT} from './pipoBubbleLayout';
 
 /** One decorative bird per Phaser scene; no physics, AI, network packets or external assets. */
 export class PipoGuide {
@@ -195,7 +195,8 @@ export class PipoGuide {
     py=Math.min(...ys);
    }
   }
-  this.targetX=px+80;this.targetY=py-110;
+  // Voa mais alto para não encobrir o texto de interação e os nomes do grupo.
+  this.targetX=px+80;this.targetY=py-PIPO_FOLLOW_HEIGHT;
   if(this.seed===0){this.bird.setPosition(this.targetX,this.targetY);this.seed=1;}
   const dx=this.targetX-this.bird.x,dy=this.targetY-this.bird.y;
   const near=Math.abs(dx)<8&&Math.abs(dy)<8;
