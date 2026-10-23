@@ -1370,7 +1370,7 @@ export class Network {
         this.fallTracker.reset(blackoutActive(l,now)?now+900:0);
       }else{
         const hits=this.fallTracker.sample(this.poses,loopFallSurfaces(l.layout,l.bridge,
-          SUMMIT_BRANCH,l.suspendedOpen),now,l.supporting);
+          SUMMIT_BRANCH,l.suspendedOpen,l.suspendedX),now,l.supporting);
         for(const seat of hits)if(this.loopAuthority.damage(seat,now,false))this.shareLoop();
       }
       if(!blackoutActive(this.loopAuthority.world,now)
