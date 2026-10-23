@@ -1,6 +1,7 @@
 import type { Pose, Seat } from './network';
 import type { PuzzleAction } from './puzzles';
 import { applyDamage } from './survival';
+import {puzzleShotInRange,dashCanActivate} from './puzzleInteraction';
 
 export const FOREST_WIDTH = 4300;
 export const FOREST_SPAWNS: Pose[] = ([0,1,2] as Seat[]).map(seat=>({
@@ -62,16 +63,16 @@ export function forestHint(w:ForestWorld,seat:Seat,x:number):string {
   }
   if(!w.vines.every(Boolean)){
     if(x>3050 && !w.vines[2] && seat===2)
-      return 'NINO: recue até o raio azul e aperte SHIFT + →. Atravesse o cipó durante o DASH.';
+      return 'NINO: use SHIFT no círculo azul ou atravesse-o de qualquer lado.';
     if(x>FOREST_GATES.vines-170)
       return 'BARREIRA DE CIPÓS: faltam materiais ('+w.vines.filter(Boolean).length+'/3). Voltem e coletem.';
     if(seat===0&&!w.vines[0])
       return x<1230?'TÉO: vá até a árvore gigante; os amigos ajudarão você a subir.'
         :'TÉO: Lia sobe em Nino com E, você sobe em Lia com E; pule até o cipó verde alto.';
     if(seat===1&&!w.vines[1])
-      return 'LIA: fique À ESQUERDA do cipó laranja e atire J olhando para a DIREITA.';
+      return 'LIA: aproxime-se do círculo laranja e atire com J de qualquer lado.';
     if(seat===2&&!w.vines[2])
-      return 'NINO: comece o DASH (SHIFT + →) no raio azul, ANTES do cipó, e atravesse-o.';
+      return 'NINO: use SHIFT dentro do círculo azul ou atravesse-o de qualquer lado.';
     return 'AJUDE SEUS AMIGOS: todos precisam coletar seu cipó antes do grande abismo.';
   }
   if(w.treeFallAt>0&&!w.bridge)
@@ -167,8 +168,8 @@ export class ForestAuthority {
     }
     if(a.kind==='dash'){
       if(seat!==2)return false;
-      if(p.x>=2840&&p.x<=3020){this.dashOrigin=p.x;this.dashAt=now;}
-      if(p.x>3170&&p.x<3335){this.treeDashOrigin=p.x;this.treeDashAt=now;}
+      if(Math.abs(p.x-FOREST_VINES[2].x)<=230){this.dashOrigin=p.x;this.dashAt=now;}
+      if(Math.abs(p.x-TREE_ACTIONS.nino.x)<=250){this.treeDashOrigin=p.x;this.treeDashAt=now;}
       return false;
     }
     if(!w.unlocked)return false;
@@ -177,14 +178,14 @@ export class ForestAuthority {
         w.vines[0]=true;return true;
       }
       if(seat===2&&!w.vines[2]&&near(p,FOREST_VINES[2].x,FOREST_VINES[2].y,58,85)
-        &&this.dashAt>0&&now-this.dashAt<=1750&&p.x-this.dashOrigin>=95){
+        &&this.dashAt>0&&now-this.dashAt<=1750&&dashCanActivate(this.dashOrigin,p.x,FOREST_VINES[2].x,95)){
         w.vines[2]=true;return true;
       }
       return false;
     }
-    if(a.kind==='shoot'&&seat===1&&a.facing===1&&now-this.lastShot>=470){
+    if(a.kind==='shoot'&&seat===1&&now-this.lastShot>=470){
       this.lastShot=now;
-      const hit=(x:number,y:number)=>x>p.x&&x-p.x<=350&&Math.abs(p.y-18-y)<65;
+      const hit=(x:number,y:number)=>puzzleShotInRange(p,{x,y},a.facing??1,350,65,90);
       if(!w.vines[1]&&hit(FOREST_VINES[1].x,FOREST_VINES[1].y)){
         w.vines[1]=true;return true;
       }
@@ -200,7 +201,7 @@ export class ForestAuthority {
     }
     if(a.kind==='switch'&&seat===2&&w.treeSteps[0]&&w.treeSteps[1]
       &&!w.treeSteps[2]&&near(p,TREE_ACTIONS.nino.x,TREE_ACTIONS.nino.y,60,82)
-      &&this.treeDashAt>0&&now-this.treeDashAt<1250&&p.x-this.treeDashOrigin>=95){
+      &&this.treeDashAt>0&&now-this.treeDashAt<1250&&dashCanActivate(this.treeDashOrigin,p.x,TREE_ACTIONS.nino.x,95)){
       w.treeSteps[2]=true;return this.fallTree(now);
     }
     return false;
