@@ -626,8 +626,13 @@ function render(): void {
         '<p>Os três chegaram exaustos à margem do rio. Pipo pousou ao lado deles.</p>'+ 
         '<strong>NINGUÉM FICA PARA TRÁS. NEM A FLORESTA.</strong>'+ 
         '<p>A AVENTURA FOI CONCLUÍDA!</p>'+victoryScore(net)+
+        '<p class="replay-challenge">🏆 DESAFIO: VOCÊ CONSEGUE TERMINAR MAIS RÁPIDO E BATER SEU RECORDE?</p>'+
+        (net.isSolo?button('replay-adventure','↻ JOGAR NOVAMENTE',true):'')+
         button('show-final-credits','VER CRÉDITOS',true)+
         button('leave-final','VOLTAR AO MENU')+'</div>';
+      ui.querySelector('#replay-adventure')?.addEventListener('click',()=>{
+        net.shutdown();showSoloSelection(1);
+      });
       ui.querySelector('#leave-final')?.addEventListener('click',()=>net.shutdown());
       ui.querySelector('#show-final-credits')?.addEventListener('click',()=>openPanel('credits'));
       return;
