@@ -1,5 +1,6 @@
 import type { Pose, Seat } from './network';
 import type { PuzzleAction } from './puzzles';
+import {puzzleShotInRange,dashCanActivate} from './puzzleInteraction';
 
 export type RiverWorld = {
   partA: boolean; partB: boolean; partC: boolean;
@@ -55,7 +56,6 @@ export class RiverAuthority {
     const p = poses[seat];
     if (!p || p.seat !== seat || !unlocked[seat]) return false;
     const w = this.world;
-    const lookRight = action.facing === 1;
     if (action.kind === 'lever') {
       if (seat !== 0 || w.partA || !near(p, RIVER.lever, 64, 60)) return false;
       w.partA = true;
@@ -63,11 +63,10 @@ export class RiverAuthority {
       return true;
     }
     if (action.kind === 'shoot') {
-      if (seat !== 1 || !lookRight || now - this.lastShot < 450) return false;
+      if (seat !== 1 || now - this.lastShot < 450) return false;
       this.lastShot = now;
       const canHit = (target: {x:number;y:number}) =>
-        target.x > p.x && target.x - p.x < 345 &&
-        Math.abs(target.y - (p.y - 18)) <= 55;
+        puzzleShotInRange(p,target,action.facing??1,345,55,85);
       if (w.partA && !w.partB && canHit(RIVER.target)) {
         w.partB = true; return true;
       }
@@ -86,10 +85,10 @@ export class RiverAuthority {
     if (action.kind === 'dash') {
       if (seat !== 2 || now - this.lastDash < 1850) return false;
       this.lastDash = now;
-      if (w.partB && !w.partC && w.timerUntil > now && p.x >= 605 && p.x <= 755) {
+      if (w.partB && !w.partC && w.timerUntil > now && Math.abs(p.x-RIVER.switch.x)<=315) {
         this.dashFrom = p.x; this.dashAt = now;
       }
-      if (w.partC && !w.finalGate && p.x >= 895 && p.x <= 1020) {
+      if (w.partC && !w.finalGate && Math.abs(p.x-RIVER.finalSwitch.x)<=220) {
         this.finalDashFrom = p.x; this.finalDashAt = now;
       }
       return false; // somente registro de uso; não há broadcast de puzzle.
@@ -98,13 +97,13 @@ export class RiverAuthority {
       if (seat !== 2) return false;
       if (!w.partC && w.timerUntil > now && near(p, RIVER.switch, 57, 78)
         && this.dashAt >= w.timerUntil - RIVER_TIMER_MS && this.dashAt <= now
-        && this.dashFrom <= 755 && p.x - this.dashFrom >= 165) {
+        && dashCanActivate(this.dashFrom,p.x,RIVER.switch.x,165)) {
         w.partC = true; w.timerUntil = 0; return true;
       }
       if (w.partC && !w.finalGate && w.pressure && w.shotUntil > now
         && near(p, RIVER.finalSwitch, 47, 75)
         && this.finalDashAt > 0 && now - this.finalDashAt < 1800
-        && this.finalDashFrom < 1020 && p.x - this.finalDashFrom >= 120) {
+        && dashCanActivate(this.finalDashFrom,p.x,RIVER.finalSwitch.x,120)) {
         w.finalGate = true; w.shotUntil = 0; return true;
       }
     }
