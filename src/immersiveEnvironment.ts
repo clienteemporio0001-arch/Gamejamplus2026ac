@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import {IMMERSIVE_SPOTS,type ImmersiveStage,type ImmersiveFrame} from './immersiveEnvironmentLayout';
+import {IMMERSIVE_SPOTS,type ImmersiveStage} from './immersiveEnvironmentLayout';
 
 export const IMMERSIVE_TEXTURE='forest-immersion-atlas';
 export function preloadImmersiveEnvironment(scene:Phaser.Scene):void{
