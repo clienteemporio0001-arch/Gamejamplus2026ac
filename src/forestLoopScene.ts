@@ -16,6 +16,7 @@ import { LOOP_WIDTH, LOOP_GEOMETRY, LOOP_MARKS, markPosition, LOOP_TREE, LOOP_FI
   UPPER_BRANCH,SUMMIT_BRANCH,upperLandingY,summitLandingY,markerBaseY,hasBranchFooting,hasSummitFooting } from './forestLoop';
 import { NightArt } from './visuals';
 import {ForestTrees,preloadForestTrees} from './forestTrees';
+import {ImmersiveEnvironment,preloadImmersiveEnvironment} from './immersiveEnvironment';
 import {ForestChickens,preloadForestChickens} from './forestChickens';
 import { loopContext, regionTitle } from './forestLoopUI';
 import { leafAt, swayAt, WIND_LEAVES } from './loopWind';
@@ -31,7 +32,7 @@ export class ForestLoopScene extends Phaser.Scene {
  private ratEnemies?:RatEnemyVisuals;
  private knockUntil=[0,0,0];private knockVx=[0,0,0];
   private net:Network;private touch:TouchInput;private hud?:()=>void;
-  private art!:NightArt;private chickens?:ForestChickens;private forestTrees?:ForestTrees;private w:LoopWorld;
+  private art!:NightArt;private chickens?:ForestChickens;private forestTrees?:ForestTrees;private immersiveEnvironment?:ImmersiveEnvironment;private w:LoopWorld;
   private avatars:Phaser.GameObjects.Rectangle[]=[];
   private labels:Phaser.GameObjects.Text[]=[];
   private blocks:Phaser.GameObjects.Rectangle[]=[];
@@ -118,7 +119,7 @@ export class ForestLoopScene extends Phaser.Scene {
   preload():void{
     preloadKenneyCharacters(this);
     preloadForestChickens(this);preloadRatEnemies(this,1);
-    preloadForestTrees(this);
+    preloadForestTrees(this);preloadImmersiveEnvironment(this);
     this.load.svg('loop-clearing-tree',import.meta.env.BASE_URL+'assets/clearing-tree.svg');
     preloadOfficialLandmarks(this);
     this.load.svg('loop-elevated-tree',import.meta.env.BASE_URL+'assets/loop-elevated-tree.svg');
@@ -255,6 +256,7 @@ export class ForestLoopScene extends Phaser.Scene {
     this.physics.world.setBoundsCollision(true,true,false,false);
     this.background();
     this.forestTrees=new ForestTrees(this,1);
+    this.immersiveEnvironment=new ImmersiveEnvironment(this,1);
     this.chickens=new ForestChickens(this,1);
    this.ratEnemies=new RatEnemyVisuals(this,1);
     this.art.setReducedVisuals(this.reducedGraphics);
@@ -922,7 +924,7 @@ export class ForestLoopScene extends Phaser.Scene {
     }
     this.exitArt?.update(w.exit,this.net.poses,w.health,time);
     this.art.update(time);
-    this.forestTrees?.update();
+    this.forestTrees?.update();this.immersiveEnvironment?.update();
     this.chickens?.update(time);
    this.ratEnemies?.update(now,w.cycleStart,w.ratDownUntil,pause);
     this.art.drawBoulder(w.boulderAt,now,blackoutActive(w,now)||w.deadUntil>0||w.completed);

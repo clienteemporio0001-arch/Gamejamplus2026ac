@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {IMMERSIVE_TEXTURE} from './immersiveEnvironment';
 
 /** The Fase 1 SVGs are the sole official source of landmark silhouettes.
  * Decoration only: never adds collision bodies, modifies authoritative targets,
@@ -37,10 +38,20 @@ export function officialLandmark(
  scene:Phaser.Scene,kind:LandmarkKind,biome:LandmarkBiome,
  x:number,footY:number,targetY:number,scale=1
 ):Phaser.GameObjects.Container{
- const size=LANDMARK_SIZES[kind];
- const offset=LANDMARK_IMAGE_OFFSETS[kind];
+ // Night: preserve the hollow tree approved in the previous playtest.
+ // Rain: use the hollow trunk from the author's new environment pack.
+ // Stone and arch get new artwork in Fases 1 and 2 only.
+ const usePack=(biome==='night'||biome==='rain')&&
+   scene.textures.exists(IMMERSIVE_TEXTURE)&&
+   (kind!=='hollow'||biome==='rain');
+ const frame=kind==='hollow'?'hollow_stump':kind==='stone'?'split_rock':'rune_arch';
+ const size=usePack?(kind==='hollow'?{width:245,height:254}:
+   kind==='stone'?{width:167,height:110}:{width:232,height:155}):
+   LANDMARK_SIZES[kind];
+ const offset=usePack?{x:0,y:0}:LANDMARK_IMAGE_OFFSETS[kind];
  const root=scene.add.container(x,footY).setDepth(12);
- const image=scene.add.image(offset.x*scale,(-size.height/2+offset.y)*scale,LANDMARK_SPRITES[kind])
+ const image=usePack?scene.add.image(offset.x*scale,(-size.height/2+offset.y)*scale,IMMERSIVE_TEXTURE,frame):
+  scene.add.image(offset.x*scale,(-size.height/2+offset.y)*scale,LANDMARK_SPRITES[kind])
   .setDisplaySize(size.width*scale,size.height*scale);
  root.add(image);
  const tint=biome==='rain'?0xa7c9cf:biome==='fire'?0xd4a68a:0xffffff;

@@ -16,6 +16,7 @@ import {cameraZoomFor,isCoarseDevice} from './mobileViewport';
 import {gameKeys} from './keyboard';
 import {NightArt} from './visuals';
 import {ForestTrees,preloadForestTrees} from './forestTrees';
+import {ImmersiveEnvironment,preloadImmersiveEnvironment} from './immersiveEnvironment';
 import {ForestChickens,preloadForestChickens} from './forestChickens';
 import type {VitalAction} from './loopVitals';
 import {temporalDrop,rainBudget,rippleAt} from './temporalRain';
@@ -36,7 +37,7 @@ export class TemporalForestScene extends Phaser.Scene {
  private net:Network;private touch:TouchInput;private hud?:()=>void;
  private w:TemporalWorld;
  private art!:NightArt;
- private forestTrees?:ForestTrees;
+ private forestTrees?:ForestTrees;private immersiveEnvironment?:ImmersiveEnvironment;
  private chickens?:ForestChickens;
  private blocks:Phaser.GameObjects.Rectangle[]=[];
  private layoutBlocks:Phaser.GameObjects.Rectangle[]=[];
@@ -169,12 +170,13 @@ export class TemporalForestScene extends Phaser.Scene {
   this.art.water(TEMP_CHANNEL.start,TEMP_CHANNEL.end,638);
   this.text(2800,511,'CORRENTEZA PROFUNDA',14,'#efc6b3').setAlpha(.9);
  }
- preload():void{preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestChickens(this);preloadRatEnemies(this,2);preloadBafomet(this);preloadForestTrees(this);}
+ preload():void{preloadOfficialLandmarks(this);preloadKenneyCharacters(this);preloadForestChickens(this);preloadRatEnemies(this,2);preloadBafomet(this);preloadForestTrees(this);preloadImmersiveEnvironment(this);}
  create():void{
   this.physics.world.setBounds(0,0,TEMP_WIDTH,900);
   this.physics.world.setBoundsCollision(true,true,false,false);
   this.woodedEnvironment();
   this.forestTrees=new ForestTrees(this,2);
+  this.immersiveEnvironment=new ImmersiveEnvironment(this,2);
   this.chickens=new ForestChickens(this,2);
    this.ratEnemies=new RatEnemyVisuals(this,2);
    this.bafomet=new BafometVisual(this);
@@ -503,7 +505,7 @@ export class TemporalForestScene extends Phaser.Scene {
   this.tree.setRotation(-1.13*(1-progress*progress*(3-2*progress)));
   this.renderRain(time);
   this.art.update(time);
-  this.forestTrees?.update();
+  this.forestTrees?.update();this.immersiveEnvironment?.update();
   this.chickens?.update(time);
    this.ratEnemies?.update(now,w.cycleStart,w.ratDownUntil,pause);
   this.bafomet?.update(w.boss,now,true);
