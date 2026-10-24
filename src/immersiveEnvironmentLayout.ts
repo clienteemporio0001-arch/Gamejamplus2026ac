@@ -53,9 +53,9 @@ export const IMMERSIVE_SPOTS:Readonly<Record<ImmersiveStage,readonly ImmersiveSp
   {x:3290,baseY:638,width:138,height:120,frame:'fern_moss',alpha:.68,tint:0x8abfb3,depth:-10},
   {x:3820,baseY:638,width:142,height:82,frame:'mushrooms_blue',alpha:.65,tint:0x85b8c2,depth:-9,flipX:true},
   {x:4040,baseY:638,width:136,height:145,frame:'fern_drape',alpha:.64,tint:0x8baba6,depth:-10},
-  {x:4400,baseY:638,width:180,height:119,frame:'fern_broad',alpha:.56,tint:0x8ca8a3,depth:-11},
+  {x:4160,baseY:638,width:180,height:119,frame:'fern_broad',alpha:.56,tint:0x8ca8a3,depth:-11},
   {x:760,baseY:638,width:125,height:133,frame:'fern_moss',alpha:.62,tint:0x7bb7a9,depth:-10,flipX:true},
   // Actual root platform at TEMP_ECHO[0], y539: decorative art only.
-  {x:680,baseY:551,width:145,height:48,frame:'wood_platform',alpha:.91,tint:0xa6bbaf,depth:9}
+  {x:870,baseY:549,width:145,height:48,frame:'wood_platform',alpha:.91,tint:0xa6bbaf,depth:9}
  ]
 } as const;
