@@ -6,6 +6,12 @@ for(const key of ['hollow-tree-custom.webp','loop-stone.svg','loop-arch.svg'])
  assert.ok(official.includes(key),'official landmark asset '+key);
 assert.ok(existsSync('public/assets/hollow-tree-custom.webp'),'árvore oca nova precisa estar embutida no jogo');
 for(const kind of ['hollow','stone','arch'])assert.ok(official.includes(kind+':'),'landmark '+kind);
+assert.ok(official.includes('hollow:{width:272,height:344}'), 'hollow tree enlarged only visually');
+assert.ok(official.includes('hollow:{x:0,y:40}'), 'hollow tree roots lowered 40px to meet the floor');
+assert.ok(official.includes('(-size.height/2+offset.y)*scale'),
+ 'visual correction respects different biome sizes without moving the physics anchor');
+assert.ok(official.includes('scene.add.container(x,footY)'),
+ 'world origin remains unchanged and landmark target is still at its original coordinate');
 assert.ok(official.includes('scene.add.image('));
 assert.ok(official.includes('targetY-footY'));
 assert.ok(!official.includes('physics.add'),'art must not add colliders');

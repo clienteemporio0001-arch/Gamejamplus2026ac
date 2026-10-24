@@ -10,7 +10,13 @@ export const LANDMARK_SPRITES={
  hollow:'loop-hollow-tree',stone:'loop-stone',arch:'loop-arch'
 } as const;
 export const LANDMARK_SIZES={
- hollow:{width:255,height:320},stone:{width:155,height:104},arch:{width:244,height:182}
+ hollow:{width:272,height:344},stone:{width:155,height:104},arch:{width:244,height:182}
+} as const;
+/** Art-only offsets measured from the existing ground-foot anchor.
+ * The new hollow-tree WebP has internal empty padding below the roots.
+ * Correct it visually without moving targetY, colliders, or puzzle geometry. */
+export const LANDMARK_IMAGE_OFFSETS={
+ hollow:{x:0,y:40},stone:{x:0,y:0},arch:{x:0,y:0}
 } as const;
 export const LANDMARK_KEYS=['hollow','stone','arch'] as const;
 export const LANDMARK_ACCENTS={hollow:0xc7f5a5,stone:0xf3dfa8,arch:0x9bd3f3} as const;
@@ -32,8 +38,9 @@ export function officialLandmark(
  x:number,footY:number,targetY:number,scale=1
 ):Phaser.GameObjects.Container{
  const size=LANDMARK_SIZES[kind];
+ const offset=LANDMARK_IMAGE_OFFSETS[kind];
  const root=scene.add.container(x,footY).setDepth(12);
- const image=scene.add.image(0,-size.height*scale/2,LANDMARK_SPRITES[kind])
+ const image=scene.add.image(offset.x*scale,(-size.height/2+offset.y)*scale,LANDMARK_SPRITES[kind])
   .setDisplaySize(size.width*scale,size.height*scale);
  root.add(image);
  const tint=biome==='rain'?0xa7c9cf:biome==='fire'?0xd4a68a:0xffffff;
